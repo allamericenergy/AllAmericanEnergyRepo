@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  superadmin
+  admin
+  member
+  user
+}
+
+enum UserStatus {
+  invited
+  active
+  disabled
+}
+
+enum DealStage {
+  prospecting
+  qualification
+  proposal
+  negotiation
+  won
+  lost
+}
+
+enum TaskStatus {
+  open
+  in_progress
+  completed
+  blocked
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  address     String?
+  billingInfo Json?
+  users       User[]
+  companies   Company[]
+  contacts    Contact[]
+  deals       Deal[]
+  tasks       Task[]
+  notes       Note[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  passwordHash     String
+  firstName        String
+  lastName         String
+  role             Role
+  status           UserStatus     @default(invited)
+  orgId            String?
+  organization     Organization?  @relation(fields: [orgId], references: [id])
+  lastLogin        DateTime?
+  twoFactorEnabled Boolean        @default(false)
+  refreshTokens    RefreshToken[]
+  ownedDeals       Deal[]         @relation("DealOwner")
+  assignedTasks    Task[]         @relation("TaskAssignee")
+  notes            Note[]
+  auditLogs        AuditLog[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([orgId])
+}
+
+model Company {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  industry  String?
+  address   String?
+  phone     String?
+  website   String?
+  contacts  Contact[]
+  deals     Deal[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+model Contact {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  companyId String?
+  company   Company?     @relation(fields: [companyId], references: [id])
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  role      String?
+  deals     Deal[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([orgId])
+  @@index([companyId])
+}
+
+model Deal {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  companyId   String?
+  company     Company?     @relation(fields: [companyId], references: [id])
+  contactId   String?
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  title       String
+  description String?
+  amount      Decimal      @default(0)
+  currency    String       @default("USD")
+  stage       DealStage    @default(prospecting)
+  probability Int          @default(10)
+  ownerId     String
+  owner       User         @relation("DealOwner", fields: [ownerId], references: [id])
+  closeDate   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId, stage])
+  @@index([ownerId])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      TaskStatus   @default(open)
+  assigneeId  String?
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  relatedType String?
+  relatedId   String?
+  priority    Priority     @default(medium)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId, status])
+  @@index([assigneeId])
+}
+
+model Note {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  relatedType String
+  relatedId   String
+  content     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId, relatedType, relatedId])
+}
+
+model AuditLog {
+  id         String       @id @default(cuid())
+  orgId      String?
+  org        Organization? @relation(fields: [orgId], references: [id])
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id])
+  action     String
+  objectType String
+  objectId   String?
+  diff       Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime     @default(now())
+
+  @@index([orgId, objectType])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
