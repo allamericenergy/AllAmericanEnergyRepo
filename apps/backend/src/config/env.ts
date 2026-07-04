@@ -1,10 +1,14 @@
-import "dotenv/config";
+import path from "node:path";
+import dotenv from "dotenv";
 import { z } from "zod";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "../../.env"), override: false });
 
 const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEMO_MODE: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
-  DATABASE_URL: z.string().min(1).default("postgresql://aae:aae_password@localhost:5432/allamericanenergy?schema=public"),
+  DATABASE_URL: z.string().min(1).default("sqlserver://LAPTOP-L4K0EB02:1433;database=GreenEnergyDB;user=sa;password=admin;encrypt=true;trustServerCertificate=true"),
   JWT_ACCESS_SECRET: z.string().min(20).default("local-access-secret-change-me"),
   JWT_REFRESH_SECRET: z.string().min(20).default("local-refresh-secret-change-me"),
   ACCESS_TOKEN_TTL: z.string().default("15m"),

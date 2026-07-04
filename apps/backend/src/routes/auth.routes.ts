@@ -5,7 +5,8 @@ import {
   createRefreshToken,
   signAccessToken,
   validateRefreshToken,
-  verifyPassword
+  verifyPassword,
+  type AuthPrincipal
 } from "../security/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { env } from "../config/env.js";
@@ -47,7 +48,7 @@ authRoutes.post("/login", async (req, res, next) => {
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
-    const principal = { id: user.id, email: user.email, role: user.role, orgId: user.orgId };
+    const principal: AuthPrincipal = { id: user.id, email: user.email, role: user.role as AuthPrincipal["role"], orgId: user.orgId };
     const accessToken = signAccessToken(principal);
     const refreshToken = await createRefreshToken(user.id);
 
@@ -72,7 +73,7 @@ authRoutes.post("/refresh", async (req, res, next) => {
     }
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: input.userId } });
-    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, orgId: user.orgId });
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role as AuthPrincipal["role"], orgId: user.orgId });
     return res.json({ accessToken });
   } catch (error) {
     return next(error);

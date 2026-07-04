@@ -26,12 +26,14 @@ Frontend: http://localhost:5173
 Backend: http://localhost:4000  
 OpenAPI: http://localhost:4000/docs
 
-Local development defaults to `DEMO_MODE=true`, so no Docker or database is required. Demo login:
+Local development is configured for the local SQL Server connection in `.env.example`.
+
+For a quick in-memory demo with no database, set `DEMO_MODE=true`. Demo login:
 
 - Email: `superadmin@allamericanenergy.local`
 - Password: `ChangeMe123!`
 
-For database-backed development, set `DEMO_MODE=false`, configure `DATABASE_URL`, run Prisma migrations, then run `npm run seed`.
+For database-backed development, keep `DEMO_MODE=false`, configure `DATABASE_URL`, run Prisma migrations, then run `npm run seed`.
 
 ## Branch Strategy
 

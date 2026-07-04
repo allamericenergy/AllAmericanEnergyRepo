@@ -3,51 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  superadmin
-  admin
-  member
-  user
-}
-
-enum UserStatus {
-  invited
-  active
-  disabled
-}
-
-enum DealStage {
-  prospecting
-  qualification
-  proposal
-  negotiation
-  won
-  lost
-}
-
-enum TaskStatus {
-  open
-  in_progress
-  completed
-  blocked
-}
-
-enum Priority {
-  low
-  medium
-  high
-  urgent
 }
 
 model Organization {
   id          String    @id @default(cuid())
   name        String
   address     String?
-  billingInfo Json?
+  billingInfo String?
   users       User[]
   companies   Company[]
   contacts    Contact[]
@@ -57,6 +21,8 @@ model Organization {
   auditLogs   AuditLog[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@map("aae_organizations")
 }
 
 model User {
@@ -65,10 +31,10 @@ model User {
   passwordHash     String
   firstName        String
   lastName         String
-  role             Role
-  status           UserStatus     @default(invited)
+  role             String
+  status           String         @default("invited")
   orgId            String?
-  organization     Organization?  @relation(fields: [orgId], references: [id])
+  organization     Organization?  @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   lastLogin        DateTime?
   twoFactorEnabled Boolean        @default(false)
   refreshTokens    RefreshToken[]
@@ -80,12 +46,13 @@ model User {
   updatedAt        DateTime       @updatedAt
 
   @@index([orgId])
+  @@map("aae_users")
 }
 
 model Company {
   id        String       @id @default(cuid())
   orgId     String
-  org       Organization @relation(fields: [orgId], references: [id])
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   name      String
   industry  String?
   address   String?
@@ -97,14 +64,15 @@ model Company {
   updatedAt DateTime     @updatedAt
 
   @@index([orgId])
+  @@map("aae_companies")
 }
 
 model Contact {
   id        String       @id @default(cuid())
   orgId     String
-  org       Organization @relation(fields: [orgId], references: [id])
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   companyId String?
-  company   Company?     @relation(fields: [companyId], references: [id])
+  company   Company?     @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   firstName String
   lastName  String
   email     String?
@@ -116,58 +84,61 @@ model Contact {
 
   @@index([orgId])
   @@index([companyId])
+  @@map("aae_contacts")
 }
 
 model Deal {
   id          String       @id @default(cuid())
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   companyId   String?
-  company     Company?     @relation(fields: [companyId], references: [id])
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   contactId   String?
-  contact     Contact?     @relation(fields: [contactId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   title       String
   description String?
   amount      Decimal      @default(0)
   currency    String       @default("USD")
-  stage       DealStage    @default(prospecting)
+  stage       String       @default("prospecting")
   probability Int          @default(10)
   ownerId     String
-  owner       User         @relation("DealOwner", fields: [ownerId], references: [id])
+  owner       User         @relation("DealOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   closeDate   DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([orgId, stage])
   @@index([ownerId])
+  @@map("aae_deals")
 }
 
 model Task {
   id          String       @id @default(cuid())
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   title       String
   description String?
   dueDate     DateTime?
-  status      TaskStatus   @default(open)
+  status      String       @default("open")
   assigneeId  String?
-  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   relatedType String?
   relatedId   String?
-  priority    Priority     @default(medium)
+  priority    String       @default("medium")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([orgId, status])
   @@index([assigneeId])
+  @@map("aae_tasks")
 }
 
 model Note {
   id          String       @id @default(cuid())
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   userId      String
-  user        User         @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   relatedType String
   relatedId   String
   content     String
@@ -175,33 +146,36 @@ model Note {
   updatedAt   DateTime     @updatedAt
 
   @@index([orgId, relatedType, relatedId])
+  @@map("aae_notes")
 }
 
 model AuditLog {
   id         String       @id @default(cuid())
   orgId      String?
-  org        Organization? @relation(fields: [orgId], references: [id])
+  org        Organization? @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   userId     String?
-  user       User?        @relation(fields: [userId], references: [id])
+  user       User?        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   action     String
   objectType String
   objectId   String?
-  diff       Json?
+  diff       String?
   ip         String?
   userAgent  String?
   createdAt  DateTime     @default(now())
 
   @@index([orgId, objectType])
+  @@map("aae_audit_logs")
 }
 
 model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tokenHash String
   revoked   Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@map("aae_refresh_tokens")
 }
