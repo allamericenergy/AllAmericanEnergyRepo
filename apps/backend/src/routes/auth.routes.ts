@@ -8,6 +8,8 @@ import {
   verifyPassword
 } from "../security/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { env } from "../config/env.js";
+import { demoCredentials, demoRefreshToken, demoUser } from "../demo/demoData.js";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -24,6 +26,19 @@ export const authRoutes = Router();
 authRoutes.post("/login", async (req, res, next) => {
   try {
     const input = loginSchema.parse(req.body);
+
+    if (env.DEMO_MODE) {
+      if (input.email !== demoCredentials.email || input.password !== demoCredentials.password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      return res.json({
+        accessToken: signAccessToken(demoUser),
+        refreshToken: demoRefreshToken(),
+        user: demoUser
+      });
+    }
+
     const user = await prisma.user.findUnique({ where: { email: input.email } });
 
     if (!user || user.status !== "active" || !(await verifyPassword(input.password, user.passwordHash))) {
@@ -45,6 +60,11 @@ authRoutes.post("/login", async (req, res, next) => {
 authRoutes.post("/refresh", async (req, res, next) => {
   try {
     const input = refreshSchema.parse(req.body);
+
+    if (env.DEMO_MODE && input.userId === demoUser.id) {
+      return res.json({ accessToken: signAccessToken(demoUser) });
+    }
+
     const refreshToken = await validateRefreshToken(input.userId, input.refreshToken);
 
     if (!refreshToken) {
@@ -61,6 +81,10 @@ authRoutes.post("/refresh", async (req, res, next) => {
 
 authRoutes.post("/logout", authenticate, async (req, res, next) => {
   try {
+    if (env.DEMO_MODE) {
+      return res.status(204).send();
+    }
+
     await prisma.refreshToken.updateMany({ where: { userId: req.user!.id }, data: { revoked: true } });
     return res.status(204).send();
   } catch (error) {

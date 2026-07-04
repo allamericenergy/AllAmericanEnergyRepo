@@ -4,6 +4,8 @@ import { authenticate } from "../middleware/authenticate.js";
 import { authorize } from "../middleware/authorize.js";
 import { scopedOrgId } from "../middleware/tenant.js";
 import { prisma } from "../db/prisma.js";
+import { env } from "../config/env.js";
+import { demoCompanies, demoContacts, demoDeals, demoTasks, paged } from "../demo/demoData.js";
 
 export const crmRoutes = Router();
 
@@ -22,6 +24,11 @@ function pagination(query: unknown) {
 crmRoutes.get("/companies", authorize("company:read"), async (req, res, next) => {
   try {
     const { skip, take, page, pageSize } = pagination(req.query);
+
+    if (env.DEMO_MODE) {
+      return res.json(paged(demoCompanies, page, pageSize));
+    }
+
     const orgId = scopedOrgId(req);
     const [data, total] = await Promise.all([
       prisma.company.findMany({ where: { orgId: orgId ?? undefined }, skip, take, orderBy: { createdAt: "desc" } }),
@@ -36,6 +43,13 @@ crmRoutes.get("/companies", authorize("company:read"), async (req, res, next) =>
 crmRoutes.post("/companies", authorize("company:create"), async (req, res, next) => {
   try {
     const input = z.object({ name: z.string().min(1), industry: z.string().optional(), phone: z.string().optional(), website: z.string().optional() }).parse(req.body);
+
+    if (env.DEMO_MODE) {
+      const data = { id: `company-${Date.now()}`, orgId: req.user!.orgId ?? "demo-org", ...input, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      demoCompanies.unshift(data);
+      return res.status(201).json({ data });
+    }
+
     const orgId = scopedOrgId(req);
     if (!orgId) return res.status(400).json({ error: "orgId is required" });
     const data = await prisma.company.create({ data: { ...input, orgId } });
@@ -48,6 +62,11 @@ crmRoutes.post("/companies", authorize("company:create"), async (req, res, next)
 crmRoutes.get("/contacts", authorize("contact:read"), async (req, res, next) => {
   try {
     const { skip, take, page, pageSize } = pagination(req.query);
+
+    if (env.DEMO_MODE) {
+      return res.json(paged(demoContacts, page, pageSize));
+    }
+
     const orgId = scopedOrgId(req);
     const [data, total] = await Promise.all([
       prisma.contact.findMany({ where: { orgId: orgId ?? undefined }, skip, take, orderBy: { createdAt: "desc" } }),
@@ -69,6 +88,13 @@ crmRoutes.post("/contacts", authorize("contact:create"), async (req, res, next) 
       phone: z.string().optional(),
       role: z.string().optional()
     }).parse(req.body);
+
+    if (env.DEMO_MODE) {
+      const data = { id: `contact-${Date.now()}`, orgId: req.user!.orgId ?? "demo-org", ...input, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      demoContacts.unshift(data);
+      return res.status(201).json({ data });
+    }
+
     const orgId = scopedOrgId(req);
     if (!orgId) return res.status(400).json({ error: "orgId is required" });
     const data = await prisma.contact.create({ data: { ...input, orgId } });
@@ -81,6 +107,11 @@ crmRoutes.post("/contacts", authorize("contact:create"), async (req, res, next) 
 crmRoutes.get("/deals", authorize("deal:read"), async (req, res, next) => {
   try {
     const { skip, take, page, pageSize } = pagination(req.query);
+
+    if (env.DEMO_MODE) {
+      return res.json(paged(demoDeals, page, pageSize));
+    }
+
     const orgId = scopedOrgId(req);
     const [data, total] = await Promise.all([
       prisma.deal.findMany({ where: { orgId: orgId ?? undefined }, skip, take, orderBy: { createdAt: "desc" } }),
@@ -104,6 +135,13 @@ crmRoutes.post("/deals", authorize("deal:create"), async (req, res, next) => {
       probability: z.coerce.number().int().min(0).max(100).default(10),
       closeDate: z.coerce.date().optional()
     }).parse(req.body);
+
+    if (env.DEMO_MODE) {
+      const data = { id: `deal-${Date.now()}`, orgId: req.user!.orgId ?? "demo-org", currency: "USD", ...input, ownerId: req.user!.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      demoDeals.unshift(data);
+      return res.status(201).json({ data });
+    }
+
     const orgId = scopedOrgId(req);
     if (!orgId) return res.status(400).json({ error: "orgId is required" });
     const data = await prisma.deal.create({ data: { ...input, orgId, ownerId: req.user!.id } });
@@ -116,6 +154,11 @@ crmRoutes.post("/deals", authorize("deal:create"), async (req, res, next) => {
 crmRoutes.get("/tasks", authorize("task:read"), async (req, res, next) => {
   try {
     const { skip, take, page, pageSize } = pagination(req.query);
+
+    if (env.DEMO_MODE) {
+      return res.json(paged(demoTasks, page, pageSize));
+    }
+
     const orgId = scopedOrgId(req);
     const [data, total] = await Promise.all([
       prisma.task.findMany({ where: { orgId: orgId ?? undefined }, skip, take, orderBy: { createdAt: "desc" } }),
@@ -138,6 +181,13 @@ crmRoutes.post("/tasks", authorize("task:create"), async (req, res, next) => {
       relatedId: z.string().optional(),
       priority: z.enum(["low", "medium", "high", "urgent"]).default("medium")
     }).parse(req.body);
+
+    if (env.DEMO_MODE) {
+      const data = { id: `task-${Date.now()}`, orgId: req.user!.orgId ?? "demo-org", status: "open", ...input, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      demoTasks.unshift(data);
+      return res.status(201).json({ data });
+    }
+
     const orgId = scopedOrgId(req);
     if (!orgId) return res.status(400).json({ error: "orgId is required" });
     const data = await prisma.task.create({ data: { ...input, orgId } });

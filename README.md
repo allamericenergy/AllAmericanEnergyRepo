@@ -19,8 +19,6 @@ AllAmericanEnergy is a multi-tenant CRM scaffold for an energy company. It inclu
 ```bash
 cp .env.example .env
 npm install
-docker compose up -d db redis minio
-npm run seed
 npm run dev
 ```
 
@@ -28,7 +26,12 @@ Frontend: http://localhost:5173
 Backend: http://localhost:4000  
 OpenAPI: http://localhost:4000/docs
 
-Default superadmin is controlled by `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`.
+Local development defaults to `DEMO_MODE=true`, so no Docker or database is required. Demo login:
+
+- Email: `superadmin@allamericanenergy.local`
+- Password: `ChangeMe123!`
+
+For database-backed development, set `DEMO_MODE=false`, configure `DATABASE_URL`, run Prisma migrations, then run `npm run seed`.
 
 ## Branch Strategy
 

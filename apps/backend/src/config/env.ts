@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.string().default("development"),
+  DEMO_MODE: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   DATABASE_URL: z.string().min(1).default("postgresql://aae:aae_password@localhost:5432/allamericanenergy?schema=public"),
   JWT_ACCESS_SECRET: z.string().min(20).default("local-access-secret-change-me"),
   JWT_REFRESH_SECRET: z.string().min(20).default("local-refresh-secret-change-me"),
