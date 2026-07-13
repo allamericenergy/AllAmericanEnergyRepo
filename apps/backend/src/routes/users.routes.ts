@@ -4,7 +4,8 @@ import { z } from "zod";
 import { authenticate } from "../middleware/authenticate.js";
 import { authorize } from "../middleware/authorize.js";
 import { prisma } from "../db/prisma.js";
-import { permissionMatrix } from "../security/permissions.js";
+import { permissionMatrix, type Role } from "../security/permissions.js";
+import { permissionService } from "../application/auth/permissionService.js";
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -19,11 +20,17 @@ export const usersRoutes = Router();
 
 usersRoutes.use(authenticate);
 
-usersRoutes.get("/me", (req, res) => {
-  return res.json({
-    user: req.user,
-    permissions: permissionMatrix[req.user!.role]
-  });
+usersRoutes.get("/me", async (req, res, next) => {
+  try {
+    const role = req.user!.role as Role;
+    const permissions = await permissionService.permissionsForUser(req.user!.id, role);
+    return res.json({
+      user: req.user,
+      permissions: permissions.length > 0 ? permissions : permissionMatrix[role]
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 usersRoutes.get("/", authorize("user:administer"), async (req, res, next) => {

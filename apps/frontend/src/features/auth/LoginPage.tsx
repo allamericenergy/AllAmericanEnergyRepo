@@ -1,43 +1,58 @@
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../../lib/api";
+import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, TextField, Typography } from "@mui/material";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { useAuthStore } from "./authStore";
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  rememberMe: z.boolean().default(false)
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("superadmin@allamericanenergy.local");
-  const [password, setPassword] = useState("ChangeMe123!");
+  const login = useAuthStore((state) => state.login);
   const [error, setError] = useState("");
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    defaultValues: {
+      email: "superadmin@allamericanenergy.local",
+      password: "ChangeMe123!",
+      rememberMe: true
+    }
+  });
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function submit(values: LoginForm) {
     setError("");
     try {
-      const response = await api.post("/auth/login", { email, password });
-      localStorage.setItem("aae_access_token", response.data.accessToken);
-      localStorage.setItem("aae_role", response.data.user.role);
+      const parsed = loginSchema.parse(values);
+      await login(parsed.email, parsed.password, parsed.rememberMe);
       navigate("/");
-    } catch {
-      setError("Login failed. Check credentials and API availability.");
+    } catch (submitError) {
+      setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : "Login failed. Check credentials, email verification, and account status.");
     }
   }
 
   return (
-    <main className="login-page">
-      <form className="login-card" onSubmit={submit}>
-        <span className="eyebrow">AllAmericanEnergy CRM</span>
-        <h1>Sign in</h1>
-        <label>
-          Email
-          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
-        </label>
-        <label>
-          Password
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
-        </label>
-        {error ? <p className="error">{error}</p> : null}
-        <button type="submit">Log in</button>
-        <a href="mailto:admin@allamericanenergy.local">Request access</a>
-      </form>
-    </main>
+    <Box className="auth-page">
+      <Paper className="auth-panel" elevation={0}>
+        <Typography variant="overline">AllAmericanEnergy CRM</Typography>
+        <Typography variant="h4">Sign in</Typography>
+        {error ? <Alert severity="error">{error}</Alert> : null}
+        <Box component="form" onSubmit={handleSubmit(submit)} className="auth-form">
+          <TextField label="Email" error={Boolean(errors.email)} helperText={errors.email?.message} {...register("email")} />
+          <TextField label="Password" type="password" error={Boolean(errors.password)} helperText={errors.password?.message} {...register("password")} />
+          <FormControlLabel control={<Checkbox {...register("rememberMe")} defaultChecked />} label="Remember me" />
+          <Button type="submit" variant="contained" disabled={isSubmitting}>Log in</Button>
+        </Box>
+        <Box className="auth-links">
+          <Link to="/register">Register user</Link>
+          <Link to="/forgot-password">Forgot password</Link>
+        </Box>
+      </Paper>
+    </Box>
   );
 }

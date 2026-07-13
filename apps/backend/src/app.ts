@@ -12,6 +12,7 @@ import { authRoutes } from "./routes/auth.routes.js";
 import { usersRoutes } from "./routes/users.routes.js";
 import { crmRoutes } from "./routes/crm.routes.js";
 import { reportsRoutes } from "./routes/reports.routes.js";
+import { rbacRoutes } from "./routes/rbac.routes.js";
 
 export function createApp() {
   const app = express();
@@ -43,6 +44,7 @@ export function createApp() {
   const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 25, standardHeaders: true });
   app.use("/api/auth", authLimiter, authRoutes);
   app.use("/api/users", usersRoutes);
+  app.use("/api/rbac", rbacRoutes);
   app.use("/api", crmRoutes);
   app.use("/api/reports", reportsRoutes);
 
@@ -59,7 +61,9 @@ export function createApp() {
     if (error && typeof error === "object" && "issues" in error) {
       return res.status(400).json({ error: "Validation failed", details: error });
     }
-    return res.status(500).json({ error: "Internal server error" });
+    const statusCode = error && typeof error === "object" && "statusCode" in error ? Number(error.statusCode) : 500;
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return res.status(statusCode).json({ error: message });
   });
 
   return app;

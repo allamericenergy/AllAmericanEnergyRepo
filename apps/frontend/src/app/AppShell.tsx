@@ -1,6 +1,7 @@
 import { BarChart3, Building2, CheckSquare, Contact, Handshake, LayoutDashboard, Shield, UserCog } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navByRole, type Role } from "../lib/permissions";
+import { useAuthStore } from "../features/auth/authStore";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -21,16 +22,20 @@ const pathMap: Record<string, string> = {
   Deals: "/deals",
   Tasks: "/tasks",
   Reports: "/reports"
+  ,
+  Admin: "/admin",
+  "Audit Log": "/admin"
 };
 
 export function AppShell() {
   const navigate = useNavigate();
-  const role = (localStorage.getItem("aae_role") as Role | null) ?? "admin";
+  const logoutUser = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role ?? ((localStorage.getItem("aae_role") as Role | null) ?? "admin");
   const nav = navByRole[role];
 
-  function logout() {
-    localStorage.removeItem("aae_access_token");
-    localStorage.removeItem("aae_role");
+  async function logout() {
+    await logoutUser();
     navigate("/login");
   }
 

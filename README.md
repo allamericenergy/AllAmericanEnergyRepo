@@ -76,5 +76,6 @@ docker compose up --build
 
 - [Architecture](docs/architecture.md)
 - [API Reference](docs/openapi.yaml)
+- [Authentication and RBAC](docs/auth-rbac.md)
 - [Deployment Runbook](docs/deployment.md)
 - [Maintenance Checklist](docs/maintenance.md)

@@ -29,6 +29,20 @@ paths:
       responses:
         "204":
           description: Token revoked
+  /auth/register:
+    post:
+      summary: Public user registration
+      responses:
+        "201":
+          description: User registered and verification token generated
+  /auth/admin/register:
+    post:
+      summary: Admin-created user, member, admin, or superadmin registration
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Account created according to role rules
   /users/me:
     get:
       summary: Current authenticated user
@@ -37,6 +51,67 @@ paths:
       responses:
         "200":
           description: Current user profile and permissions
+  /auth/change-password:
+    post:
+      summary: Change current authenticated user's password
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Password changed
+  /auth/verify-email:
+    post:
+      summary: Verify account email with token
+      responses:
+        "204":
+          description: Email verified
+  /rbac/permissions:
+    get:
+      summary: List permission catalog
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Permission catalog
+  /rbac/roles:
+    get:
+      summary: List roles and assigned permissions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roles with permissions
+    post:
+      summary: Create a role
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Role created
+  /rbac/audit-logs:
+    get:
+      summary: List audit log entries
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Audit logs
+  /rbac/login-history:
+    get:
+      summary: List login history
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Login history
+  /rbac/sessions:
+    get:
+      summary: List current user's sessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User sessions
   /companies:
     get:
       summary: List companies

@@ -13,6 +13,7 @@ model Organization {
   address     String?
   billingInfo String?
   users       User[]
+  roles       AuthRole[]
   companies   Company[]
   contacts    Contact[]
   deals       Deal[]
@@ -28,16 +29,29 @@ model Organization {
 model User {
   id               String         @id @default(cuid())
   email            String         @unique
+  username         String?        @unique
+  phone            String?
   passwordHash     String
   firstName        String
   lastName         String
   role             String
   status           String         @default("invited")
+  emailVerified    Boolean        @default(false)
+  failedLoginAttempts Int         @default(0)
+  lockoutEnd       DateTime?
   orgId            String?
   organization     Organization?  @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   lastLogin        DateTime?
   twoFactorEnabled Boolean        @default(false)
+  createdBy        String?
+  updatedBy        String?
   refreshTokens    RefreshToken[]
+  userRoles        UserRole[]
+  loginHistory     LoginHistory[]
+  passwordHistory  PasswordHistory[]
+  emailVerifications EmailVerification[]
+  passwordResetTokens PasswordResetToken[]
+  sessions         UserSession[]
   ownedDeals       Deal[]         @relation("DealOwner")
   assignedTasks    Task[]         @relation("TaskAssignee")
   notes            Note[]
@@ -47,6 +61,62 @@ model User {
 
   @@index([orgId])
   @@map("aae_users")
+}
+
+model AuthRole {
+  id             String           @id @default(cuid())
+  orgId          String?
+  org            Organization?    @relation(fields: [orgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name           String
+  description    String?
+  priority       Int              @default(100)
+  isSystemRole   Boolean          @default(false)
+  rolePermissions RolePermission[]
+  userRoles      UserRole[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([orgId, name])
+  @@map("aae_roles")
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  module          String
+  action          String
+  displayName     String
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+
+  @@unique([module, action])
+  @@map("aae_permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         AuthRole   @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("aae_role_permissions")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roleId    String
+  role      AuthRole @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("aae_user_roles")
 }
 
 model Company {
@@ -156,11 +226,17 @@ model AuditLog {
   userId     String?
   user       User?        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   action     String
+  module     String?
   objectType String
   objectId   String?
+  oldValue   String?
+  newValue   String?
   diff       String?
   ip         String?
   userAgent  String?
+  browser    String?
+  os         String?
+  device     String?
   createdAt  DateTime     @default(now())
 
   @@index([orgId, objectType])
@@ -173,9 +249,82 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tokenHash String
   revoked   Boolean  @default(false)
+  rememberMe Boolean @default(false)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@map("aae_refresh_tokens")
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email     String
+  success   Boolean
+  reason    String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@map("aae_login_history")
+}
+
+model PasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("aae_password_history")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tokenHash String
+  usedAt    DateTime?
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@map("aae_refresh_tokens")
+  @@map("aae_email_verifications")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tokenHash String
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("aae_password_reset_tokens")
+}
+
+model UserSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  refreshTokenId String?
+  ip          String?
+  userAgent   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("aae_user_sessions")
 }
