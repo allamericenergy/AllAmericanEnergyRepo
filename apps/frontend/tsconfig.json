@@ -13,14 +13,14 @@
     "moduleResolution": "Node",
     "baseUrl": ".",
     "paths": {
-      "@intiligrid": ["../../../intiligrid/src/components/IntiliGrid/index.ts"],
-      "@intiligrid/*": ["../../../intiligrid/src/components/IntiliGrid/*"]
+      "@intiligrid": ["src/vendor/IntiliGrid/index.ts"],
+      "@intiligrid/*": ["src/vendor/IntiliGrid/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "../../../intiligrid/src/components/IntiliGrid"],
+  "include": ["src"],
   "references": []
 }

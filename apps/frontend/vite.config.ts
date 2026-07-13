@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@intiligrid": path.resolve(__dirname, "../../../intiligrid/src/components/IntiliGrid")
+      "@intiligrid": path.resolve(__dirname, "src/vendor/IntiliGrid")
     }
   },
   server: {
