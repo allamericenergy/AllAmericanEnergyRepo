@@ -213,7 +213,7 @@ rbacRoutes.post("/admin-requests/:id/message", authorize("Users.Manage"), async 
 rbacRoutes.get("/notifications", async (req, res, next) => {
   try {
     const data = await prisma.notification.findMany({ where: { userId: req.user!.id, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 100 });
-    const unreadCount = data.filter((item) => !item.readAt).length;
+    const unreadCount = data.filter((item: { readAt: Date | null }) => !item.readAt).length;
     return res.json({ data, unreadCount });
   } catch (error) {
     return next(error);

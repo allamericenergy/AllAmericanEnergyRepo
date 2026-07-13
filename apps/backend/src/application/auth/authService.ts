@@ -229,7 +229,7 @@ export class AuthService {
     const policy = validatePasswordPolicy(newPassword);
     if (!policy.valid) throw Object.assign(new Error(policy.errors.join(" ")), { statusCode: 400 });
     const history = await prisma.passwordHistory.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5 });
-    if (await wasPasswordReused(newPassword, history.map((item) => item.passwordHash))) {
+    if (await wasPasswordReused(newPassword, history.map((item: { passwordHash: string }) => item.passwordHash))) {
       throw Object.assign(new Error("Cannot reuse one of the last 5 passwords"), { statusCode: 400 });
     }
     const passwordHash = await bcrypt.hash(newPassword, 12);
@@ -270,7 +270,7 @@ export class AuthService {
     ].join("\n");
 
     await prisma.notification.createMany({
-      data: superadmins.map((superadmin) => ({
+      data: superadmins.map((superadmin: { id: string }) => ({
         userId: superadmin.id,
         type: "Registration",
         title: "New Admin Registration Request",

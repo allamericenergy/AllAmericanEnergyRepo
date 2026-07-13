@@ -78,14 +78,20 @@ reportsRoutes.get("/organizations", authorize("org:administer"), async (_req, re
 
     return res.json({
       total: organizations.length,
-      data: organizations.map(({ _count, ...organization }) => ({
-        ...organization,
-        usersCount: _count.users,
-        companiesCount: _count.companies,
-        contactsCount: _count.contacts,
-        dealsCount: _count.deals,
-        tasksCount: _count.tasks
-      }))
+      data: organizations.map((entry: {
+        _count: { users: number; companies: number; contacts: number; deals: number; tasks: number };
+        [key: string]: unknown;
+      }) => {
+        const { _count, ...organization } = entry;
+        return {
+          ...organization,
+          usersCount: _count.users,
+          companiesCount: _count.companies,
+          contactsCount: _count.contacts,
+          dealsCount: _count.deals,
+          tasksCount: _count.tasks
+        };
+      })
     });
   } catch (error) {
     return next(error);
@@ -95,8 +101,8 @@ reportsRoutes.get("/organizations", authorize("org:administer"), async (_req, re
 reportsRoutes.get("/tbl-companies", authorize("report:read"), async (req, res, next) => {
   try {
     const take = Math.min(Number(req.query.take ?? 100), 500);
-    const countRows = await prisma.$queryRawUnsafe<Array<{ total: bigint | number }>>("SELECT COUNT(*) AS total FROM dbo.tblCompany");
-    const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+    const countRows = await rawUnsafeRows<{ total: bigint | number }>("SELECT COUNT(*) AS total FROM dbo.tblCompany");
+    const rows = await rawUnsafeRows<Record<string, unknown>>(`
       SELECT TOP (${take})
         [id] AS id,
         [organizationId] AS organizationId,
@@ -171,6 +177,10 @@ const optionalText = z.preprocess(emptyStringToUndefined, z.string().trim().opti
 const optionalNumber = z.preprocess(emptyStringToUndefined, z.coerce.number().optional());
 const optionalPositiveInt = z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().optional());
 const optionalDate = z.preprocess(emptyStringToUndefined, z.coerce.date().optional());
+
+async function rawUnsafeRows<T>(query: string) {
+  return await prisma.$queryRawUnsafe(query) as T[];
+}
 
 function requireMemberManager(role: string | undefined) {
   if (role !== "superadmin" && role !== "admin") {
@@ -260,7 +270,7 @@ reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) =
 
     return res.json({
       total,
-      data: rows.map((row) => ({
+      data: rows.map((row: { company: string | null; role: string; status: string; [key: string]: unknown }) => ({
         ...row,
         companyId: row.company,
         roleName: row.role === "member" ? "Member" : "User",
@@ -470,13 +480,13 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
         WHERE link.[ContractID] = c.[id]
       ) cmc
     `;
-    const countRows = await prisma.$queryRawUnsafe<Array<{ total: bigint | number }>>(`
+    const countRows = await rawUnsafeRows<{ total: bigint | number }>(`
       SELECT COUNT(*) AS total
       FROM dbo.tbl_Contract c
       ${contractCompanyApply}
       ${whereClause}
     `);
-    const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+    const rows = await rawUnsafeRows<Record<string, unknown>>(`
       SELECT TOP (${take})
         c.[id] AS id,
         c.[ContractID] AS contractId,
@@ -528,10 +538,10 @@ reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) =>
       productId ? `m.[ProductId] = ${productId}` : null
     ].filter(Boolean);
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
-    const countRows = await prisma.$queryRawUnsafe<Array<{ total: bigint | number }>>(
+    const countRows = await rawUnsafeRows<{ total: bigint | number }>(
       `SELECT COUNT(*) AS total FROM dbo.tbl_MeterList m ${whereClause}`
     );
-    const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+    const rows = await rawUnsafeRows<Record<string, unknown>>(`
       SELECT TOP (${take})
         m.[id] AS id,
         m.[Account Number] AS accountNumber,
@@ -1066,7 +1076,7 @@ reportsRoutes.post("/tbl-companies", authorize("company:create"), async (req, re
       )
     `;
 
-    const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+    const rows = await rawUnsafeRows<Record<string, unknown>>(`
       SELECT TOP (1)
         [id] AS id,
         [organizationId] AS organizationId,

@@ -44,8 +44,8 @@ export class PermissionService {
       include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
     });
 
-    const assigned = userRoles.flatMap((userRole) =>
-      userRole.role.rolePermissions.map((rolePermission) => `${rolePermission.permission.module}.${rolePermission.permission.action}` as PermissionKey)
+    const assigned = userRoles.flatMap((userRole: { role: { rolePermissions: Array<{ permission: { module: string; action: string } }> } }) =>
+      userRole.role.rolePermissions.map((rolePermission: { permission: { module: string; action: string } }) => `${rolePermission.permission.module}.${rolePermission.permission.action}` as PermissionKey)
     );
 
     return [...new Set([...permissionMatrix[fallbackRole], ...assigned])];
