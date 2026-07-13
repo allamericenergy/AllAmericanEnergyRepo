@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, TextField, Typography } from "@mui/material";
+import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -34,7 +35,7 @@ export function LoginPage() {
       await login(parsed.email, parsed.password, parsed.rememberMe);
       navigate("/");
     } catch (submitError) {
-      setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : "Login failed. Check credentials, email verification, and account status.");
+      setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : loginError(submitError));
     }
   }
 
@@ -58,4 +59,11 @@ export function LoginPage() {
       </Paper>
     </Box>
   );
+}
+
+function loginError(error: unknown) {
+  if (isAxiosError<{ error?: string }>(error)) {
+    return error.response?.data.error ?? "Login failed. Check credentials, email verification, and account status.";
+  }
+  return "Login failed. Check credentials, email verification, and account status.";
 }
