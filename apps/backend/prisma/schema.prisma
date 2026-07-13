@@ -31,6 +31,11 @@ model User {
   email            String         @unique
   username         String?        @unique
   phone            String?
+  company          String?
+  department       String?
+  designation      String?
+  profilePhotoUrl  String?
+  documents        String?
   passwordHash     String
   firstName        String
   lastName         String
@@ -45,6 +50,12 @@ model User {
   twoFactorEnabled Boolean        @default(false)
   createdBy        String?
   updatedBy        String?
+  approvedBy       String?
+  approvedAt       DateTime?
+  approvalNotes    String?
+  rejectionReason  String?
+  rejectionMessage String?
+  employeeCode     String?
   refreshTokens    RefreshToken[]
   userRoles        UserRole[]
   loginHistory     LoginHistory[]
@@ -56,11 +67,43 @@ model User {
   assignedTasks    Task[]         @relation("TaskAssignee")
   notes            Note[]
   auditLogs        AuditLog[]
+  notifications    Notification[]
+  registrationMessages RegistrationMessage[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   @@index([orgId])
   @@map("aae_users")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  type        String
+  title       String
+  message     String
+  actionUrl   String?
+  readAt      DateTime?
+  archivedAt  DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("aae_notifications")
+}
+
+model RegistrationMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  senderId    String?
+  senderRole  String?
+  message     String
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("aae_registration_messages")
 }
 
 model AuthRole {

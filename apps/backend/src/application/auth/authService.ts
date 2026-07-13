@@ -33,6 +33,11 @@ export interface RegisterInput {
   email: string;
   username?: string;
   phone?: string;
+  company?: string;
+  department?: string;
+  designation?: string;
+  profilePhotoUrl?: string;
+  documents?: string;
   password: string;
   role: Role;
   orgId?: string;
@@ -72,7 +77,7 @@ export class AuthService {
 
     if (user.status !== "active") {
       await this.recordLogin(user.id, email, false, "inactive", context);
-      throw Object.assign(new Error("Account is not active"), { statusCode: 403 });
+      throw Object.assign(new Error(user.status === "pending_approval" ? "Account is pending Super Admin approval" : "Account is not active"), { statusCode: 403 });
     }
 
     if (!user.emailVerified) {
@@ -151,20 +156,26 @@ export class AuthService {
         email,
         username: input.username,
         phone: input.phone,
+        company: input.company,
+        department: input.department,
+        designation: input.designation,
+        profilePhotoUrl: input.profilePhotoUrl,
+        documents: input.documents,
         passwordHash,
         role: input.role,
-        status: input.role === "user" ? "active" : "invited",
-        emailVerified: false,
+        status: input.role === "admin" ? "pending_approval" : input.role === "user" ? "active" : "invited",
+        emailVerified: input.role === "admin" ? true : false,
         orgId: input.orgId ?? input.createdBy?.orgId,
         createdBy: input.createdBy?.id
       },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true, orgId: true }
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true, orgId: true, company: true, department: true, designation: true, phone: true, createdAt: true }
     });
 
     await prisma.passwordHistory.create({ data: { userId: user.id, passwordHash } });
-    const verificationToken = await this.createEmailVerification(user.id);
+    const verificationToken = user.role === "admin" ? null : await this.createEmailVerification(user.id);
+    if (user.role === "admin") await this.notifySuperadminsForAdminRequest(user.id);
     await this.audit(input.createdBy?.id, user.orgId, "Auth.Register", "Users", undefined, JSON.stringify(user), context);
-    return { user, verificationToken };
+    return { user, verificationToken, pendingApproval: user.status === "pending_approval" };
   }
 
   async requestPasswordReset(email: string, context: RequestContext) {
@@ -239,12 +250,34 @@ export class AuthService {
     if (role === "superadmin" && actorRole !== "superadmin") {
       throw Object.assign(new Error("Only a Super Administrator can create another Super Administrator"), { statusCode: 403 });
     }
-    if (role === "admin" && actorRole !== "superadmin") {
-      throw Object.assign(new Error("Only a Super Administrator can create an Administrator"), { statusCode: 403 });
-    }
+    if (role === "admin" && actorRole && actorRole !== "superadmin") throw Object.assign(new Error("Only a Super Administrator can create an Administrator"), { statusCode: 403 });
     if (role === "member" && actorRole !== "superadmin" && actorRole !== "admin") {
       throw Object.assign(new Error("Only an Administrator or Super Administrator can create a Member"), { statusCode: 403 });
     }
+  }
+
+  private async notifySuperadminsForAdminRequest(userId: string) {
+    const applicant = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const superadmins = await prisma.user.findMany({ where: { role: "superadmin", status: "active" } });
+    const message = [
+      "New Admin Registration Request",
+      `Name: ${applicant.firstName} ${applicant.lastName}`,
+      `Company: ${applicant.company ?? "Not provided"}`,
+      `Email: ${applicant.email}`,
+      `Department: ${applicant.department ?? "Not provided"}`,
+      "Requested Role: Admin",
+      "Waiting for your approval."
+    ].join("\n");
+
+    await prisma.notification.createMany({
+      data: superadmins.map((superadmin) => ({
+        userId: superadmin.id,
+        type: "Registration",
+        title: "New Admin Registration Request",
+        message,
+        actionUrl: `/admin?requestId=${applicant.id}`
+      }))
+    });
   }
 
   private async findMatchingToken<T extends { id: string; tokenHash: string }>(tokens: T[], token: string) {

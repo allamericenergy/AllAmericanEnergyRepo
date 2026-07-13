@@ -35,6 +35,28 @@ Examples: `Users.Create`, `Users.Read`, `Grids.Export`, `Settings.Manage`.
 - Login history and audit logging.
 - Route-level API authorization with `401` and `403` responses.
 
+## Admin Approval Workflow
+
+Public Admin registration creates an inactive account with status `pending_approval`. The applicant cannot log in until a Super Admin approves the request.
+
+When an Admin request is submitted:
+
+- The applicant is stored with company, department, designation, phone, optional profile photo, and document metadata.
+- Super Admin users receive in-app notifications.
+- The request appears under `Admin > Pending Admin Requests`.
+
+Super Admin actions:
+
+- `Approve`: confirms approval, changes status to `active`, marks email verified, assigns Admin role permissions, records approver, approval date, approval notes, and employee code.
+- `Reject`: requires a rejection reason and optional message, changes status to `rejected`, and notifies the applicant.
+- `Send Message`: records a message for the applicant and creates an in-app notification.
+
+Applicant states:
+
+- `pending_approval`: registration submitted and waiting for Super Admin approval.
+- `active`: approved and can log in.
+- `rejected`: rejected with reason and optional message.
+
 ## SQL Server Tables
 
 All auth tables are prefixed with `aae_`:

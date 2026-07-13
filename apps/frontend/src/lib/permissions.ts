@@ -8,8 +8,17 @@ export const roleLabels: Record<Role, string> = {
 };
 
 export const navByRole: Record<Role, string[]> = {
-  superadmin: ["Dashboard", "Organizations", "Companies", "Contacts", "Deals", "Tasks", "Reports", "Audit Log", "Admin"],
-  admin: ["Dashboard", "Companies", "Contacts", "Deals", "Tasks", "Reports", "Admin"],
-  member: ["Dashboard", "Companies", "Contacts", "Deals", "Tasks", "Reports"],
-  user: ["Dashboard", "Contacts", "Tasks"]
+  superadmin: ["Dashboard", "Companies", "Contracts", "Meters", "Members"],
+  admin: ["Dashboard", "Companies", "Contracts", "Meters", "Members"],
+  member: ["Dashboard", "Companies", "Contracts", "Meters", "Members"],
+  user: ["Dashboard", "Members"]
 };
+
+export function normalizeRole(value: string | null | undefined): Role {
+  const normalized = (value ?? "admin").toLowerCase().replace(/[^a-z]/g, "");
+
+  if (normalized === "superadmin") return "superadmin";
+  if (normalized === "member") return "member";
+  if (normalized === "user") return "user";
+  return "admin";
+}

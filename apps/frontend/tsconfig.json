@@ -11,11 +11,16 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Node",
+    "baseUrl": ".",
+    "paths": {
+      "@intiligrid": ["../../../intiligrid/src/components/IntiliGrid/index.ts"],
+      "@intiligrid/*": ["../../../intiligrid/src/components/IntiliGrid/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "../../../intiligrid/src/components/IntiliGrid"],
   "references": []
 }

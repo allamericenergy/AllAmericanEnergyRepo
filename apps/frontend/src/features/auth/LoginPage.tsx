@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useAuthStore } from "./authStore";
 
@@ -15,8 +15,10 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const login = useAuthStore((state) => state.login);
   const [error, setError] = useState("");
+  const sessionTimedOut = searchParams.get("sessionTimedOut") === "1";
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     defaultValues: {
       email: "superadmin@allamericanenergy.local",
@@ -41,6 +43,7 @@ export function LoginPage() {
       <Paper className="auth-panel" elevation={0}>
         <Typography variant="overline">AllAmericanEnergy CRM</Typography>
         <Typography variant="h4">Sign in</Typography>
+        {sessionTimedOut ? <Alert severity="warning">Session timed out. Please log in again.</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Box component="form" onSubmit={handleSubmit(submit)} className="auth-form">
           <TextField label="Email" error={Boolean(errors.email)} helperText={errors.email?.message} {...register("email")} />

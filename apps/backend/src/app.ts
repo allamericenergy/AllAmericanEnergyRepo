@@ -17,10 +17,20 @@ import { rbacRoutes } from "./routes/rbac.routes.js";
 export function createApp() {
   const app = express();
   const registry = new client.Registry();
+  const allowedOrigins = new Set([
+    env.CORS_ORIGIN,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+  ]);
   client.collectDefaultMetrics({ register: registry });
 
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGIN }));
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error(`CORS origin not allowed: ${origin}`));
+    }
+  }));
   app.use(express.json({ limit: "1mb" }));
   app.use((req, res, next) => {
     const startedAt = Date.now();

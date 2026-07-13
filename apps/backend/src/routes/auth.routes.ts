@@ -25,6 +25,11 @@ const registerSchema = z.object({
   email: z.string().email(),
   username: z.string().min(3).optional(),
   phone: z.string().optional(),
+  company: z.string().optional(),
+  department: z.string().optional(),
+  designation: z.string().optional(),
+  profilePhotoUrl: z.string().url().optional(),
+  documents: z.string().optional(),
   password: z.string().min(12),
   role: roleSchema.default("user"),
   orgId: z.string().optional()
@@ -79,10 +84,10 @@ authRoutes.post("/login", async (req, res, next) => {
 authRoutes.post("/register", async (req, res, next) => {
   try {
     const input = registerSchema.parse(req.body);
-    if (input.role !== "user") {
-      return res.status(403).json({ error: "Public registration is only enabled for User accounts" });
+    if (input.role !== "user" && input.role !== "admin") {
+      return res.status(403).json({ error: "Public registration is only enabled for User accounts and Admin approval requests" });
     }
-    const result = await authService.register({ ...input, role: "user" }, requestContext(req));
+    const result = await authService.register({ ...input, role: input.role }, requestContext(req));
     return res.status(201).json(result);
   } catch (error) {
     return next(error);

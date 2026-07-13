@@ -14,7 +14,15 @@ const envSchema = z.object({
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
-  SENTRY_DSN: z.string().optional()
+  SENTRY_DSN: z.string().optional(),
+  SHAREPOINT_TENANT_ID: z.string().optional(),
+  SHAREPOINT_CLIENT_ID: z.string().optional(),
+  SHAREPOINT_CLIENT_SECRET: z.string().optional(),
+  SHAREPOINT_SITE_ID: z.string().optional(),
+  SHAREPOINT_DRIVE_ID: z.string().optional(),
+  SHAREPOINT_COMPANY_ROOT_PATH: z.string().default(""),
+  SHAREPOINT_COMPANY_SUBFOLDERS: z.string().default(""),
+  SHAREPOINT_COMPANY_SUBFOLDERS_UTILITYBILLS: z.string().default("")
 });
 
 export const env = envSchema.parse(process.env);

@@ -1,28 +1,28 @@
-import { BarChart3, Building2, CheckSquare, Contact, Handshake, LayoutDashboard, Shield, UserCog } from "lucide-react";
+import { Avatar, Menu, MenuItem } from "@mui/material";
+import { Building2, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { navByRole, type Role } from "../lib/permissions";
+import { navByRole, normalizeRole, roleLabels, type Role } from "../lib/permissions";
 import { useAuthStore } from "../features/auth/authStore";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
   Organizations: Building2,
   Companies: Building2,
-  Contacts: Contact,
-  Deals: Handshake,
-  Tasks: CheckSquare,
-  Reports: BarChart3,
+  Contracts: Handshake,
+  Meters: Gauge,
+  Members: Users,
   "Audit Log": Shield,
   Admin: UserCog
 };
 
 const pathMap: Record<string, string> = {
   Dashboard: "/",
+  Organizations: "/organizations",
   Companies: "/companies",
-  Contacts: "/contacts",
-  Deals: "/deals",
-  Tasks: "/tasks",
-  Reports: "/reports"
-  ,
+  Contracts: "/contracts",
+  Meters: "/meters",
+  Members: "/members",
   Admin: "/admin",
   "Audit Log": "/admin"
 };
@@ -31,25 +31,35 @@ export function AppShell() {
   const navigate = useNavigate();
   const logoutUser = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
-  const role = user?.role ?? ((localStorage.getItem("aae_role") as Role | null) ?? "admin");
+  const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
+  const role = normalizeRole(user?.role ?? localStorage.getItem("aae_role"));
   const nav = navByRole[role];
+  const privilegedMenuItems = role === "superadmin"
+    ? [
+        { label: "Organizations", path: "/organizations", Icon: Building2 },
+        { label: "Audit Log", path: "/admin", Icon: Shield },
+        { label: "Admin", path: "/admin", Icon: UserCog }
+      ]
+    : [];
 
   async function logout() {
+    setAccountMenuAnchor(null);
     await logoutUser();
     navigate("/login");
   }
 
+  function goTo(path: string) {
+    setAccountMenuAnchor(null);
+    navigate(path);
+  }
+
   return (
     <div className="shell">
-      <aside className="sidebar">
+      <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">AAE</span>
-          <div>
-            <strong>AllAmericanEnergy</strong>
-            <small>CRM</small>
-          </div>
+          <img src="/logo.png" alt="AllAmericanEnergy" style={{ height: 150, width: "auto" }} className="brand-logo" />
         </div>
-        <nav>
+        <nav className="topbar-nav">
           {nav.map((item) => {
             const Icon = iconMap[item as keyof typeof iconMap];
             return (
@@ -60,15 +70,38 @@ export function AppShell() {
             );
           })}
         </nav>
-      </aside>
+        <button
+          type="button"
+          className="user-menu-trigger"
+          onClick={(event) => setAccountMenuAnchor(event.currentTarget)}
+          aria-controls={accountMenuAnchor ? "account-menu" : undefined}
+          aria-haspopup="menu"
+          aria-expanded={Boolean(accountMenuAnchor)}
+        >
+          <Avatar className="user-avatar">{roleLabels[role].slice(0, 1)}</Avatar>
+          <span>
+            <strong>{roleLabels[role]}</strong>
+            <small>{role === "superadmin" ? "Administrator" : roleLabels[role]}</small>
+          </span>
+        </button>
+        <Menu
+          id="account-menu"
+          anchorEl={accountMenuAnchor}
+          open={Boolean(accountMenuAnchor)}
+          onClose={() => setAccountMenuAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          {privilegedMenuItems.map(({ label, path, Icon }) => (
+            <MenuItem key={label} onClick={() => goTo(path)}>
+              <Icon size={16} />
+              {label}
+            </MenuItem>
+          ))}
+          <MenuItem onClick={logout}>Logout</MenuItem>
+        </Menu>
+      </header>
       <main className="main">
-        <header className="topbar">
-          <input aria-label="Search" placeholder="Search contacts, companies, deals" />
-          <div className="user-menu">
-            <span>{role}</span>
-            <button onClick={logout}>Log out</button>
-          </div>
-        </header>
         <Outlet />
       </main>
     </div>
