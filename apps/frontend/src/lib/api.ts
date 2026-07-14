@@ -8,14 +8,15 @@ const authStorageKeys = [
   "aae_role"
 ];
 
+const productionApiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL ??
+  "https://backend02-c3ehhyf3edeeefen.centralus-01.azurewebsites.net/api";
+
 // Automatically determines if the app is local or deployed
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
 export const api = axios.create({
-  //baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api"
-  baseURL: isLocal
-    ? "http://localhost:4000/api"
-    : import.meta.env.VITE_API_BASE_URL
+  baseURL: isLocal ? "http://localhost:4000/api" : productionApiBaseUrl
 });
 
 api.interceptors.request.use((config) => {
