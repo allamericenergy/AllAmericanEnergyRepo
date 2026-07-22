@@ -8,6 +8,7 @@ import { OrganizationsPage } from "../features/organizations/OrganizationsPage";
 import { AdminPages } from "../features/admin/AdminPages";
 import { AppShell } from "./AppShell";
 import { MembersPage } from "../features/members/MembersPage";
+import { CompanyActivityPage, MyActivityPage } from "../features/activity/TeamActivityPages";
 
 export function App() {
   return (
@@ -21,9 +22,11 @@ export function App() {
         <Route path="/organizations" element={<OrganizationsPage />} />
         <Route path="/companies" element={<DashboardPage view="companies" />} />
         <Route path="/companies/:companyId/documents" element={<CompanyDocumentsPage />} />
+        <Route path="/companies/:companyId/activities" element={<CompanyActivityPage />} />
         <Route path="/contracts" element={<DashboardPage view="contracts" />} />
         <Route path="/meters" element={<DashboardPage view="meters" />} />
         <Route path="/members" element={<MembersPage />} />
+        <Route path="/activity" element={<MyActivityPage />} />
        {/*  <Route path="/deals" element={<CrmPage entity="deals" />} />
         <Route path="/tasks" element={<CrmPage entity="tasks" />} />
         <Route path="/reports" element={<DashboardPage view="reports" />} /> */}

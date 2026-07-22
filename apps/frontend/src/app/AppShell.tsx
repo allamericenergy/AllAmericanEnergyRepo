@@ -1,9 +1,11 @@
 import { Avatar, Menu, MenuItem } from "@mui/material";
-import { Building2, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Activity, Building2, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navByRole, normalizeRole, roleLabels, type Role } from "../lib/permissions";
 import { useAuthStore } from "../features/auth/authStore";
+import { api } from "../lib/api";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -12,6 +14,7 @@ const iconMap = {
   Contracts: Handshake,
   Meters: Gauge,
   Members: Users,
+  Activity,
   "Audit Log": Shield,
   Admin: UserCog
 };
@@ -23,6 +26,7 @@ const pathMap: Record<string, string> = {
   Contracts: "/contracts",
   Meters: "/meters",
   Members: "/members",
+  Activity: "/activity",
   Admin: "/admin",
   "Audit Log": "/admin"
 };
@@ -34,6 +38,12 @@ export function AppShell() {
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
   const role = normalizeRole(user?.role ?? localStorage.getItem("aae_role"));
   const nav = navByRole[role];
+  const activityCount = useQuery({
+    queryKey: ["activity-unread-counts"],
+    queryFn: async () => (await api.get("/reports/activity-unread-counts")).data as { total: number; byCompany: Record<string, number> },
+    refetchInterval: 30000,
+    retry: false
+  });
   const privilegedMenuItems = role === "superadmin"
     ? [
         { label: "Organizations", path: "/organizations", Icon: Building2 },
@@ -65,7 +75,7 @@ export function AppShell() {
             return (
               <NavLink key={item} to={pathMap[item] ?? "/"} className={({ isActive }) => (isActive ? "active" : "")}>
                 <Icon size={18} />
-                {item}
+                {item}{item === "Activity" ? <span className="activity-nav-count">({activityCount.data?.total ?? 0})</span> : null}
               </NavLink>
             );
           })}

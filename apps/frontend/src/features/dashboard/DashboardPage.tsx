@@ -1,9 +1,10 @@
-import { Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, TextField, Tooltip } from "@mui/material";
+import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Building2, Eye, FileText, Folder, FolderOpen, Pencil, Plus, Power } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Activity, Building2, Eye, FileText, Folder, FolderOpen, Pencil, Plus, Power, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
@@ -29,14 +30,53 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [activatingCompanyId, setActivatingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
   const [companyError, setCompanyError] = useState("");
   const [newCompany, setNewCompany] = useState<NewCompanyForm>(emptyCompanyForm());
+  const isCompanyFormValid = [
+    newCompany.companyName,
+    newCompany.legalEntityName,
+    newCompany.email,
+    newCompany.phoneNumber,
+    newCompany.mailingAddress,
+    newCompany.city,
+    newCompany.state,
+    newCompany.postalCode
+  ].every((value) => value.trim()) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim());
+  const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
+  const [bulkCompanyRows, setBulkCompanyRows] = useState<NewCompanyForm[]>([]);
+  const [bulkCompanyFileName, setBulkCompanyFileName] = useState("");
+  const [bulkCompanyError, setBulkCompanyError] = useState("");
+  const [bulkCompanyResult, setBulkCompanyResult] = useState<BulkCompanyResult | null>(null);
+  const [isUploadingCompanies, setIsUploadingCompanies] = useState(false);
+  const [duplicateCompanyNames, setDuplicateCompanyNames] = useState<string[]>([]);
+  const [isDuplicateCompanyConfirmOpen, setIsDuplicateCompanyConfirmOpen] = useState(false);
+  const [companyUploadNotice, setCompanyUploadNotice] = useState<{ message: string; severity: "success" | "warning" } | null>(null);
+  const [selectedCompanies, setSelectedCompanies] = useState<TblCompanyRow[]>([]);
+  const [isUpdatingCompanyStatus, setIsUpdatingCompanyStatus] = useState(false);
+  const [companyGridKey, setCompanyGridKey] = useState(0);
+
+  useEffect(() => {
+    if (!companyUploadNotice) return;
+    const timeoutId = window.setTimeout(() => setCompanyUploadNotice(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [companyUploadNotice]);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [contractFormMode, setContractFormMode] = useState<"create" | "edit">("create");
   const [viewedContract, setViewedContract] = useState<ContractRow | null>(null);
   const [editingContractId, setEditingContractId] = useState<ContractRow["id"] | null>(null);
   const [savingContract, setSavingContract] = useState(false);
+  const [isContractSubmitConfirmOpen, setIsContractSubmitConfirmOpen] = useState(false);
+  const [selectedContracts, setSelectedContracts] = useState<ContractRow[]>([]);
+  const [isUpdatingContractStatus, setIsUpdatingContractStatus] = useState(false);
+  const [contractGridKey, setContractGridKey] = useState(0);
   const [togglingContractId, setTogglingContractId] = useState<ContractRow["id"] | null>(null);
   const [contractError, setContractError] = useState("");
+  const [contractAvailabilityNotice, setContractAvailabilityNotice] = useState("");
   const [contractForm, setContractForm] = useState<ContractForm>(emptyContractForm());
+  const activityUnreadCounts = useQuery({
+    queryKey: ["activity-unread-counts"],
+    queryFn: async () => (await api.get("/reports/activity-unread-counts")).data as { total: number; byCompany: Record<string, number> },
+    refetchInterval: 30000,
+    retry: false
+  });
   const contractCompanyId = viewedCompany?.id ? Number(viewedCompany.id) : contractForm.companyId;
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
   const [meterFormMode, setMeterFormMode] = useState<"create" | "edit">("create");
@@ -46,6 +86,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [togglingMeterId, setTogglingMeterId] = useState<MeterRow["id"] | null>(null);
   const [meterError, setMeterError] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
+
+  useEffect(() => {
+    if (!contractAvailabilityNotice) return;
+    const timeoutId = window.setTimeout(() => setContractAvailabilityNotice(""), 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [contractAvailabilityNotice]);
   const pipeline = useQuery({
     queryKey: ["pipeline"],
     queryFn: async () => (await api.get("/reports/pipeline")).data,
@@ -69,7 +115,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
   });
   const contractLookups = useQuery({
     queryKey: ["contract-lookups"],
-    queryFn: async () => (await api.get("/reports/contract-lookups")).data as { brokers: LookupOption[]; suppliers: LookupOption[] },
+    queryFn: async () => (await api.get("/reports/contract-lookups")).data as {
+      brokers: LookupOption[];
+      suppliers: LookupOption[];
+      swings: LookupOption[];
+      passThroughs: LookupOption[];
+      billTypes: LookupOption[];
+      products: LookupOption[];
+    },
     enabled: Boolean(viewedCompany) || isContractModalOpen,
     retry: false
   });
@@ -100,59 +153,40 @@ export function DashboardPage({ view }: DashboardPageProps) {
     queryFn: async () => (await api.get("/reports/us-states")).data as { data: USStateOption[] },
     retry: false
   });
-  const meterCities = useQuery({
-    queryKey: ["meter-cities", meterForm.state],
-    queryFn: async () => (await api.get("/reports/us-cities", { params: { state: meterForm.state } })).data as { data: CityOption[] },
-    enabled: Boolean(isMeterModalOpen && meterForm.state),
+  const meterZipMatches = useQuery({
+    queryKey: ["meter-zip-details", meterForm.zip],
+    queryFn: async () => (await api.get("/reports/zip-code-details", { params: { zip: meterForm.zip.trim() } })).data as { data: ZipDetailOption[] },
+    enabled: Boolean(isMeterModalOpen && meterForm.zip.trim().length >= 2),
     retry: false
   });
-  const meterZipCodes = useQuery({
-    queryKey: ["meter-zips", meterForm.state, meterForm.city],
-    queryFn: async () => (await api.get("/reports/zip-codes", { params: { state: meterForm.state, city: meterForm.city } })).data as { data: ZipCodeOption[] },
-    enabled: Boolean(isMeterModalOpen && meterForm.state && meterForm.city),
-    retry: false
-  });
-  const meterStateProductUtilities = useQuery({
-    queryKey: ["meter-state-product-utilities", meterForm.state, meterForm.productId],
-    queryFn: async () => (
-      await api.get("/reports/meter-state-product-utilities", {
-        params: {
-          state: meterForm.state,
-          productId: meterForm.productId || undefined
-        }
-      })
-    ).data as MeterStateProductUtilities,
-    enabled: Boolean(isMeterModalOpen && meterForm.state),
-    retry: false
-  });
-  const contractStateProductUtilities = useQuery({
-    queryKey: ["contract-state-product-utilities", contractForm.state, contractForm.utilityId],
-    queryFn: async () => (
-      await api.get("/reports/meter-state-product-utilities", {
-        params: {
-          state: contractForm.state,
-          utilityId: contractForm.utilityId || undefined
-        }
-      })
-    ).data as MeterStateProductUtilities,
-    enabled: Boolean(isContractModalOpen && contractForm.state),
-    retry: false
-  });
+  useEffect(() => {
+    const normalizedZip = meterForm.zip.trim();
+    const match = meterZipMatches.data?.data.find((item) => String(item.code).trim() === normalizedZip);
+    if (!match) return;
+    setMeterForm((current) => current.state === match.state && current.city === match.city
+      ? current
+      : { ...current, state: match.state, city: match.city });
+  }, [meterForm.zip, meterZipMatches.data]);
   const contractMeters = useQuery({
-    queryKey: ["contract-meters", contractCompanyId, contractForm.state, contractForm.utilityId, contractForm.productId],
+    queryKey: ["contract-meters", contractCompanyId, contractForm.productId],
     queryFn: async () => (
       await api.get("/reports/meters", {
         params: {
           companyId: contractCompanyId || undefined,
-          state: contractForm.state || undefined,
-          utilityId: contractForm.utilityId || undefined,
           productId: contractForm.productId || undefined
         }
       })
     ).data as { total: number; data: MeterRow[] },
-    enabled: Boolean(isContractModalOpen && contractCompanyId && contractForm.state && contractForm.utilityId && contractForm.productId),
+    enabled: Boolean(isContractModalOpen && contractCompanyId),
     retry: false
   });
+  useEffect(() => {
+    if (!isContractModalOpen || contractFormMode !== "create" || contractMeters.data?.data.length !== 1) return;
+    const meterId = Number(contractMeters.data.data[0].id);
+    setContractForm((current) => current.meterIds.length === 1 && current.meterIds[0] === meterId
+      ? current
+      : { ...current, meterIds: [meterId] });
+  }, [contractFormMode, contractMeters.data, isContractModalOpen]);
   const companyDocuments = useQuery({
     queryKey: ["company-documents", viewedCompany?.id],
     queryFn: async () => (
@@ -189,7 +223,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     {
       field: "id",
       headerName: "Actions",
-      width: 150,
+      width: 190,
       pinned: "right",
       renderCell: ({ row }) => (
         <span className="grid-action-buttons">
@@ -201,6 +235,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <Tooltip title="Edit company">
             <IconButton size="small" aria-label="Edit company" onClick={(event) => { event.stopPropagation(); editCompany(row); }}>
               <Pencil size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Company activity">
+            <IconButton size="small" aria-label="Company activity" onClick={(event) => { event.stopPropagation(); navigate(`/companies/${row.id}/activities`); }}>
+              <Badge badgeContent={activityUnreadCounts.data?.byCompany[String(row.id)] ?? 0} color="error" max={99}>
+                <Activity size={16} />
+              </Badge>
             </IconButton>
           </Tooltip>
           <Tooltip title={row.isActive ? "Already active" : "Activate company"}>
@@ -225,6 +266,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
     { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
     { field: "broker", headerName: "Broker", minWidth: 180 },
     { field: "supplier", headerName: "Supplier", minWidth: 180 },
+    { field: "swing", headerName: "Swing", minWidth: 140 },
+    { field: "passThrough", headerName: "Pass Through", minWidth: 150 },
+    { field: "billType", headerName: "Bill Type", minWidth: 140 },
     { field: "startDate", headerName: "Start Date", width: 140, valueFormatter: formatDate },
     { field: "endDate", headerName: "End Date", width: 140, valueFormatter: formatDate },
     {
@@ -345,16 +389,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setContractForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateContractCurrency(field: "rate" | "fee", value: string) {
+    if (/^\d*(?:\.\d*)?$/.test(value)) updateContractForm(field, value);
+  }
+
   function updateContractCompany(value: number) {
     setContractForm((current) => ({ ...current, companyId: value, meterIds: [] }));
-  }
-
-  function updateContractState(value: string) {
-    setContractForm((current) => ({ ...current, state: value, utilityId: 0, productId: 0, meterIds: [] }));
-  }
-
-  function updateContractUtility(value: number) {
-    setContractForm((current) => ({ ...current, utilityId: value, productId: 0, meterIds: [] }));
   }
 
   function updateContractProduct(value: number) {
@@ -397,16 +437,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateMeterState(value: string) {
-    setMeterForm((current) => ({ ...current, state: value, city: "", zip: "", productId: 0, utilityId: 0 }));
-  }
-
-  function updateMeterCity(value: string) {
-    setMeterForm((current) => ({ ...current, city: value, zip: "" }));
+  function updateMeterZip(value: string) {
+    setMeterForm((current) => ({ ...current, zip: value, state: "", city: "" }));
   }
 
   function updateMeterProduct(value: number) {
-    setMeterForm((current) => ({ ...current, productId: value, utilityId: 0 }));
+    setMeterForm((current) => ({ ...current, productId: value }));
   }
 
   function openCreateCompany() {
@@ -444,10 +480,25 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
-  function openCreateContract() {
+  async function openCreateContract() {
+    setContractAvailabilityNotice("");
     if (viewedCompany && !viewedCompany.isActive) {
       setContractError("Make company active to add contracts.");
       return;
+    }
+    if (viewedCompany?.id) {
+      try {
+        const response = await api.get("/reports/meters", { params: { companyId: viewedCompany.id } });
+        const availableMeters = response.data as { total: number; data: MeterRow[] };
+        if (!availableMeters.data.length) {
+          setContractError("");
+          setContractAvailabilityNotice("Please add meters first before adding a contract.");
+          return;
+        }
+      } catch (error) {
+        setContractError(companyApiError(error) ?? "Unable to check available meters. Try again.");
+        return;
+      }
     }
     setContractError("");
     setContractFormMode("create");
@@ -478,10 +529,49 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  const contractMonths = calculateContractMonths(contractForm.startDate, contractForm.endDate);
+  const meterLoadProfile = calculateMeterLoadProfile(meterForm.demand, meterForm.annualUsage);
+  const contractNotesText = contractForm.notes.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim();
+  const requiredContractFieldsValid = Boolean(
+    contractForm.brokerId
+    && contractForm.supplierId
+    && contractForm.swingId
+    && contractForm.passThroughId
+    && contractForm.billTypeId
+    && contractForm.rate
+    && contractForm.fee
+    && contractForm.startDate
+    && contractForm.endDate
+    && contractMonths !== null
+    && contractForm.cFile
+    && contractNotesText
+  );
+  const isContractFormValid = requiredContractFieldsValid && (contractFormMode === "edit" || Boolean(
+    (viewedCompany?.id || contractForm.companyId)
+    && contractForm.productId
+    && contractForm.meterIds.length
+  ));
+  const selectedContractMeterNumbers = (contractMeters.data?.data ?? [])
+    .filter((meter) => contractForm.meterIds.includes(Number(meter.id)))
+    .map((meter) => meter.meter || meter.accountNumber || `Meter ${meter.id}`);
+  const displayedContractFileName = shortenFileName(contractForm.cFile);
+
+  function requestContractSubmit() {
+    if (contractFormMode === "create") {
+      setIsContractSubmitConfirmOpen(true);
+      return;
+    }
+    void saveContract();
+  }
+
   async function saveContract() {
     setContractError("");
     if (!viewedCompany && !contractForm.companyId) {
       setContractError("Company is required.");
+      return;
+    }
+    if (!isContractFormValid) {
+      setContractError("Complete all required contract fields, select at least one meter, and ensure the end date is not before the start date.");
       return;
     }
 
@@ -491,13 +581,18 @@ export function DashboardPage({ view }: DashboardPageProps) {
         companyId: viewedCompany?.id ? Number(viewedCompany.id) : contractForm.companyId || undefined,
         brokerId: contractForm.brokerId || undefined,
         supplierId: contractForm.supplierId || undefined,
-        meterIds: contractForm.meterIds,
+        swingId: contractForm.swingId || undefined,
+        passThroughId: contractForm.passThroughId || undefined,
+        billTypeId: contractForm.billTypeId || undefined,
+        productId: contractFormMode === "create" ? contractForm.productId || undefined : undefined,
+        meterIds: contractFormMode === "create" ? contractForm.meterIds : undefined,
         rate: contractForm.rate.trim(),
         fee: contractForm.fee.trim(),
         startDate: contractForm.startDate,
         endDate: contractForm.endDate,
         cFile: contractForm.cFile.trim(),
         contractFile: contractForm.contractFile ?? undefined,
+        notes: contractForm.notes,
         isActive: contractForm.isActive
       };
 
@@ -509,6 +604,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
       await contracts.refetch();
       setIsContractModalOpen(false);
+      setIsContractSubmitConfirmOpen(false);
       setEditingContractId(null);
       setContractFormMode("create");
       setContractForm(emptyContractForm());
@@ -567,6 +663,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
       const payload = {
         ...meterForm,
         companyId,
+        taxExempt: meterForm.taxExempt || undefined,
+        rate: meterForm.rate || undefined,
+        loadProfile: meterLoadProfile,
         iEnergyBillId: meterForm.iEnergyBillId || undefined,
         energyDashboardId: meterForm.energyDashboardId || undefined,
         onSiteGenerationId: meterForm.onSiteGenerationId || undefined,
@@ -597,8 +696,23 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   async function saveCompany() {
     setCompanyError("");
-    if (!newCompany.companyName.trim()) {
-      setCompanyError("Company name is required.");
+    const requiredFields = [
+      ["Company name", newCompany.companyName],
+      ["Legal name", newCompany.legalEntityName],
+      ["Email", newCompany.email],
+      ["Phone number", newCompany.phoneNumber],
+      ["Mailing address", newCompany.mailingAddress],
+      ["City", newCompany.city],
+      ["State", newCompany.state],
+      ["PIN / Postal code", newCompany.postalCode]
+    ] as const;
+    const missingField = requiredFields.find(([, value]) => !value.trim());
+    if (missingField) {
+      setCompanyError(`${missingField[0]} is required.`);
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim())) {
+      setCompanyError("Enter a valid email address.");
       return;
     }
 
@@ -617,7 +731,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
         email: newCompany.email.trim(),
         phoneNumber: newCompany.phoneNumber.trim(),
         taxId: newCompany.taxId.trim(),
-        url: newCompany.url.trim()
+        url: newCompany.url.trim(),
+        notes: newCompany.notes
       };
 
       if (companyFormMode === "edit" && editingCompanyId !== null) {
@@ -637,6 +752,123 @@ export function DashboardPage({ view }: DashboardPageProps) {
     } finally {
       setIsSavingCompany(false);
     }
+  }
+
+  async function selectBulkCompanyFile(file: File | undefined) {
+    setBulkCompanyError("");
+    setBulkCompanyResult(null);
+    setBulkCompanyRows([]);
+    setBulkCompanyFileName(file?.name ?? "");
+    if (!file) return;
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!worksheet) throw new Error("The workbook does not contain a worksheet.");
+      const rows = parseBulkCompanies(worksheet);
+      if (!rows.length) throw new Error("No company rows were found in the file.");
+      if (rows.length > 500) throw new Error("A maximum of 500 companies can be uploaded at once.");
+      setBulkCompanyRows(rows);
+    } catch (error) {
+      setBulkCompanyError(error instanceof Error ? error.message : "Unable to read the selected file.");
+    }
+  }
+
+  async function updateSelectedContractStatus(isActive: boolean) {
+    if (!selectedContracts.length) return;
+    setContractError("");
+    setIsUpdatingContractStatus(true);
+    try {
+      await api.patch("/reports/contracts/bulk-status", {
+        ids: selectedContracts.map((contract) => contract.id),
+        isActive
+      });
+      await contracts.refetch();
+      setSelectedContracts([]);
+      setContractGridKey((current) => current + 1);
+    } catch (error) {
+      setContractError(companyApiError(error) ?? `Unable to ${isActive ? "activate" : "deactivate"} selected contracts.`);
+    } finally {
+      setIsUpdatingContractStatus(false);
+    }
+  }
+
+  async function uploadBulkCompanies(confirmDuplicates = false) {
+    if (!bulkCompanyRows.length) return;
+    setBulkCompanyError("");
+    setBulkCompanyResult(null);
+    setIsUploadingCompanies(true);
+    try {
+      const response = await api.post("/reports/tbl-companies/bulk", { companies: bulkCompanyRows, confirmDuplicates });
+      const result = response.data as BulkCompanyResult;
+      setBulkCompanyResult(result);
+      await companies.refetch();
+      setIsDuplicateCompanyConfirmOpen(false);
+      setDuplicateCompanyNames([]);
+      setIsBulkCompanyModalOpen(false);
+      setBulkCompanyRows([]);
+      setBulkCompanyFileName("");
+      setCompanyUploadNotice({
+        severity: result.failed ? "warning" : "success",
+        message: result.failed
+          ? `Uploaded ${result.imported} of ${result.total} companies. ${result.failed} row(s) failed.`
+          : `Successfully uploaded ${result.imported} companies.`
+      });
+    } catch (error) {
+      if (isAxiosError<{ requiresConfirmation?: boolean; duplicates?: string[]; error?: string }>(error) && error.response?.data.requiresConfirmation) {
+        setDuplicateCompanyNames(error.response.data.duplicates ?? []);
+        setIsDuplicateCompanyConfirmOpen(true);
+        setBulkCompanyError("");
+      } else {
+        setBulkCompanyError(companyApiError(error) ?? "Unable to upload companies.");
+      }
+    } finally {
+      setIsUploadingCompanies(false);
+    }
+  }
+
+  async function updateSelectedCompanyStatus(isActive: boolean) {
+    if (selectedCompanies.length < 2) return;
+    setCompanyError("");
+    setIsUpdatingCompanyStatus(true);
+    try {
+      await api.patch("/reports/tbl-companies/bulk-status", {
+        ids: selectedCompanies.map((company) => company.id),
+        isActive
+      });
+      await companies.refetch();
+      setSelectedCompanies([]);
+      setCompanyGridKey((current) => current + 1);
+      setCompanyUploadNotice({
+        severity: "success",
+        message: `${selectedCompanies.length} companies marked ${isActive ? "active" : "inactive"}.`
+      });
+    } catch (error) {
+      setCompanyError(companyApiError(error) ?? "Unable to update selected companies.");
+    } finally {
+      setIsUpdatingCompanyStatus(false);
+    }
+  }
+
+  function downloadCompanyTemplate() {
+    const worksheet = XLSX.utils.json_to_sheet([{
+      "Organization ID": 1,
+      "Company Name": "Example Company",
+      "Legal Entity Name": "Example Company LLC",
+      Email: "company@example.com",
+      "Phone Number": "555-0100",
+      "Mailing Address": "100 Main Street",
+      City: "Austin",
+      State: "TX",
+      Country: "USA",
+      "Postal Code": "78701",
+      "Tax ID": "",
+      URL: "",
+      Active: true
+    }]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Companies");
+    XLSX.writeFile(workbook, "company-upload-template.xlsx");
   }
 
   return (
@@ -674,11 +906,29 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Companies</h2>
-            <Button variant="contained" onClick={openCreateCompany}>Add New Company</Button>
+            <div className="panel-title-actions">
+              {selectedCompanies.length > 1 ? (
+                <>
+                  <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
+                    {isUpdatingCompanyStatus ? "Updating..." : "Make Active"}
+                  </Button>
+                  <Button variant="outlined" color="warning" onClick={() => void updateSelectedCompanyStatus(false)} disabled={isUpdatingCompanyStatus}>
+                    {isUpdatingCompanyStatus ? "Updating..." : "Make Inactive"}
+                  </Button>
+                </>
+              ) : null}
+              <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => setIsBulkCompanyModalOpen(true)}>Add Multiple Companies</Button>
+              <Button variant="contained" onClick={openCreateCompany}>Add New Company</Button>
+            </div>
           </div>
+          {companyUploadNotice ? (
+            <Alert severity={companyUploadNotice.severity} onClose={() => setCompanyUploadNotice(null)} className="company-section-notice">
+              {companyUploadNotice.message}
+            </Alert>
+          ) : null}
           {/*  <p className="muted">Detailed company list from SQL Server table tblCompany.</p> */}
           {companies.isError ? <p className="error">Unable to load tblCompany records.</p> : null}
-          <IntiliGrid checkboxSelection columns={companyColumns} rows={companies.data?.data ?? []} onRowClick={viewCompany} />
+          <IntiliGrid key={companyGridKey} checkboxSelection columns={companyColumns} rows={companies.data?.data ?? []} onRowClick={viewCompany} onSelectionChange={(_ids, rows) => setSelectedCompanies(rows)} />
         </section>
       ) : null}
 
@@ -686,12 +936,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Contracts</h2>
-            <Button variant="contained" onClick={openCreateContract}>Add New Contract</Button>
+            <div className="panel-title-actions">
+              {selectedContracts.length ? (
+                <>
+                  <Button variant="outlined" color="success" startIcon={<Power size={16} />} onClick={() => void updateSelectedContractStatus(true)} disabled={isUpdatingContractStatus}>Activate</Button>
+                  <Button variant="outlined" color="warning" startIcon={<Power size={16} />} onClick={() => void updateSelectedContractStatus(false)} disabled={isUpdatingContractStatus}>Deactivate</Button>
+                </>
+              ) : null}
+              <Button variant="contained" onClick={() => void openCreateContract()}>Add New Contract</Button>
+            </div>
           </div>
+          {contractAvailabilityNotice ? <Alert severity="error">{contractAvailabilityNotice}</Alert> : null}
           {contractError ? <p className="error">{contractError}</p> : null}
           {contracts.isError ? <p className="error">Unable to load contracts.</p> : null}
           {contracts.isLoading ? <p className="muted">Loading contracts...</p> : null}
-          <IntiliGrid checkboxSelection columns={contractColumns} rows={contracts.data?.data ?? []} />
+          <IntiliGrid key={contractGridKey} checkboxSelection columns={contractColumns} rows={contracts.data?.data ?? []} onSelectionChange={(_ids, rows) => setSelectedContracts(rows)} />
         </section>
       ) : null}
 
@@ -713,30 +972,82 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogContent>
           {companyError ? <p className="error">{companyError}</p> : null}
           <div className="company-form-grid">
-            <TextField label="Organization ID" type="number" value={newCompany.organizationId} onChange={(event) => updateNewCompany("organizationId", Number(event.target.value))} />
             <TextField label="Company Name" required value={newCompany.companyName} onChange={(event) => updateNewCompany("companyName", event.target.value)} />
-            <TextField label="Legal Entity Name" value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
-            <TextField label="Email" value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
-            <TextField label="Phone Number" value={newCompany.phoneNumber} onChange={(event) => updateNewCompany("phoneNumber", event.target.value)} />
-            <TextField label="Mailing Address" value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
-            <TextField label="City" value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
-            <TextField select label="State" value={newCompany.state} onChange={(event) => updateNewCompany("state", event.target.value)}>
+            <TextField label="Legal Entity Name" required value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
+            <TextField label="Email" type="email" required value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
+            <TextField label="Phone Number" type="tel" required value={newCompany.phoneNumber} onChange={(event) => updateNewCompany("phoneNumber", event.target.value)} />
+            <TextField label="Mailing Address" required value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
+            <TextField label="City" required value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
+            <TextField select label="State" required value={newCompany.state} onChange={(event) => updateNewCompany("state", event.target.value)}>
               <MenuItem value="">Select state</MenuItem>
               {usStates.data?.data.map((state) => (
                 <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
               ))}
             </TextField>
-            <TextField label="Country" value={newCompany.country} onChange={(event) => updateNewCompany("country", event.target.value)} />
-            <TextField label="Postal Code" value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
-            <TextField label="Tax ID" value={newCompany.taxId} onChange={(event) => updateNewCompany("taxId", event.target.value)} />
+            <TextField label="PIN / Postal Code" required value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
             <TextField label="URL" value={newCompany.url} onChange={(event) => updateNewCompany("url", event.target.value)} />
             <FormControlLabel control={<Checkbox checked={newCompany.isActive} onChange={(event) => updateNewCompany("isActive", event.target.checked)} />} label="Active" />
+            <RichTextEditor label="Company Notes" value={newCompany.notes} onChange={(value) => updateNewCompany("notes", value)} />
           </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={saveCompany} disabled={isSavingCompany}>
+          <Button variant="contained" onClick={saveCompany} disabled={isSavingCompany || !isCompanyFormValid}>
             {isSavingCompany ? "Saving..." : companyFormMode === "edit" ? "Update Company" : "Save Company"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isBulkCompanyModalOpen} onClose={() => !isUploadingCompanies && setIsBulkCompanyModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Bulk Upload Companies</DialogTitle>
+        <DialogContent>
+          <p className="muted">Upload an Excel or CSV file containing up to 500 companies. Company Name is required. Organization ID defaults to 1 and Active defaults to true when omitted.</p>
+          {bulkCompanyError ? <p className="error">{bulkCompanyError}</p> : null}
+          {bulkCompanyResult ? (
+            <Alert severity={bulkCompanyResult.failed ? "warning" : "success"}>
+              Imported {bulkCompanyResult.imported} of {bulkCompanyResult.total} companies.
+              {bulkCompanyResult.failed ? ` ${bulkCompanyResult.failed} row(s) failed.` : ""}
+            </Alert>
+          ) : null}
+          {bulkCompanyResult?.errors.slice(0, 10).map((item) => (
+            <p className="error" key={`${item.row}-${item.companyName}`}>Row {item.row}{item.companyName ? ` (${item.companyName})` : ""}: {item.error}</p>
+          ))}
+          {isUploadingCompanies ? (
+            <Alert severity="info" icon={<CircularProgress size={20} />}>
+              Processing companies and creating folders. Please wait...
+            </Alert>
+          ) : null}
+          <div className="bulk-upload-controls">
+            <Button component="label" variant="outlined" startIcon={<Upload size={18} />} disabled={isUploadingCompanies}>
+              Choose File
+              <input hidden type="file" accept=".xlsx,.xls,.csv" disabled={isUploadingCompanies} onChange={(event) => void selectBulkCompanyFile(event.target.files?.[0])} />
+            </Button>
+            <span>{bulkCompanyFileName || "No file selected"}</span>
+          </div>
+          {bulkCompanyRows.length ? <p className="muted">{bulkCompanyRows.length} company row(s) ready to upload.</p> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={downloadCompanyTemplate} disabled={isUploadingCompanies}>Download Template</Button>
+          <Button onClick={() => setIsBulkCompanyModalOpen(false)} disabled={isUploadingCompanies}>Cancel</Button>
+          <Button variant="contained" onClick={() => void uploadBulkCompanies(false)} disabled={!bulkCompanyRows.length || isUploadingCompanies}>
+            {isUploadingCompanies ? <><CircularProgress size={18} color="inherit" /> Processing...</> : "Upload Companies"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isDuplicateCompanyConfirmOpen} onClose={() => !isUploadingCompanies && setIsDuplicateCompanyConfirmOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Duplicate Company Names</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning">Companies with the same name were found. Do you want to upload them anyway?</Alert>
+          <ul>
+            {duplicateCompanyNames.map((name) => <li key={name}>{name}</li>)}
+          </ul>
+          {isUploadingCompanies ? <Alert severity="info" icon={<CircularProgress size={20} />}>Processing companies. Please wait...</Alert> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDuplicateCompanyConfirmOpen(false)} disabled={isUploadingCompanies}>Cancel</Button>
+          <Button variant="contained" color="warning" onClick={() => void uploadBulkCompanies(true)} disabled={isUploadingCompanies}>
+            {isUploadingCompanies ? <><CircularProgress size={18} color="inherit" /> Processing...</> : "Confirm and Upload"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -799,14 +1110,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
                   <section className="account-card notes-card">
                     <h2>Notes</h2>
-                    <div className="note-tile">
-                      <strong>Status</strong>
-                      <span>{viewedCompany.isActive ? "Active company account" : "Inactive company account"}</span>
-                    </div>
-                    <div className="note-tile">
-                      <strong>Location</strong>
-                      <span>{[viewedCompany.city, viewedCompany.state, viewedCompany.country].filter(Boolean).join(", ") || "No location entered"}</span>
-                    </div>
+                    {viewedCompany.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? (
+                      <div className="company-note-content" dangerouslySetInnerHTML={{ __html: viewedCompany.notes }} />
+                    ) : (
+                      <p className="muted">No notes entered for this company.</p>
+                    )}
                   </section>
 
                   <section className="account-card documents-card">
@@ -829,7 +1137,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     isLoading={contracts.isLoading}
                     isError={contracts.isError}
                     error={contractError}
-                    onAdd={openCreateContract}
+                    availabilityNotice={contractAvailabilityNotice}
+                    onAdd={() => void openCreateContract()}
                     addDisabled={!viewedCompany.isActive}
                   />
                   <MeterListPanel
@@ -857,61 +1166,53 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {contractError ? <p className="error">{contractError}</p> : null}
           <div className="company-form-grid">
             {!viewedCompany ? (
-              <TextField select label="Company" value={contractForm.companyId} onChange={(event) => updateContractCompany(Number(event.target.value))}>
+              <TextField select required label="Company" value={contractForm.companyId} onChange={(event) => updateContractCompany(Number(event.target.value))}>
                 <MenuItem value={0}>Select company</MenuItem>
                 {companies.data?.data.map((company) => (
                   <MenuItem key={company.id} value={Number(company.id)}>{company.companyName}</MenuItem>
                 ))}
               </TextField>
             ) : null}
-            {contractFormMode === "create" ? (
-              <>
-                <TextField select label="State" value={contractForm.state} onChange={(event) => updateContractState(event.target.value)}>
-                  <MenuItem value="">Select state</MenuItem>
-                  {usStates.data?.data.map((state) => (
-                    <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
-                  ))}
-                </TextField>
-                <MeterSelect
-                  label="Utility"
-                  value={contractForm.utilityId}
-                  options={contractStateProductUtilities.data?.utilities ?? []}
-                  onChange={updateContractUtility}
-                  disabled={!contractForm.state || contractStateProductUtilities.isLoading}
-                  placeholder={contractForm.state ? "Select Utility" : "Select state first"}
-                />
-                <MeterSelect
-                  label="Product"
-                  value={contractForm.productId}
-                  options={contractStateProductUtilities.data?.products ?? []}
-                  onChange={updateContractProduct}
-                  disabled={!contractForm.utilityId || contractStateProductUtilities.isLoading}
-                  placeholder={contractForm.utilityId ? "Select Product" : "Select utility first"}
-                />
-              </>
-            ) : null}
-            <TextField select label="Broker" value={contractForm.brokerId} onChange={(event) => updateContractForm("brokerId", Number(event.target.value))}>
-              <MenuItem value={0}>Select broker</MenuItem>
-              {contractLookups.data?.brokers.map((broker) => <MenuItem key={broker.id} value={Number(broker.id)}>{broker.name}</MenuItem>)}
-            </TextField>
-            <TextField select label="Supplier" value={contractForm.supplierId} onChange={(event) => updateContractForm("supplierId", Number(event.target.value))}>
-              <MenuItem value={0}>Select supplier</MenuItem>
-              {contractLookups.data?.suppliers.map((supplier) => <MenuItem key={supplier.id} value={Number(supplier.id)}>{supplier.name}</MenuItem>)}
-            </TextField>
-            <TextField label="Rate-kWh/therms" type="number" value={contractForm.rate} onChange={(event) => updateContractForm("rate", event.target.value)} />
-            <TextField label="Fee-kWh/Dth" type="number" value={contractForm.fee} onChange={(event) => updateContractForm("fee", event.target.value)} />
-            <TextField label="Start Date" type="date" value={contractForm.startDate} onChange={(event) => updateContractForm("startDate", event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="End Date" type="date" value={contractForm.endDate} onChange={(event) => updateContractForm("endDate", event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <div className={`contract-form-row${contractFormMode === "edit" ? " contract-form-row-two" : ""}`}>
+              {contractFormMode === "create" ? (
+                <MeterSelect required label="Product" value={contractForm.productId} options={contractLookups.data?.products ?? []} onChange={updateContractProduct} />
+              ) : null}
+              <TextField select required label="Broker" value={contractForm.brokerId} onChange={(event) => updateContractForm("brokerId", Number(event.target.value))}>
+                <MenuItem value={0}>Select broker</MenuItem>
+                {contractLookups.data?.brokers.map((broker) => <MenuItem key={broker.id} value={Number(broker.id)}>{broker.name}</MenuItem>)}
+              </TextField>
+              <TextField select required label="Supplier" value={contractForm.supplierId} onChange={(event) => updateContractForm("supplierId", Number(event.target.value))}>
+                <MenuItem value={0}>Select supplier</MenuItem>
+                {contractLookups.data?.suppliers.map((supplier) => <MenuItem key={supplier.id} value={Number(supplier.id)}>{supplier.name}</MenuItem>)}
+              </TextField>
+            </div>
+            <div className="contract-form-row">
+              <MeterSelect required label="Swing" value={contractForm.swingId} options={contractLookups.data?.swings ?? []} onChange={(value) => updateContractForm("swingId", value)} />
+              <MeterSelect required label="Pass Through" value={contractForm.passThroughId} options={contractLookups.data?.passThroughs ?? []} onChange={(value) => updateContractForm("passThroughId", value)} />
+              <MeterSelect required label="Bill Type" value={contractForm.billTypeId} options={contractLookups.data?.billTypes ?? []} onChange={(value) => updateContractForm("billTypeId", value)} />
+            </div>
+            <div className="contract-form-row contract-form-row-five">
+              <TextField required label="Rate-kWh/therms" value={contractForm.rate} onChange={(event) => updateContractCurrency("rate", event.target.value)} slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> }, htmlInput: { inputMode: "decimal" } }} />
+              <TextField required label="Fee-kWh/Dth" value={contractForm.fee} onChange={(event) => updateContractCurrency("fee", event.target.value)} slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> }, htmlInput: { inputMode: "decimal" } }} />
+              <TextField required label="Start Date" type="date" value={contractForm.startDate} onChange={(event) => updateContractForm("startDate", event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField required label="End Date" type="date" value={contractForm.endDate} onChange={(event) => updateContractForm("endDate", event.target.value)} error={Boolean(contractForm.startDate && contractForm.endDate && contractMonths === null)} helperText={contractForm.startDate && contractForm.endDate && contractMonths === null ? "End date cannot be before start date." : ""} slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: contractForm.startDate || undefined } }} />
+              <div className="contract-months-label" aria-live="polite">
+                <span>Total Months</span>
+                <strong>{contractMonths ?? "-"}</strong>
+              </div>
+            </div>
             <div className="file-upload-field">
               <Button variant="outlined" component="label">
-                Upload Contract File
+                Upload Contract File *
                 <input type="file" hidden onChange={(event) => updateContractFile(event.target.files?.[0] ?? null)} />
               </Button>
-              <span>{contractForm.cFile || "No file selected"}</span>
+              <Tooltip title={contractForm.cFile.length > 20 ? contractForm.cFile : ""} followCursor>
+                <span>{displayedContractFileName || "No file selected"}</span>
+              </Tooltip>
             </div>
             <FormControlLabel control={<Checkbox checked={contractForm.isActive} onChange={(event) => updateContractForm("isActive", event.target.checked)} />} label="Active" />
           </div>
-          {contractFormMode === "create" && contractForm.productId ? (
+          {contractFormMode === "create" && contractCompanyId ? (
             <section className="contract-meter-picker">
               <div className="section-heading-row">
                 <h3>Meters</h3>
@@ -919,7 +1220,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               </div>
               {contractMeters.isLoading ? <p className="muted">Loading meters...</p> : null}
               {contractMeters.isError ? <p className="error">Unable to load meters.</p> : null}
-              {!contractMeters.isLoading && !contractMeters.data?.data.length ? <p className="muted">No meters found for selected state, utility, and product.</p> : null}
+              {!contractMeters.isLoading && !contractMeters.data?.data.length ? <p className="muted">No meters found for the selected company and product.</p> : null}
               <div className="meter-check-grid">
                 {(contractMeters.data?.data ?? []).map((meter) => {
                   const meterId = Number(meter.id);
@@ -940,11 +1241,31 @@ export function DashboardPage({ view }: DashboardPageProps) {
               </div>
             </section>
           ) : null}
+          <div className="contract-notes-wrap">
+            <RichTextEditor label="Notes *" value={contractForm.notes} onChange={(value) => updateContractForm("notes", value)} />
+          </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsContractModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={saveContract} disabled={savingContract}>
+          <Button variant="contained" onClick={requestContractSubmit} disabled={savingContract || !isContractFormValid}>
             {savingContract ? "Saving..." : contractFormMode === "edit" ? "Update Contract" : "Submit"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isContractSubmitConfirmOpen} onClose={() => !savingContract && setIsContractSubmitConfirmOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Confirm Contract Meters</DialogTitle>
+        <DialogContent>
+          {contractError ? <Alert severity="error">{contractError}</Alert> : null}
+          <p>Please confirm the selected meter numbers before creating this contract:</p>
+          <ul className="contract-confirm-meter-list">
+            {selectedContractMeterNumbers.map((meterNumber, index) => <li key={`${meterNumber}-${index}`}>{meterNumber}</li>)}
+          </ul>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsContractSubmitConfirmOpen(false)} disabled={savingContract}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveContract()} disabled={savingContract}>
+            {savingContract ? "Creating..." : "Confirm & Create"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -962,6 +1283,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <dd>{viewedContract.broker ?? "-"}</dd>
               <dt>Supplier</dt>
               <dd>{viewedContract.supplier ?? "-"}</dd>
+              <dt>Swing</dt>
+              <dd>{viewedContract.swing ?? "-"}</dd>
+              <dt>Pass Through</dt>
+              <dd>{viewedContract.passThrough ?? "-"}</dd>
+              <dt>Bill Type</dt>
+              <dd>{viewedContract.billType ?? "-"}</dd>
               <dt>Start Date</dt>
               <dd>{formatDate(viewedContract.startDate)}</dd>
               <dt>End Date</dt>
@@ -972,6 +1299,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <dd>{viewedContract.fee ?? "-"}</dd>
               <dt>Status</dt>
               <dd>{viewedContract.isActive ? "Active" : "Inactive"}</dd>
+              <dt>Notes</dt>
+              <dd>{viewedContract.notes ? <div dangerouslySetInnerHTML={{ __html: viewedContract.notes }} /> : "-"}</dd>
             </dl>
           ) : null}
         </DialogContent>
@@ -985,6 +1314,23 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogContent>
           {meterError ? <p className="error">{meterError}</p> : null}
           <div className="company-form-grid">
+            <div className="meter-form-row meter-form-row-four">
+              <TextField
+                label="Zip"
+                value={meterForm.zip}
+                onChange={(event) => updateMeterZip(event.target.value)}
+                helperText={meterZipMatches.isLoading ? "Finding city and state..." : "Enter or select a ZIP code"}
+                slotProps={{ htmlInput: { list: "meter-zip-options", autoComplete: "postal-code" } }}
+              />
+              <TextField label="City" value={meterForm.city} slotProps={{ htmlInput: { readOnly: true } }} />
+              <TextField label="State" value={meterForm.state} slotProps={{ htmlInput: { readOnly: true } }} />
+              <TextField label="Service Address" value={meterForm.serviceAddress} onChange={(event) => updateMeterForm("serviceAddress", event.target.value)} />
+              <datalist id="meter-zip-options">
+                {(meterZipMatches.data?.data ?? []).map((zip) => (
+                  <option key={`${zip.id}-${zip.city}`} value={zip.code}>{zip.city}, {zip.state}</option>
+                ))}
+              </datalist>
+            </div>
             {!viewedCompany ? (
               <TextField select label="Company" value={meterForm.companyId} onChange={(event) => updateMeterForm("companyId", Number(event.target.value))}>
                 <MenuItem value={0}>Select company</MenuItem>
@@ -993,60 +1339,46 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 ))}
               </TextField>
             ) : null}
-            <TextField select label="State" value={meterForm.state} onChange={(event) => updateMeterState(event.target.value)}>
-              <MenuItem value="">Select state</MenuItem>
-              {usStates.data?.data.map((state) => (
-                <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
-              ))}
-            </TextField>
-            <TextField select label="City" value={meterForm.city} onChange={(event) => updateMeterCity(event.target.value)} disabled={!meterForm.state || meterCities.isLoading}>
-              <MenuItem value="">{meterForm.state ? "Select city" : "Select state first"}</MenuItem>
-              {meterCities.data?.data.map((city) => (
-                <MenuItem key={city.id} value={city.name}>{city.name}</MenuItem>
-              ))}
-            </TextField>
-            <TextField select label="Zip" value={meterForm.zip} onChange={(event) => updateMeterForm("zip", event.target.value)} disabled={!meterForm.city || meterZipCodes.isLoading}>
-              <MenuItem value="">{meterForm.city ? "Select zip" : "Select city first"}</MenuItem>
-              {meterZipCodes.data?.data.map((zip) => (
-                <MenuItem key={zip.id} value={zip.code}>{zip.code}</MenuItem>
-              ))}
-            </TextField>
-            <MeterSelect
-              label="Product"
-              value={meterForm.productId}
-              options={meterStateProductUtilities.data?.products ?? []}
-              onChange={updateMeterProduct}
-              disabled={!meterForm.state || meterStateProductUtilities.isLoading}
-              placeholder={meterForm.state ? "Select Product" : "Select state first"}
-            />
-            <MeterSelect
-              label="Utility"
-              value={meterForm.utilityId}
-              options={meterStateProductUtilities.data?.utilities ?? []}
-              onChange={(value) => updateMeterForm("utilityId", value)}
-              disabled={!meterForm.state || !meterForm.productId || meterStateProductUtilities.isLoading}
-              placeholder={meterForm.productId ? "Select Utility" : "Select product first"}
-            />
+            <div className="meter-form-row">
+              <MeterSelect
+                label="Product"
+                value={meterForm.productId}
+                options={meterLookups.data?.products ?? []}
+                onChange={updateMeterProduct}
+                placeholder="Select Product"
+              />
+              <MeterSelect
+                label="Utility"
+                value={meterForm.utilityId}
+                options={meterLookups.data?.utilities ?? []}
+                onChange={(value) => updateMeterForm("utilityId", value)}
+                placeholder="Select Utility"
+              />
+              <MeterSelect label="Rate" value={meterForm.rate} options={meterLookups.data?.rates ?? []} onChange={(value) => updateMeterForm("rate", value)} />
+            </div>
 
-            <TextField label="Account Number" value={meterForm.accountNumber} onChange={(event) => updateMeterForm("accountNumber", event.target.value)} />
-            <TextField label="Service Ref/POD" value={meterForm.serviceRefPod} onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)} />
-            <TextField label="Name Key" value={meterForm.nameKey} onChange={(event) => updateMeterForm("nameKey", event.target.value)} />
-            <TextField label="Meter" value={meterForm.meter} onChange={(event) => updateMeterForm("meter", event.target.value)} />
-            <TextField label="Service Address" value={meterForm.serviceAddress} onChange={(event) => updateMeterForm("serviceAddress", event.target.value)} />
-            <TextField label="Tax Exempt" value={meterForm.taxExempt} onChange={(event) => updateMeterForm("taxExempt", event.target.value)} />
+            <div className="meter-form-row meter-form-row-four">
+              <TextField label="Account Number" value={meterForm.accountNumber} onChange={(event) => updateMeterForm("accountNumber", event.target.value)} />
+              <TextField label="Service Ref/POD" value={meterForm.serviceRefPod} onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)} />
+              <TextField label="Meter" value={meterForm.meter} onChange={(event) => updateMeterForm("meter", event.target.value)} />
+              <TextField label="Name Key" value={meterForm.nameKey} onChange={(event) => updateMeterForm("nameKey", event.target.value)} />
+            </div>
+            <MeterSelect label="Tax Exempt" value={meterForm.taxExempt} options={meterLookups.data?.taxExempts ?? []} onChange={(value) => updateMeterForm("taxExempt", value)} />
             <TextField label="Cycle/Read Day" value={meterForm.cycleReadDay} onChange={(event) => updateMeterForm("cycleReadDay", event.target.value)} />
-            <TextField label="Rate" value={meterForm.rate} onChange={(event) => updateMeterForm("rate", event.target.value)} />
-            <TextField label="Demand" value={meterForm.demand} onChange={(event) => updateMeterForm("demand", event.target.value)} />
-            <TextField label="Ann. Usage-Dth/kWh" value={meterForm.annualUsage} onChange={(event) => updateMeterForm("annualUsage", event.target.value)} />
-            <TextField label="Load Profile" value={meterForm.loadProfile} onChange={(event) => updateMeterForm("loadProfile", event.target.value)} />
-            <MeterSelect label="iEnergyBill" value={meterForm.iEnergyBillId} options={meterLookups.data?.iEnergyBills ?? []} onChange={(value) => updateMeterForm("iEnergyBillId", value)} />
-            <MeterSelect label="EnergyDashboard" value={meterForm.energyDashboardId} options={meterLookups.data?.energyDashboards ?? []} onChange={(value) => updateMeterForm("energyDashboardId", value)} />
-            <MeterSelect label="OnSiteGeneration" value={meterForm.onSiteGenerationId} options={meterLookups.data?.onSiteGenerations ?? []} onChange={(value) => updateMeterForm("onSiteGenerationId", value)} />
-            <MeterSelect label="Type" value={meterForm.typeId} options={meterLookups.data?.types ?? []} onChange={(value) => updateMeterForm("typeId", value)} />
-
-
-            <MeterSelect label="Status" value={meterForm.statusId} options={meterLookups.data?.statuses ?? []} onChange={(value) => updateMeterForm("statusId", value)} />
+            <div className="meter-form-row">
+              <TextField label="Demand" value={meterForm.demand} onChange={(event) => updateMeterForm("demand", event.target.value)} />
+              <TextField label="Ann. Usage-Dth/kWh" value={meterForm.annualUsage} onChange={(event) => updateMeterForm("annualUsage", event.target.value)} />
+              <TextField label="Load Profile" value={meterLoadProfile} slotProps={{ htmlInput: { readOnly: true } }} />
+            </div>
+            <div className="meter-form-row meter-form-row-five">
+              <MeterSelect label="iEnergyBill" value={meterForm.iEnergyBillId} options={meterLookups.data?.iEnergyBills ?? []} onChange={(value) => updateMeterForm("iEnergyBillId", value)} />
+              <MeterSelect label="EnergyDashboard" value={meterForm.energyDashboardId} options={meterLookups.data?.energyDashboards ?? []} onChange={(value) => updateMeterForm("energyDashboardId", value)} />
+              <MeterSelect label="OnSiteGeneration" value={meterForm.onSiteGenerationId} options={meterLookups.data?.onSiteGenerations ?? []} onChange={(value) => updateMeterForm("onSiteGenerationId", value)} />
+              <MeterSelect label="Type" value={meterForm.typeId} options={meterLookups.data?.types ?? []} onChange={(value) => updateMeterForm("typeId", value)} />
+              <MeterSelect label="Status" value={meterForm.statusId} options={meterLookups.data?.statuses ?? []} onChange={(value) => updateMeterForm("statusId", value)} />
+            </div>
             <FormControlLabel control={<Checkbox checked={meterForm.isActive} onChange={(event) => updateMeterForm("isActive", event.target.checked)} />} label="Active" />
+            <RichTextEditor label="Notes" value={meterForm.notes} onChange={(value) => updateMeterForm("notes", value)} />
           </div>
         </DialogContent>
         <DialogActions>
@@ -1084,6 +1416,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <dd>{viewedMeter.utility ?? "-"}</dd>
               <dt>Active</dt>
               <dd>{viewedMeter.isActive ? "Active" : "Inactive"}</dd>
+              <dt>Notes</dt>
+              <dd>{viewedMeter.notes ? <div dangerouslySetInnerHTML={{ __html: viewedMeter.notes }} /> : "-"}</dd>
             </dl>
           ) : null}
         </DialogContent>
@@ -1121,6 +1455,7 @@ interface ContractListPanelProps {
   isLoading: boolean;
   isError: boolean;
   error: string;
+  availabilityNotice?: string;
   onAdd: () => void;
   addDisabled?: boolean;
 }
@@ -1165,7 +1500,9 @@ export function CompanyDocumentsPage() {
         <aside className="document-viewer-tree">
           <div className="document-viewer-title">
             <h2>Documents</h2>
-            <span>{selectedFileName || "Select a PDF"}</span>
+            <Tooltip title={selectedFileName.length > 20 ? selectedFileName : ""} followCursor>
+              <span>{shortenFileName(selectedFileName) || "Select a PDF"}</span>
+            </Tooltip>
           </div>
           {companyDocuments.isLoading ? <p className="muted">Loading documents...</p> : null}
           {companyDocuments.isError ? <p className="error">Unable to load documents.</p> : null}
@@ -1232,6 +1569,7 @@ function DocumentTreeNode({
   const [isOpen, setIsOpen] = useState(level === 0);
   const isFolder = node.type === "folder";
   const fileExtension = node.name.includes(".") ? node.name.split(".").pop()?.toLowerCase() ?? "" : "";
+  const displayedFileName = shortenFileName(node.name);
   const openFile = () => {
     if (onFileClick) {
       onFileClick(node);
@@ -1258,10 +1596,12 @@ function DocumentTreeNode({
             <span>{node.name}</span>
           </button>
         ) : (
-          <button type="button" className={`document-file-button ${isSelected ? "selected" : ""} ${fileExtension ? `file-${fileExtension}` : ""}`} onClick={openFile}>
-            <FileText size={14} />
-            {node.name}
-          </button>
+          <Tooltip title={node.name.length > 20 ? node.name : ""} followCursor>
+            <button type="button" className={`document-file-button ${isSelected ? "selected" : ""} ${fileExtension ? `file-${fileExtension}` : ""}`} onClick={openFile}>
+              <FileText size={14} />
+              <span>{displayedFileName}</span>
+            </button>
+          </Tooltip>
         )}
       </div>
       {isFolder && isOpen && node.children?.length ? (
@@ -1271,7 +1611,7 @@ function DocumentTreeNode({
   );
 }
 
-function ContractListPanel({ columns, contracts, isLoading, isError, error, onAdd, addDisabled = false }: ContractListPanelProps) {
+function ContractListPanel({ columns, contracts, isLoading, isError, error, availabilityNotice, onAdd, addDisabled = false }: ContractListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
@@ -1291,6 +1631,7 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, onAd
           <span>Columns</span> */}
         </div>
       </div>
+      {availabilityNotice ? <Alert severity="error" className="contract-panel-message">{availabilityNotice}</Alert> : null}
       {error ? <p className="error contract-panel-message">{error}</p> : null}
       {isError ? <p className="error contract-panel-message">Unable to load contracts.</p> : null}
       {isLoading ? <p className="muted contract-panel-message">Loading contracts...</p> : null}
@@ -1350,11 +1691,12 @@ interface MeterSelectProps {
   onChange: (value: number) => void;
   disabled?: boolean;
   placeholder?: string;
+  required?: boolean;
 }
 
-function MeterSelect({ label, value, options, onChange, disabled = false, placeholder }: MeterSelectProps) {
+function MeterSelect({ label, value, options, onChange, disabled = false, placeholder, required = false }: MeterSelectProps) {
   return (
-    <TextField select label={label} value={value} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled}>
+    <TextField select required={required} label={label} value={value} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled}>
       <MenuItem value={0}>{placeholder ?? `Select ${label}`}</MenuItem>
       {options.map((option) => <MenuItem key={option.id} value={Number(option.id)}>{option.name}</MenuItem>)}
     </TextField>
@@ -1365,8 +1707,9 @@ interface ContractForm {
   companyId: number;
   brokerId: number;
   supplierId: number;
-  state: string;
-  utilityId: number;
+  swingId: number;
+  passThroughId: number;
+  billTypeId: number;
   productId: number;
   meterIds: number[];
   rate: string;
@@ -1375,6 +1718,7 @@ interface ContractForm {
   endDate: string;
   cFile: string;
   contractFile: ContractFilePayload | null;
+  notes: string;
   isActive: boolean;
 }
 
@@ -1389,8 +1733,9 @@ function emptyContractForm(): ContractForm {
     companyId: 0,
     brokerId: 0,
     supplierId: 0,
-    state: "",
-    utilityId: 0,
+    swingId: 0,
+    passThroughId: 0,
+    billTypeId: 0,
     productId: 0,
     meterIds: [],
     rate: "",
@@ -1399,6 +1744,7 @@ function emptyContractForm(): ContractForm {
     endDate: "",
     cFile: "",
     contractFile: null,
+    notes: "",
     isActive: true
   };
 }
@@ -1408,8 +1754,9 @@ function contractToForm(contract: ContractRow): ContractForm {
     companyId: Number(contract.companyId ?? 0),
     brokerId: Number(contract.brokerId ?? 0),
     supplierId: Number(contract.supplierId ?? 0),
-    state: "",
-    utilityId: 0,
+    swingId: Number(contract.swingId ?? 0),
+    passThroughId: Number(contract.passThroughId ?? 0),
+    billTypeId: Number(contract.billTypeId ?? 0),
     productId: 0,
     meterIds: [],
     rate: contract.rate === null || contract.rate === undefined ? "" : String(contract.rate),
@@ -1418,6 +1765,7 @@ function contractToForm(contract: ContractRow): ContractForm {
     endDate: dateInputValue(contract.endDate),
     cFile: contract.cFile ?? "",
     contractFile: null,
+    notes: contract.notes ?? "",
     isActive: Boolean(contract.isActive)
   };
 }
@@ -1432,9 +1780,9 @@ interface MeterForm {
   city: string;
   state: string;
   zip: string;
-  taxExempt: string;
+  taxExempt: number;
   cycleReadDay: string;
-  rate: string;
+  rate: number;
   demand: string;
   annualUsage: string;
   loadProfile: string;
@@ -1445,6 +1793,7 @@ interface MeterForm {
   productId: number;
   utilityId: number;
   statusId: number;
+  notes: string;
   isActive: boolean;
 }
 
@@ -1459,9 +1808,9 @@ function emptyMeterForm(): MeterForm {
     city: "",
     state: "",
     zip: "",
-    taxExempt: "",
+    taxExempt: 0,
     cycleReadDay: "",
-    rate: "",
+    rate: 0,
     demand: "",
     annualUsage: "",
     loadProfile: "",
@@ -1472,6 +1821,7 @@ function emptyMeterForm(): MeterForm {
     productId: 0,
     utilityId: 0,
     statusId: 0,
+    notes: "",
     isActive: true
   };
 }
@@ -1487,9 +1837,9 @@ function meterToForm(meter: MeterRow): MeterForm {
     city: meter.city ?? "",
     state: meter.state ?? "",
     zip: meter.zip ?? "",
-    taxExempt: meter.taxExempt ?? "",
+    taxExempt: Number(meter.taxExempt ?? 0),
     cycleReadDay: meter.cycleReadDay ?? "",
-    rate: meter.rate ?? "",
+    rate: Number(meter.rate ?? 0),
     demand: meter.demand ?? "",
     annualUsage: meter.annualUsage ?? "",
     loadProfile: meter.loadProfile ?? "",
@@ -1500,6 +1850,7 @@ function meterToForm(meter: MeterRow): MeterForm {
     productId: Number(meter.productId ?? 0),
     utilityId: Number(meter.utilityId ?? 0),
     statusId: Number(meter.statusId ?? 0),
+    notes: meter.notes ?? "",
     isActive: Boolean(meter.isActive)
   };
 }
@@ -1507,6 +1858,24 @@ function meterToForm(meter: MeterRow): MeterForm {
 function dateInputValue(value: unknown) {
   if (!value) return "";
   return new Date(String(value)).toISOString().slice(0, 10);
+}
+
+function calculateContractMonths(startValue: string, endValue: string) {
+  if (!startValue || !endValue) return null;
+  const start = new Date(`${startValue}T00:00:00`);
+  const end = new Date(`${endValue}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+  return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
+}
+
+function calculateMeterLoadProfile(demandValue: string, annualUsageValue: string) {
+  const demandText = demandValue.trim().replace(/,/g, "");
+  const annualUsageText = annualUsageValue.trim().replace(/,/g, "");
+  if (!demandText && !annualUsageText) return "";
+  const demand = demandText ? Number(demandText) : 0;
+  const annualUsage = annualUsageText ? Number(annualUsageText) : 0;
+  if (!Number.isFinite(demand) || !Number.isFinite(annualUsage)) return "";
+  return String(Number((demand + annualUsage).toFixed(6)));
 }
 
 function formatDate(value: unknown) {
@@ -1527,7 +1896,43 @@ interface NewCompanyForm {
   phoneNumber: string;
   taxId: string;
   url: string;
+  notes: string;
   isActive: boolean;
+}
+
+interface BulkCompanyResult {
+  total: number;
+  imported: number;
+  failed: number;
+  errors: Array<{ row: number; companyName: string; error: string }>;
+}
+
+function parseBulkCompanies(worksheet: XLSX.WorkSheet): NewCompanyForm[] {
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+  return rows.map((source) => {
+    const row = new Map(Object.entries(source).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value]));
+    const value = (...keys: string[]) => keys.map((key) => row.get(key)).find((item) => item !== undefined);
+    const text = (...keys: string[]) => String(value(...keys) ?? "").trim();
+    const activeValue = text("active", "isactive").toLowerCase();
+    const organizationValue = Number(value("organizationid", "orgid"));
+
+    return {
+      organizationId: Number.isInteger(organizationValue) && organizationValue > 0 ? organizationValue : 1,
+      companyName: text("companyname", "company"),
+      legalEntityName: text("legalentityname", "legalname"),
+      mailingAddress: text("mailingaddress", "address"),
+      city: text("city"),
+      state: text("state"),
+      country: text("country"),
+      postalCode: text("postalcode", "zipcode", "zip"),
+      email: text("email"),
+      phoneNumber: text("phonenumber", "phone"),
+      taxId: text("taxid"),
+      url: text("url", "website"),
+      notes: text("notes"),
+      isActive: activeValue ? !["false", "no", "0", "inactive"].includes(activeValue) : true
+    };
+  });
 }
 
 function emptyCompanyForm(): NewCompanyForm {
@@ -1544,6 +1949,7 @@ function emptyCompanyForm(): NewCompanyForm {
     phoneNumber: "",
     taxId: "",
     url: "",
+    notes: "",
     isActive: true
   };
 }
@@ -1562,6 +1968,7 @@ function companyToForm(company: TblCompanyRow): NewCompanyForm {
     phoneNumber: company.phoneNumber ?? "",
     taxId: company.taxId ?? "",
     url: company.url ?? "",
+    notes: company.notes ?? "",
     isActive: Boolean(company.isActive)
   };
 }
@@ -1587,6 +1994,7 @@ interface TblCompanyRow {
   phoneNumber?: string;
   taxId?: string;
   url?: string;
+  notes?: string;
   companyFolderId?: string | null;
   contractFolderId?: string | null;
   utilityBillsFolderId?: string | null;
@@ -1595,24 +2003,64 @@ interface TblCompanyRow {
   updatedAt?: string;
 }
 
+function RichTextEditor({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (editor && editor.innerHTML !== value && document.activeElement !== editor) editor.innerHTML = value;
+  }, [value]);
+
+  function applyFormat(command: "bold" | "italic" | "underline" | "insertUnorderedList") {
+    editorRef.current?.focus();
+    document.execCommand(command);
+    onChange(editorRef.current?.innerHTML ?? "");
+  }
+
+  return (
+    <div className="company-notes-editor">
+      <label>{label}</label>
+      <div className="rich-text-toolbar" aria-label="Text formatting">
+        <Button size="small" onMouseDown={(event) => event.preventDefault()} onClick={() => applyFormat("bold")}><strong>B</strong></Button>
+        <Button size="small" onMouseDown={(event) => event.preventDefault()} onClick={() => applyFormat("italic")}><em>I</em></Button>
+        <Button size="small" onMouseDown={(event) => event.preventDefault()} onClick={() => applyFormat("underline")}><u>U</u></Button>
+        <Button size="small" onMouseDown={(event) => event.preventDefault()} onClick={() => applyFormat("insertUnorderedList")}>List</Button>
+      </div>
+      <div
+        ref={editorRef}
+        className="rich-text-input"
+        contentEditable
+        role="textbox"
+        aria-label={label}
+        aria-multiline="true"
+        suppressContentEditableWarning
+        onInput={(event) => onChange(event.currentTarget.innerHTML)}
+      />
+    </div>
+  );
+}
+
 interface LookupOption {
   id: string | number;
   name?: string;
 }
 
+interface ZipDetailOption {
+  id: string | number;
+  code: string;
+  city: string;
+  state: string;
+  stateName: string;
+}
+
+function shortenFileName(fileName: string, maximumLength = 20) {
+  if (fileName.length <= maximumLength) return fileName;
+  return `${fileName.slice(0, maximumLength - 3)}...`;
+}
+
 interface USStateOption {
   id: string | number;
   name: string;
-  code: string;
-}
-
-interface CityOption {
-  id: string | number;
-  name: string;
-}
-
-interface ZipCodeOption {
-  id: string | number;
   code: string;
 }
 
@@ -1624,11 +2072,8 @@ interface MeterLookups {
   products: LookupOption[];
   utilities: LookupOption[];
   statuses: LookupOption[];
-}
-
-interface MeterStateProductUtilities {
-  products: LookupOption[];
-  utilities: LookupOption[];
+  taxExempts: LookupOption[];
+  rates: LookupOption[];
 }
 
 interface CompanyDocumentsResponse {
@@ -1655,6 +2100,12 @@ interface ContractRow {
   broker?: string | null;
   supplierId?: string | number | null;
   supplier?: string | null;
+  swingId?: string | number | null;
+  swing?: string | null;
+  passThroughId?: string | number | null;
+  passThrough?: string | null;
+  billTypeId?: string | number | null;
+  billType?: string | null;
   rate?: string | number | null;
   fee?: string | number | null;
   startDate?: string | null;
@@ -1665,6 +2116,7 @@ interface ContractRow {
   createdAt?: string;
   updatedAt?: string;
   onDate?: string | null;
+  notes?: string | null;
 }
 
 interface MeterRow {
@@ -1679,9 +2131,9 @@ interface MeterRow {
   city?: string | null;
   state?: string | null;
   zip?: string | null;
-  taxExempt?: string | null;
+  taxExempt?: string | number | null;
   cycleReadDay?: string | null;
-  rate?: string | null;
+  rate?: string | number | null;
   demand?: string | null;
   annualUsage?: string | null;
   loadProfile?: string | null;
@@ -1690,6 +2142,7 @@ interface MeterRow {
   onSiteGeneration?: string | null;
   statusId?: string | number | null;
   status?: string | null;
+  notes?: string | null;
   typeId?: string | number | null;
   type?: string | null;
   productId?: string | number | null;

@@ -11,7 +11,7 @@ describe("role navigation", () => {
   });
 
   it("keeps user navigation limited", () => {
-    expect(navByRole.user).toEqual(["Dashboard", "Members"]);
+    expect(navByRole.user).toEqual(["Dashboard", "Members", "Activity"]);
   });
 
   it("normalizes superadmin role variants", () => {
