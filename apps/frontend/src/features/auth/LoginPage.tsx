@@ -20,6 +20,8 @@ export function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const [error, setError] = useState("");
   const sessionTimedOut = searchParams.get("sessionTimedOut") === "1";
+  const emailVerified = searchParams.get("verified") === "1";
+  const passwordReset = searchParams.get("passwordReset") === "1";
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     defaultValues: {
       email: "superadmin@allamericanenergy.local",
@@ -34,7 +36,7 @@ export function LoginPage() {
       const parsed = loginSchema.parse(values);
       await login(parsed.email, parsed.password, parsed.rememberMe);
       navigate("/");
-    } catch (submitError) {
+      } catch (submitError) {
       setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : loginError(submitError));
     }
   }
@@ -42,8 +44,10 @@ export function LoginPage() {
   return (
     <Box className="auth-page">
       <Paper className="auth-panel" elevation={0}>
-        <Typography variant="overline">AllAmericanEnergy CRM</Typography>
+        <Box component="img" className="auth-logo" src="/logo.png" alt="iEnergyBill" />
         <Typography variant="h4">Sign in</Typography>
+        {emailVerified ? <Alert severity="success">Email verified. You can now sign in.</Alert> : null}
+        {passwordReset ? <Alert severity="success">Password reset successfully. You can now sign in.</Alert> : null}
         {sessionTimedOut ? <Alert severity="warning">Session timed out. Please log in again.</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Box component="form" onSubmit={handleSubmit(submit)} className="auth-form">
