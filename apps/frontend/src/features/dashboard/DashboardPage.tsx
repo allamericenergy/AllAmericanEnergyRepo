@@ -84,6 +84,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [editingMeterId, setEditingMeterId] = useState<MeterRow["id"] | null>(null);
   const [savingMeter, setSavingMeter] = useState(false);
   const [togglingMeterId, setTogglingMeterId] = useState<MeterRow["id"] | null>(null);
+  const [selectedMeters, setSelectedMeters] = useState<MeterRow[]>([]);
+  const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
+  const [meterGridKey, setMeterGridKey] = useState(0);
   const [meterError, setMeterError] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
 
@@ -793,6 +796,25 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  async function updateSelectedMeterStatus(isActive: boolean) {
+    if (!selectedMeters.length) return;
+    setMeterError("");
+    setIsUpdatingMeterStatus(true);
+    try {
+      await api.patch("/reports/meters/bulk-status", {
+        ids: selectedMeters.map((meter) => meter.id),
+        isActive
+      });
+      await meters.refetch();
+      setSelectedMeters([]);
+      setMeterGridKey((current) => current + 1);
+    } catch (error) {
+      setMeterError(companyApiError(error) ?? `Unable to mark selected meters ${isActive ? "active" : "inactive"}.`);
+    } finally {
+      setIsUpdatingMeterStatus(false);
+    }
+  }
+
   async function uploadBulkCompanies(confirmDuplicates = false) {
     if (!bulkCompanyRows.length) return;
     setBulkCompanyError("");
@@ -958,12 +980,42 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Meters</h2>
-            <Button variant="contained" onClick={openCreateMeter}>Add New Meter</Button>
+            <div className="panel-title-actions">
+              {selectedMeters.length ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    startIcon={<Power size={16} />}
+                    onClick={() => void updateSelectedMeterStatus(true)}
+                    disabled={isUpdatingMeterStatus}
+                  >
+                    {isUpdatingMeterStatus ? "Updating..." : "Active"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<Power size={16} />}
+                    onClick={() => void updateSelectedMeterStatus(false)}
+                    disabled={isUpdatingMeterStatus}
+                  >
+                    {isUpdatingMeterStatus ? "Updating..." : "Inactive"}
+                  </Button>
+                </>
+              ) : null}
+              <Button variant="contained" onClick={openCreateMeter}>Add New Meter</Button>
+            </div>
           </div>
           {meterError ? <p className="error">{meterError}</p> : null}
           {meters.isError ? <p className="error">Unable to load meters.</p> : null}
           {meters.isLoading ? <p className="muted">Loading meters...</p> : null}
-          <IntiliGrid checkboxSelection columns={meterColumns} rows={meters.data?.data ?? []} />
+          <IntiliGrid
+            key={meterGridKey}
+            checkboxSelection
+            columns={meterColumns}
+            rows={meters.data?.data ?? []}
+            onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
+          />
         </section>
       ) : null}
 
@@ -1111,7 +1163,27 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   <section className="account-card notes-card">
                     <h2>Notes</h2>
                     {viewedCompany.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? (
-                      <div className="company-note-content" dangerouslySetInnerHTML={{ __html: viewedCompany.notes }} />
+                      <>
+                        <div
+                          className="company-note-preview"
+                          role="textbox"
+                          aria-label="Company notes"
+                          aria-readonly="true"
+                        >
+                          {richTextToPlainText(viewedCompany.notes)}
+                        </div>
+                        <Button
+                          className="company-notes-more"
+                          size="small"
+                          onClick={() => {
+                            const companyId = viewedCompany.id;
+                            setViewedCompany(null);
+                            navigate(`/organizations?section=notes&companyId=${encodeURIComponent(String(companyId))}`);
+                          }}
+                        >
+                          More
+                        </Button>
+                      </>
                     ) : (
                       <p className="muted">No notes entered for this company.</p>
                     )}
@@ -1124,7 +1196,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       {companyDocuments.isError ? <p className="error">Unable to load documents.</p> : null}
                       {companyDocuments.data?.skipped ? <p className="muted">SharePoint is not configured.</p> : null}
                       {!companyDocuments.isLoading && !companyDocuments.isError && !companyDocuments.data?.skipped ? (
-                        <DocumentTree nodes={companyDocuments.data?.tree ?? []} companyId={viewedCompany.id} />
+                        <CompanyDocumentsPreview
+                          nodes={companyDocuments.data?.tree ?? []}
+                          companyId={viewedCompany.id}
+                        />
                       ) : null}
                     </div>
                   </section>
@@ -1528,25 +1603,69 @@ export function CompanyDocumentsPage() {
   );
 }
 
+function CompanyDocumentsPreview({ nodes, companyId }: { nodes: DocumentNode[]; companyId: string | number }) {
+  const navigate = useNavigate();
+  const previewTree = limitDocumentTree(nodes, 2);
+
+  function openDocumentViewer() {
+    navigate(`/companies/${encodeURIComponent(String(companyId))}/documents`);
+  }
+
+  if (!previewTree.length) return <p className="muted">No documents found.</p>;
+
+  return (
+    <div className="company-documents-preview">
+      <DocumentTree nodes={previewTree} companyId={companyId} expandAll />
+      <Button className="company-documents-more" size="small" onClick={() => openDocumentViewer()}>
+        More
+      </Button>
+    </div>
+  );
+}
+
+function limitDocumentTree(nodes: DocumentNode[], maximumFiles: number): DocumentNode[] {
+  let remainingFiles = maximumFiles;
+
+  function visit(items: DocumentNode[]): DocumentNode[] {
+    const result: DocumentNode[] = [];
+    for (const node of items) {
+      if (remainingFiles <= 0) break;
+      if (node.type === "file") {
+        result.push(node);
+        remainingFiles -= 1;
+        continue;
+      }
+
+      const children = visit(node.children ?? []);
+      if (children.length) result.push({ ...node, children });
+    }
+    return result;
+  }
+
+  return visit(nodes);
+}
+
 function DocumentTree({
   nodes,
   level = 0,
   companyId,
   onFileClick,
-  selectedFileId
+  selectedFileId,
+  expandAll = false
 }: {
   nodes: DocumentNode[];
   level?: number;
   companyId?: string | number;
   onFileClick?: (node: DocumentNode) => void;
   selectedFileId?: string;
+  expandAll?: boolean;
 }) {
   if (!nodes.length) return <p className="muted">No documents found.</p>;
 
   return (
     <ul className="document-tree">
       {nodes.map((node) => (
-        <DocumentTreeNode key={node.id} node={node} level={level} companyId={companyId} onFileClick={onFileClick} selectedFileId={selectedFileId} />
+        <DocumentTreeNode key={node.id} node={node} level={level} companyId={companyId} onFileClick={onFileClick} selectedFileId={selectedFileId} expandAll={expandAll} />
       ))}
     </ul>
   );
@@ -1557,16 +1676,18 @@ function DocumentTreeNode({
   level,
   companyId,
   onFileClick,
-  selectedFileId
+  selectedFileId,
+  expandAll
 }: {
   node: DocumentNode;
   level: number;
   companyId?: string | number;
   onFileClick?: (node: DocumentNode) => void;
   selectedFileId?: string;
+  expandAll: boolean;
 }) {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(level === 0);
+  const [isOpen, setIsOpen] = useState(expandAll || level === 0);
   const isFolder = node.type === "folder";
   const fileExtension = node.name.includes(".") ? node.name.split(".").pop()?.toLowerCase() ?? "" : "";
   const displayedFileName = shortenFileName(node.name);
@@ -1605,7 +1726,7 @@ function DocumentTreeNode({
         )}
       </div>
       {isFolder && isOpen && node.children?.length ? (
-        <DocumentTree nodes={node.children} level={level + 1} companyId={companyId} onFileClick={onFileClick} selectedFileId={selectedFileId} />
+        <DocumentTree nodes={node.children} level={level + 1} companyId={companyId} onFileClick={onFileClick} selectedFileId={selectedFileId} expandAll={expandAll} />
       ) : null}
     </li>
   );
@@ -2001,6 +2122,20 @@ interface TblCompanyRow {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+function richTextToPlainText(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .trim();
 }
 
 function RichTextEditor({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

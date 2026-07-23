@@ -13,7 +13,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Package, Pencil, Plug, Plus, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
@@ -94,9 +95,21 @@ const legacySections = [
 type OrganizationSection = "organizations" | "notes" | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
-  const [section, setSection] = useState<OrganizationSection>("organizations");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get("section");
+  const companyNotesId = searchParams.get("companyId");
+  const [section, setSection] = useState<OrganizationSection>(requestedSection === "notes" ? "notes" : "organizations");
   const [viewedOrganization, setViewedOrganization] = useState<OrganizationRow | null>(null);
   const selectedLegacySection = legacySections.find((item) => item.key === section);
+
+  useEffect(() => {
+    if (requestedSection === "notes") setSection("notes");
+  }, [requestedSection]);
+
+  function selectSection(nextSection: OrganizationSection) {
+    setSection(nextSection);
+    setSearchParams(nextSection === "notes" ? { section: "notes" } : {});
+  }
 
   const organizations = useQuery({
     queryKey: ["organizations"],
@@ -109,18 +122,18 @@ export function OrganizationsPage() {
     <section className="page organization-page">
       <aside className="organization-side-menu" aria-label="Organization sections">
         <h2>Organization</h2>
-        <button type="button" className={section === "organizations" ? "active" : ""} onClick={() => setSection("organizations")}>
+        <button type="button" className={section === "organizations" ? "active" : ""} onClick={() => selectSection("organizations")}>
           <Building2 size={18} /> Organizations
         </button>
         {legacySections.map((item) => {
           const Icon = item.icon;
           return (
-            <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => setSection(item.key)}>
+            <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
               <Icon size={18} /> {item.label}
             </button>
           );
         })}
-        <button type="button" className={section === "notes" ? "active" : ""} onClick={() => setSection("notes")}>
+        <button type="button" className={section === "notes" ? "active" : ""} onClick={() => selectSection("notes")}>
           <StickyNote size={18} /> Notes
         </button>
       </aside>
@@ -136,7 +149,10 @@ export function OrganizationsPage() {
             <IntiliGrid checkboxSelection columns={organizationColumns} rows={organizations.data?.data ?? []} onRowClick={setViewedOrganization} />
           </section>
         ) : section === "notes" ? (
-          <OrganizationNotesPanel />
+          <OrganizationNotesPanel
+            companyId={companyNotesId}
+            onViewAll={() => setSearchParams({ section: "notes" })}
+          />
         ) : selectedLegacySection ? (
           <LegacyTablePanel
             endpoint={selectedLegacySection.endpoint}
@@ -180,23 +196,50 @@ const noteColumns: GridColumn<OrganizationNoteRow>[] = [
   { field: "updatedAt", headerName: "Last Updated", width: 190, valueFormatter: (value) => formatDate(value) }
 ];
 
-function OrganizationNotesPanel() {
+function OrganizationNotesPanel({ companyId, onViewAll }: { companyId: string | null; onViewAll: () => void }) {
   const [viewingNote, setViewingNote] = useState<OrganizationNoteRow | null>(null);
   const notes = useQuery({
     queryKey: ["organization-notes"],
     queryFn: async () => (await api.get("/reports/organization-notes")).data as { total: number; data: OrganizationNoteRow[] },
     retry: false
   });
+  const companyNotes = useMemo(
+    () => (notes.data?.data ?? []).filter((note) => (
+      String(note.companyId ?? (note.relatedType === "company" ? note.relatedId : "")) === companyId
+    )),
+    [companyId, notes.data?.data]
+  );
+  const displayedNotes = companyId ? companyNotes : notes.data?.data ?? [];
+  const notesTitle = companyId && companyNotes[0]?.relatedName
+    ? `Notes — ${companyNotes[0].relatedName}`
+    : "Notes";
 
   return (
     <>
       <section className="panel companies-panel">
         <div className="panel-title-row">
-          <h2>Notes</h2>
-          <span className="muted">{notes.isLoading ? "Loading..." : `${notes.data?.total ?? 0} total`}</span>
+          <h2>{notesTitle}</h2>
+          <div className="panel-title-actions">
+            <span className="muted">{notes.isLoading ? "Loading..." : `${displayedNotes.length} total`}</span>
+            {companyId ? <Button variant="outlined" onClick={onViewAll}>View All Notes</Button> : null}
+          </div>
         </div>
         {notes.isError ? <p className="error">{apiError(notes.error) ?? "Unable to load organization notes."}</p> : null}
-        <IntiliGrid columns={noteColumns} rows={notes.data?.data ?? []} onRowClick={setViewingNote} />
+        {companyId ? (
+          <div className="company-notes-page-list">
+            {!notes.isLoading && !companyNotes.length ? <p className="muted">No notes found for this company.</p> : null}
+            {companyNotes.map((note) => (
+              <article className="company-full-note" key={note.id}>
+                <div className="organization-note-content" dangerouslySetInnerHTML={{ __html: note.content }} />
+                <small>
+                  Updated {formatDate(note.updatedAt)} by {note.authorName}
+                </small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <IntiliGrid columns={noteColumns} rows={displayedNotes} onRowClick={setViewingNote} />
+        )}
       </section>
 
       <Dialog open={Boolean(viewingNote)} onClose={() => setViewingNote(null)} fullWidth maxWidth="sm">

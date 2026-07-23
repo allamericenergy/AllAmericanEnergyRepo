@@ -35,7 +35,7 @@ export function LoginPage() {
     try {
       const parsed = loginSchema.parse(values);
       await login(parsed.email, parsed.password, parsed.rememberMe);
-      navigate("/");
+      navigate("/dashboard");
       } catch (submitError) {
       setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : loginError(submitError));
     }
@@ -44,7 +44,9 @@ export function LoginPage() {
   return (
     <Box className="auth-page">
       <Paper className="auth-panel" elevation={0}>
-        <Box component="img" className="auth-logo" src="/logo.png" alt="iEnergyBill" />
+        <Link className="auth-logo-link" to="/" aria-label="Go to All American Energy home page">
+          <Box component="img" className="auth-logo" src="/logo.png" alt="All American Energy" />
+        </Link>
         <Typography variant="h4">Sign in</Typography>
         {emailVerified ? <Alert severity="success">Email verified. You can now sign in.</Alert> : null}
         {passwordReset ? <Alert severity="success">Password reset successfully. You can now sign in.</Alert> : null}

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "../features/auth/LoginPage";
+import { LandingPage } from "../features/landing/LandingPage";
 import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { ProtectedRoute } from "../features/auth/ProtectedRoute";
@@ -13,12 +14,13 @@ import { CompanyActivityPage, MyActivityPage } from "../features/activity/TeamAc
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route element={<ProtectedRoute />}>
       <Route element={<AppShell />}>
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/organizations" element={<OrganizationsPage />} />
         <Route path="/companies" element={<DashboardPage view="companies" />} />
         <Route path="/companies/:companyId/documents" element={<CompanyDocumentsPage />} />

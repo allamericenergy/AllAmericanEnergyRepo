@@ -2,7 +2,7 @@ import { Avatar, Menu, MenuItem } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Building2, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navByRole, normalizeRole, roleLabels, type Role } from "../lib/permissions";
 import { useAuthStore } from "../features/auth/authStore";
 import { api } from "../lib/api";
@@ -20,7 +20,7 @@ const iconMap = {
 };
 
 const pathMap: Record<string, string> = {
-  Dashboard: "/",
+  Dashboard: "/dashboard",
   Organizations: "/organizations",
   Companies: "/companies",
   Contracts: "/contracts",
@@ -32,6 +32,17 @@ const pathMap: Record<string, string> = {
 };
 
 export function AppShell() {
+  return (
+    <div className="shell">
+      <AuthenticatedTopbar />
+      <main className="main">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+export function AuthenticatedTopbar() {
   const navigate = useNavigate();
   const logoutUser = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -55,7 +66,7 @@ export function AppShell() {
   async function logout() {
     setAccountMenuAnchor(null);
     await logoutUser();
-    navigate("/login");
+    navigate("/", { replace: true });
   }
 
   function goTo(path: string) {
@@ -64,56 +75,53 @@ export function AppShell() {
   }
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <img src="/logo.png" alt="AllAmericanEnergy" style={{ height: 150, width: "auto" }} className="brand-logo" />
-        </div>
-        <nav className="topbar-nav">
-          {nav.map((item) => {
-            const Icon = iconMap[item as keyof typeof iconMap];
-            return (
-              <NavLink key={item} to={pathMap[item] ?? "/"} className={({ isActive }) => (isActive ? "active" : "")}>
-                <Icon size={18} />
-                {item}{item === "Activity" ? <span className="activity-nav-count">({activityCount.data?.total ?? 0})</span> : null}
-              </NavLink>
-            );
-          })}
-        </nav>
-        <button
-          type="button"
-          className="user-menu-trigger"
-          onClick={(event) => setAccountMenuAnchor(event.currentTarget)}
-          aria-controls={accountMenuAnchor ? "account-menu" : undefined}
-          aria-haspopup="menu"
-          aria-expanded={Boolean(accountMenuAnchor)}
-        >
-          <Avatar className="user-avatar">{roleLabels[role].slice(0, 1)}</Avatar>
-          <span>
-            <strong>{roleLabels[role]}</strong>
-            <small>{role === "superadmin" ? "Administrator" : roleLabels[role]}</small>
-          </span>
-        </button>
-        <Menu
-          id="account-menu"
-          anchorEl={accountMenuAnchor}
-          open={Boolean(accountMenuAnchor)}
-          onClose={() => setAccountMenuAnchor(null)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-        >
-          {privilegedMenuItems.map(({ label, path, Icon }) => (
-            <MenuItem key={label} onClick={() => goTo(path)}>
-              <Icon size={16} />
-              {label}
-            </MenuItem>
-          ))}
-          <MenuItem onClick={logout}>Logout</MenuItem>
-        </Menu>
-      </header>
-      <main className="main">
-        <Outlet />
-      </main>
-    </div>
+    <header className="topbar">
+      <div className="brand">
+        <Link className="brand-home-link" to="/" aria-label="Go to All American Energy home page">
+          <img src="/logo.png" alt="All American Energy" style={{ height: 150, width: "auto" }} className="brand-logo" />
+        </Link>
+      </div>
+      <nav className="topbar-nav">
+        {nav.map((item) => {
+          const Icon = iconMap[item as keyof typeof iconMap];
+          return (
+            <NavLink key={item} to={pathMap[item] ?? "/"} className={({ isActive }) => (isActive ? "active" : "")}>
+              <Icon size={18} />
+              {item}{item === "Activity" ? <span className="activity-nav-count">({activityCount.data?.total ?? 0})</span> : null}
+            </NavLink>
+          );
+        })}
+      </nav>
+      <button
+        type="button"
+        className="user-menu-trigger"
+        onClick={(event) => setAccountMenuAnchor(event.currentTarget)}
+        aria-controls={accountMenuAnchor ? "account-menu" : undefined}
+        aria-haspopup="menu"
+        aria-expanded={Boolean(accountMenuAnchor)}
+      >
+        <Avatar className="user-avatar">{roleLabels[role].slice(0, 1)}</Avatar>
+        <span>
+          <strong>{roleLabels[role]}</strong>
+          <small>{role === "superadmin" ? "Administrator" : roleLabels[role]}</small>
+        </span>
+      </button>
+      <Menu
+        id="account-menu"
+        anchorEl={accountMenuAnchor}
+        open={Boolean(accountMenuAnchor)}
+        onClose={() => setAccountMenuAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        {privilegedMenuItems.map(({ label, path, Icon }) => (
+          <MenuItem key={label} onClick={() => goTo(path)}>
+            <Icon size={16} />
+            {label}
+          </MenuItem>
+        ))}
+        <MenuItem onClick={logout}>Logout</MenuItem>
+      </Menu>
+    </header>
   );
 }

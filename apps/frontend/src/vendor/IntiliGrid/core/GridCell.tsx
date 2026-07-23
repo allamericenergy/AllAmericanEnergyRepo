@@ -1,4 +1,5 @@
 import Box from "@mui/material/Box";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 
 import type { GridColumn, GridRowModel } from "../models";
@@ -143,6 +144,32 @@ export default function GridCell<T extends GridRowModel>({
         );
     }
 
+    const displayText = column.valueFormatter
+        ? column.valueFormatter(value)
+        : String(value ?? "");
+    const cellContent = column.renderCell
+        ? column.renderCell({
+            value,
+            row,
+            rowIndex,
+        })
+        : displayText;
+    const textElement = (
+        <Typography
+            noWrap
+            variant="body2"
+            sx={{
+                color: "text.primary",
+                fontSize: 13,
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+            }}
+        >
+            {cellContent}
+        </Typography>
+    );
+
     return (
         <Box
             sx={{
@@ -172,24 +199,11 @@ export default function GridCell<T extends GridRowModel>({
                 }
             }}
         >
-            <Typography
-                noWrap
-                variant="body2"
-                sx={{
-                    color: "text.primary",
-                    fontSize: 13,
-                }}
-            >
-                {column.renderCell
-                    ? column.renderCell({
-                        value,
-                        row,
-                        rowIndex,
-                    })
-                    : column.valueFormatter
-                        ? column.valueFormatter(value)
-                        : String(value ?? "")}
-            </Typography>
+            {displayText.length > 25 ? (
+                <Tooltip title={displayText} arrow>
+                    {textElement}
+                </Tooltip>
+            ) : textElement}
         </Box>
     );
 }
