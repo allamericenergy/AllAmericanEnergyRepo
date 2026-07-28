@@ -10,6 +10,8 @@ import { AdminPages } from "../features/admin/AdminPages";
 import { AppShell } from "./AppShell";
 import { MembersPage } from "../features/members/MembersPage";
 import { CompanyActivityPage, MyActivityPage } from "../features/activity/TeamActivityPages";
+import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
+import { AccountPage } from "../features/account/AccountPage";
 
 export function App() {
   return (
@@ -19,6 +21,7 @@ export function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route element={<ProtectedRoute />}>
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/organizations" element={<OrganizationsPage />} />
@@ -29,6 +32,7 @@ export function App() {
         <Route path="/meters" element={<DashboardPage view="meters" />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/activity" element={<MyActivityPage />} />
+        <Route path="/account" element={<AccountPage />} />
        {/*  <Route path="/deals" element={<CrmPage entity="deals" />} />
         <Route path="/tasks" element={<CrmPage entity="tasks" />} />
         <Route path="/reports" element={<DashboardPage view="reports" />} /> */}

@@ -34,19 +34,25 @@ export function LoginPage() {
     setError("");
     try {
       const parsed = loginSchema.parse(values);
-      await login(parsed.email, parsed.password, parsed.rememberMe);
-      navigate("/dashboard");
+      const user = await login(parsed.email, parsed.password, parsed.rememberMe);
+      navigate(user.mustChangePassword ? "/reset-password" : "/dashboard", { replace: true });
       } catch (submitError) {
       setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid form data." : loginError(submitError));
     }
   }
 
   return (
-    <Box className="auth-page">
+    <Box className="auth-page login-auth-page">
+      <Link className="login-corner-logo" to="/" aria-label="Go to All American Energy home page">
+        <Box component="img" className="login-corner-logo-image" src="/logo-transparent.png" alt="All American Energy" />
+      </Link>
+      <Box className="login-background-tagline">
+        <Typography component="h1">
+          The Future of Energy Management
+          <span>Smarter. Cleaner. More Efficient</span>
+        </Typography>
+      </Box>
       <Paper className="auth-panel" elevation={0}>
-        <Link className="auth-logo-link" to="/" aria-label="Go to All American Energy home page">
-          <Box component="img" className="auth-logo" src="/logo.png" alt="All American Energy" />
-        </Link>
         <Typography variant="h4">Sign in</Typography>
         {emailVerified ? <Alert severity="success">Email verified. You can now sign in.</Alert> : null}
         {passwordReset ? <Alert severity="success">Password reset successfully. You can now sign in.</Alert> : null}

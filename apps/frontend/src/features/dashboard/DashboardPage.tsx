@@ -21,7 +21,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const isContractsView = view === "contracts";
   const isMetersView = view === "meters";
   const isDashboardView = !view || view === "reports";
-  const canManageMembers = user?.role === "superadmin" || user?.role === "admin";
+  const hasAdminDashboard = user?.role === "superadmin" || user?.role === "admin";
+  const canManageMembers = hasAdminDashboard;
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [companyFormMode, setCompanyFormMode] = useState<"create" | "edit">("create");
   const [viewedCompany, setViewedCompany] = useState<TblCompanyRow | null>(null);
@@ -89,6 +90,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [meterGridKey, setMeterGridKey] = useState(0);
   const [meterError, setMeterError] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
+  const [isBulkMeterModalOpen, setIsBulkMeterModalOpen] = useState(false);
+  const [bulkMeterRows, setBulkMeterRows] = useState<MeterForm[]>([]);
+  const [bulkMeterFileName, setBulkMeterFileName] = useState("");
+  const [bulkMeterError, setBulkMeterError] = useState("");
+  const [bulkMeterResult, setBulkMeterResult] = useState<BulkMeterResult | null>(null);
+  const [isUploadingMeters, setIsUploadingMeters] = useState(false);
+  const [bulkMeterCompanyId, setBulkMeterCompanyId] = useState(0);
 
   useEffect(() => {
     if (!contractAvailabilityNotice) return;
@@ -103,7 +111,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const companies = useQuery({
     queryKey: ["tbl-companies"],
     queryFn: async () => (await api.get("/reports/tbl-companies")).data as { total: number; data: TblCompanyRow[] },
-    enabled: user?.role === "superadmin" || isCompaniesView || isContractsView || isMetersView,
+    enabled: hasAdminDashboard || isCompaniesView || isContractsView || isMetersView,
     retry: false
   });
   const contracts = useQuery({
@@ -113,7 +121,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         params: { companyId: isContractsView ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: ContractRow[] },
-    enabled: Boolean(viewedCompany) || isContractsView || (user?.role === "superadmin" && isDashboardView),
+    enabled: Boolean(viewedCompany) || isContractsView || (hasAdminDashboard && isDashboardView),
     retry: false
   });
   const contractLookups = useQuery({
@@ -136,19 +144,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
         params: { companyId: isMetersView ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: MeterRow[] },
-    enabled: Boolean(viewedCompany?.id) || isMetersView || (user?.role === "superadmin" && isDashboardView),
+    enabled: Boolean(viewedCompany?.id) || isMetersView || (hasAdminDashboard && isDashboardView),
     retry: false
   });
   const members = useQuery({
     queryKey: ["members", "dashboard"],
     queryFn: async () => (await api.get("/reports/members")).data as { total: number },
-    enabled: user?.role === "superadmin" && isDashboardView,
+    enabled: hasAdminDashboard && isDashboardView,
     retry: false
   });
   const meterLookups = useQuery({
     queryKey: ["meter-lookups"],
     queryFn: async () => (await api.get("/reports/meter-lookups")).data as MeterLookups,
-    enabled: Boolean(viewedCompany) || isMeterModalOpen,
+    enabled: Boolean(viewedCompany) || isMeterModalOpen || isBulkMeterModalOpen,
     retry: false
   });
   const usStates = useQuery({
@@ -242,7 +250,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </Tooltip>
           <Tooltip title="Company activity">
             <IconButton size="small" aria-label="Company activity" onClick={(event) => { event.stopPropagation(); navigate(`/companies/${row.id}/activities`); }}>
-              <Badge badgeContent={activityUnreadCounts.data?.byCompany[String(row.id)] ?? 0} color="error" max={99}>
+              <Badge className="company-activity-count" badgeContent={activityUnreadCounts.data?.byCompany[String(row.id)] ?? 0} color="error" max={99}>
                 <Activity size={16} />
               </Badge>
             </IconButton>
@@ -534,6 +542,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   const contractMonths = calculateContractMonths(contractForm.startDate, contractForm.endDate);
   const meterLoadProfile = calculateMeterLoadProfile(meterForm.demand, meterForm.annualUsage);
+  const bulkMeterCompany = viewedCompany ?? companies.data?.data.find((company) => Number(company.id) === bulkMeterCompanyId);
   const contractNotesText = contractForm.notes.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim();
   const requiredContractFieldsValid = Boolean(
     contractForm.brokerId
@@ -631,6 +640,34 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setIsMeterModalOpen(true);
   }
 
+  function openBulkMeterUpload() {
+    if (viewedCompany && !viewedCompany.isActive) {
+      setMeterError("Make company active to add meters.");
+      return;
+    }
+    setBulkMeterError("");
+    setBulkMeterResult(null);
+    setBulkMeterRows([]);
+    setBulkMeterFileName("");
+    setBulkMeterCompanyId(viewedCompany?.id ? Number(viewedCompany.id) : 0);
+    setIsBulkMeterModalOpen(true);
+  }
+
+  function updateBulkMeterCompany(companyId: number) {
+    setBulkMeterCompanyId(companyId);
+    setBulkMeterError("");
+    setBulkMeterResult(null);
+    setBulkMeterRows([]);
+    setBulkMeterFileName("");
+  }
+
+  function closeMeterModal() {
+    setIsMeterModalOpen(false);
+    setEditingMeterId(null);
+    setMeterFormMode("create");
+    setMeterForm(emptyMeterForm());
+  }
+
   function editMeter(meter: MeterRow) {
     setMeterError("");
     setMeterFormMode("edit");
@@ -685,10 +722,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
       }
 
       await meters.refetch();
-      setIsMeterModalOpen(false);
       setEditingMeterId(null);
       setMeterFormMode("create");
-      setMeterForm(emptyMeterForm());
+      closeMeterModal();
     } catch (error) {
       const serverMessage = companyApiError(error);
       setMeterError(serverMessage ?? "Unable to save meter. Check fields and try again.");
@@ -774,6 +810,54 @@ export function DashboardPage({ view }: DashboardPageProps) {
       setBulkCompanyRows(rows);
     } catch (error) {
       setBulkCompanyError(error instanceof Error ? error.message : "Unable to read the selected file.");
+    }
+  }
+
+  async function selectBulkMeterFile(file: File | undefined) {
+    const companyId = viewedCompany?.id ? Number(viewedCompany.id) : bulkMeterCompanyId;
+    setBulkMeterError("");
+    setBulkMeterResult(null);
+    setBulkMeterRows([]);
+    setBulkMeterFileName(file?.name ?? "");
+    if (!file) return;
+    if (!companyId) {
+      setBulkMeterError("Select a company before choosing the meter file.");
+      return;
+    }
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!worksheet) throw new Error("The workbook does not contain a worksheet.");
+      const rows = parseBulkMeters(worksheet, companyId, meterLookups.data);
+      if (!rows.length) throw new Error("No meter rows were found in the file.");
+      if (rows.length > 500) throw new Error("A maximum of 500 meters can be uploaded at once.");
+      setBulkMeterRows(rows);
+    } catch (error) {
+      setBulkMeterError(error instanceof Error ? error.message : "Unable to read the selected file.");
+    }
+  }
+
+  async function uploadBulkMeters() {
+    const companyId = viewedCompany?.id ? Number(viewedCompany.id) : bulkMeterCompanyId;
+    if (!companyId || !bulkMeterRows.length) return;
+    setBulkMeterError("");
+    setBulkMeterResult(null);
+    setIsUploadingMeters(true);
+    try {
+      const response = await api.post("/reports/meters/bulk", {
+        companyId,
+        meters: bulkMeterRows
+      });
+      const result = response.data as BulkMeterResult;
+      setBulkMeterResult(result);
+      setBulkMeterRows([]);
+      setBulkMeterFileName("");
+      await meters.refetch();
+    } catch (error) {
+      setBulkMeterError(companyApiError(error) ?? "Unable to upload meters.");
+    } finally {
+      setIsUploadingMeters(false);
     }
   }
 
@@ -893,29 +977,126 @@ export function DashboardPage({ view }: DashboardPageProps) {
     XLSX.writeFile(workbook, "company-upload-template.xlsx");
   }
 
+  async function downloadMeterTemplate() {
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const meterSheet = workbook.addWorksheet("Meters", { views: [{ state: "frozen", ySplit: 1 }] });
+    meterSheet.columns = [
+      { header: "Account Number", key: "accountNumber", width: 18 },
+      { header: "Service Ref/POD", key: "serviceRefPod", width: 18 },
+      { header: "Name Key", key: "nameKey", width: 14 },
+      { header: "Meter", key: "meter", width: 18 },
+      { header: "Service Address", key: "serviceAddress", width: 24 },
+      { header: "City", key: "city", width: 16 },
+      { header: "State", key: "state", width: 12 },
+      { header: "Zip", key: "zip", width: 12, style: { numFmt: "@" } },
+      { header: "Tax Exempt", key: "taxExempt", width: 18 },
+      { header: "Cycle/Read Day", key: "cycleReadDay", width: 18 },
+      { header: "Rate", key: "rate", width: 16 },
+      { header: "Demand", key: "demand", width: 14 },
+      { header: "Annual Usage", key: "annualUsage", width: 16 },
+      { header: "iEnergyBill", key: "iEnergyBill", width: 18 },
+      { header: "EnergyDashboard", key: "energyDashboard", width: 20 },
+      { header: "OnSiteGeneration", key: "onSiteGeneration", width: 20 },
+      { header: "Type", key: "type", width: 16 },
+      { header: "Product", key: "product", width: 18 },
+      { header: "Utility", key: "utility", width: 20 },
+      { header: "Status", key: "status", width: 16 },
+      { header: "Notes", key: "notes", width: 28 },
+      { header: "Active", key: "active", width: 12 }
+    ];
+    meterSheet.addRow({
+      accountNumber: "10001234",
+      meter: "MTR-10001",
+      serviceAddress: "100 Main Street",
+      city: "Austin",
+      state: "TX",
+      zip: "012345",
+      active: "TRUE"
+    });
+    meterSheet.autoFilter = "A1:V1";
+    meterSheet.getRow(1).height = 24;
+    meterSheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1683D8" } };
+      cell.alignment = { vertical: "middle" };
+    });
+
+    const lookupColumns = [
+      { column: "taxExempt", sheet: "Tax Exempt", range: "TaxExemptOptions", options: meterLookups.data?.taxExempts },
+      { column: "rate", sheet: "Rates", range: "RateOptions", options: meterLookups.data?.rates },
+      { column: "iEnergyBill", sheet: "iEnergyBill", range: "IEnergyBillOptions", options: meterLookups.data?.iEnergyBills },
+      { column: "energyDashboard", sheet: "Energy Dashboard", range: "EnergyDashboardOptions", options: meterLookups.data?.energyDashboards },
+      { column: "onSiteGeneration", sheet: "On Site Generation", range: "OnSiteGenerationOptions", options: meterLookups.data?.onSiteGenerations },
+      { column: "type", sheet: "Types", range: "TypeOptions", options: meterLookups.data?.types },
+      { column: "product", sheet: "Products", range: "ProductOptions", options: meterLookups.data?.products },
+      { column: "utility", sheet: "Utilities", range: "UtilityOptions", options: meterLookups.data?.utilities },
+      { column: "status", sheet: "Statuses", range: "StatusOptions", options: meterLookups.data?.statuses }
+    ];
+
+    for (const lookup of lookupColumns) {
+      if (!lookup.options?.length) continue;
+      const lookupSheet = workbook.addWorksheet(lookup.sheet, { views: [{ state: "frozen", ySplit: 1 }] });
+      lookupSheet.columns = [
+        { header: "ID", key: "id", width: 12 },
+        { header: "Name", key: "name", width: 32 }
+      ];
+      lookupSheet.addRows(lookup.options.map((option) => ({ id: option.id, name: option.name ?? "" })));
+      lookupSheet.getRow(1).font = { bold: true };
+      workbook.definedNames.add(`'${lookup.sheet}'!$B$2:$B$${lookup.options.length + 1}`, lookup.range);
+      for (let row = 2; row <= 501; row += 1) {
+        meterSheet.getRow(row).getCell(lookup.column).dataValidation = {
+          type: "list",
+          allowBlank: true,
+          formulae: [lookup.range],
+          showErrorMessage: true,
+          errorTitle: "Invalid value",
+          error: `Choose a ${lookup.sheet} value from the dropdown.`
+        };
+      }
+    }
+
+    for (let row = 2; row <= 501; row += 1) {
+      meterSheet.getRow(row).getCell("active").dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: ['"TRUE,FALSE"']
+      };
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "meter-upload-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="page">
       {isDashboardView ? (
       <div className="kpi-grid">
-        {user?.role === "superadmin" ? (
+        {hasAdminDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/companies")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/companies"); }}>
             <span>Companies</span>
             <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {user?.role === "superadmin" ? (
+        {hasAdminDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
             <span>Contracts</span>
             <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {user?.role === "superadmin" ? (
+        {hasAdminDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
             <span>Meters</span>
             <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {user?.role === "superadmin" ? (
+        {hasAdminDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/members")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/members"); }}>
             <span>Members</span>
             <strong>{members.isLoading ? "..." : members.data?.total ?? 0}</strong>
@@ -924,7 +1105,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       </div>
       ) : null}
 
-      {(user?.role === "superadmin" && isDashboardView) || isCompaniesView ? (
+      {(hasAdminDashboard && isDashboardView) || isCompaniesView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Companies</h2>
@@ -1003,6 +1184,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </Button>
                 </>
               ) : null}
+              <Button variant="outlined" startIcon={<Upload size={18} />} onClick={openBulkMeterUpload}>Add More Meters</Button>
               <Button variant="contained" onClick={openCreateMeter}>Add New Meter</Button>
             </div>
           </div>
@@ -1223,6 +1405,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     isError={meters.isError}
                     error={meterError}
                     onAdd={openCreateMeter}
+                    onAddMore={openBulkMeterUpload}
                     addDisabled={!viewedCompany.isActive}
                   />
                   {canManageMembers ? (
@@ -1384,7 +1567,67 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={isMeterModalOpen} onClose={() => setIsMeterModalOpen(false)} fullWidth maxWidth="md">
+      <Dialog open={isBulkMeterModalOpen} onClose={() => !isUploadingMeters && setIsBulkMeterModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Upload Multiple Meters</DialogTitle>
+        <DialogContent>
+          {!viewedCompany ? (
+            <TextField
+              select
+              required
+              fullWidth
+              margin="normal"
+              label="Company"
+              value={bulkMeterCompanyId}
+              onChange={(event) => updateBulkMeterCompany(Number(event.target.value))}
+              disabled={isUploadingMeters || companies.isLoading}
+            >
+              <MenuItem value={0}>Select company</MenuItem>
+              {(companies.data?.data ?? []).map((company) => (
+                <MenuItem key={company.id} value={Number(company.id)} disabled={!company.isActive}>
+                  {company.companyName}{company.isActive ? "" : " (Inactive)"}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
+          <p className="muted">
+            Upload an Excel or CSV file containing up to 500 meters for {bulkMeterCompany?.companyName ?? "the selected company"}.
+            Enter lookup names or IDs exactly as shown in the template reference sheets. Account Number or Meter is required for every row.
+          </p>
+          {bulkMeterError ? <p className="error">{bulkMeterError}</p> : null}
+          {meterLookups.isError ? <Alert severity="error">Unable to load dropdown values for the template. Try again.</Alert> : null}
+          {bulkMeterResult ? (
+            <Alert severity={bulkMeterResult.failed ? "warning" : "success"}>
+              Imported {bulkMeterResult.imported} of {bulkMeterResult.total} meters.
+              {bulkMeterResult.failed ? ` ${bulkMeterResult.failed} row(s) failed.` : ""}
+            </Alert>
+          ) : null}
+          {bulkMeterResult?.errors.slice(0, 10).map((item) => (
+            <p className="error" key={`${item.row}-${item.meter}`}>Row {item.row}{item.meter ? ` (${item.meter})` : ""}: {item.error}</p>
+          ))}
+          {isUploadingMeters ? (
+            <Alert severity="info" icon={<CircularProgress size={20} />}>Uploading meters. Please wait...</Alert>
+          ) : null}
+          <div className="bulk-upload-controls">
+            <Button component="label" variant="outlined" startIcon={<Upload size={18} />} disabled={isUploadingMeters || !bulkMeterCompany}>
+              Choose File
+              <input hidden type="file" accept=".xlsx,.xls,.csv" disabled={isUploadingMeters || !bulkMeterCompany} onChange={(event) => void selectBulkMeterFile(event.target.files?.[0])} />
+            </Button>
+            <span>{bulkMeterFileName || "No file selected"}</span>
+          </div>
+          {bulkMeterRows.length ? <p className="muted">{bulkMeterRows.length} meter row(s) ready to upload.</p> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => void downloadMeterTemplate()} disabled={isUploadingMeters || meterLookups.isLoading || meterLookups.isError}>
+            {meterLookups.isLoading ? "Loading Template..." : meterLookups.isError ? "Template Unavailable" : "Download Template"}
+          </Button>
+          <Button onClick={() => setIsBulkMeterModalOpen(false)} disabled={isUploadingMeters}>Close</Button>
+          <Button variant="contained" onClick={() => void uploadBulkMeters()} disabled={!bulkMeterCompany || !bulkMeterRows.length || isUploadingMeters}>
+            {isUploadingMeters ? <><CircularProgress size={18} color="inherit" /> Uploading...</> : "Upload Meters"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isMeterModalOpen} onClose={closeMeterModal} fullWidth maxWidth="md">
         <DialogTitle>{meterFormMode === "edit" ? "Edit Meter" : "Add New Meter"}</DialogTitle>
         <DialogContent>
           {meterError ? <p className="error">{meterError}</p> : null}
@@ -1457,8 +1700,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsMeterModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={saveMeter} disabled={savingMeter}>
+          <Button onClick={closeMeterModal} disabled={savingMeter}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveMeter()} disabled={savingMeter}>
             {savingMeter ? "Saving..." : meterFormMode === "edit" ? "Update Meter" : "Submit"}
           </Button>
         </DialogActions>
@@ -1772,10 +2015,11 @@ interface MeterListPanelProps {
   isError: boolean;
   error: string;
   onAdd: () => void;
+  onAddMore: () => void;
   addDisabled?: boolean;
 }
 
-function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, addDisabled = false }: MeterListPanelProps) {
+function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, addDisabled = false }: MeterListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
@@ -1787,6 +2031,11 @@ function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, add
           <Tooltip title={addDisabled ? "Make company active to add meters" : "Add new meter"}>
             <span>
               <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />} disabled={addDisabled}>Add New Meter</Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={addDisabled ? "Make company active to add meters" : "Add multiple meters to this company"}>
+            <span>
+              <Button size="small" variant="outlined" onClick={onAddMore} startIcon={<Upload size={16} />} disabled={addDisabled}>Add More Meters</Button>
             </span>
           </Tooltip>
           {/* <IconButton size="small" aria-label="Choose meter columns">
@@ -2028,6 +2277,13 @@ interface BulkCompanyResult {
   errors: Array<{ row: number; companyName: string; error: string }>;
 }
 
+interface BulkMeterResult {
+  total: number;
+  imported: number;
+  failed: number;
+  errors: Array<{ row: number; meter: string; error: string }>;
+}
+
 function parseBulkCompanies(worksheet: XLSX.WorkSheet): NewCompanyForm[] {
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
   return rows.map((source) => {
@@ -2051,6 +2307,61 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet): NewCompanyForm[] {
       taxId: text("taxid"),
       url: text("url", "website"),
       notes: text("notes"),
+      isActive: activeValue ? !["false", "no", "0", "inactive"].includes(activeValue) : true
+    };
+  });
+}
+
+function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?: MeterLookups): MeterForm[] {
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+  return rows.map((source, index) => {
+    const rowNumber = index + 2;
+    const row = new Map(Object.entries(source).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value]));
+    const value = (...keys: string[]) => keys.map((key) => row.get(key)).find((item) => item !== undefined);
+    const text = (...keys: string[]) => String(value(...keys) ?? "").trim();
+    const lookupId = (label: string, options: LookupOption[] | undefined, ...keys: string[]) => {
+      const rawValue = text(...keys);
+      if (!rawValue) return 0;
+      const numericValue = Number(rawValue);
+      if (Number.isInteger(numericValue) && numericValue > 0) return numericValue;
+      const normalizedValue = rawValue.toLowerCase();
+      const match = options?.find((option) => String(option.name ?? "").trim().toLowerCase() === normalizedValue);
+      if (match) return Number(match.id);
+      throw new Error(`Row ${rowNumber}: Unknown ${label} "${rawValue}". Use a name or ID from the template reference sheets.`);
+    };
+    const accountNumber = text("accountnumber", "account");
+    const meter = text("meter", "meternumber");
+    if (!accountNumber && !meter) {
+      throw new Error(`Row ${rowNumber}: Account Number or Meter is required.`);
+    }
+    const demand = text("demand");
+    const annualUsage = text("annualusage", "annusagedthkwh", "usage");
+    const activeValue = text("active", "isactive").toLowerCase();
+
+    return {
+      companyId,
+      accountNumber,
+      serviceRefPod: text("servicerefpod", "serviceref", "pod"),
+      nameKey: text("namekey"),
+      meter,
+      serviceAddress: text("serviceaddress", "address"),
+      city: text("city"),
+      state: text("state"),
+      zip: text("zip", "zipcode", "postalcode"),
+      taxExempt: lookupId("Tax Exempt", lookups?.taxExempts, "taxexempt", "taxexemptid"),
+      cycleReadDay: text("cyclereadday", "cycleday", "readday"),
+      rate: lookupId("Rate", lookups?.rates, "rate", "rateid"),
+      demand,
+      annualUsage,
+      loadProfile: text("loadprofile") || calculateMeterLoadProfile(demand, annualUsage),
+      iEnergyBillId: lookupId("iEnergyBill", lookups?.iEnergyBills, "ienergybill", "ienergybillid"),
+      energyDashboardId: lookupId("EnergyDashboard", lookups?.energyDashboards, "energydashboard", "energydashboardid"),
+      onSiteGenerationId: lookupId("OnSiteGeneration", lookups?.onSiteGenerations, "onsitegeneration", "onsitegenerationid"),
+      typeId: lookupId("Type", lookups?.types, "type", "typeid"),
+      productId: lookupId("Product", lookups?.products, "product", "productid"),
+      utilityId: lookupId("Utility", lookups?.utilities, "utility", "utilityid"),
+      statusId: lookupId("Status", lookups?.statuses, "status", "statusid"),
+      notes: text("notes", "note"),
       isActive: activeValue ? !["false", "no", "0", "inactive"].includes(activeValue) : true
     };
   });

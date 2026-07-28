@@ -5,8 +5,21 @@ import type { Role } from "../../lib/permissions";
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string | null;
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  company?: string | null;
+  department?: string | null;
+  designation?: string | null;
+  profilePhotoUrl?: string | null;
   role: Role;
+  status?: string;
   orgId: string | null;
+  organizationName?: string | null;
+  lastLogin?: string | null;
+  createdAt?: string;
+  mustChangePassword: boolean;
 }
 
 interface AuthState {
@@ -14,8 +27,8 @@ interface AuthState {
   permissions: string[];
   accessToken: string | null;
   refreshToken: string | null;
-  login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
-  loadMe: () => Promise<void>;
+  login: (email: string, password: string, rememberMe: boolean) => Promise<AuthUser>;
+  loadMe: () => Promise<AuthUser>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
@@ -37,7 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       refreshToken: response.data.refreshToken,
       user: response.data.user
     });
-    await get().loadMe();
+    return get().loadMe();
   },
 
   async loadMe() {
@@ -45,6 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem("aae_user", JSON.stringify(response.data.user));
     localStorage.setItem("aae_permissions", JSON.stringify(response.data.permissions));
     set({ user: response.data.user, permissions: response.data.permissions });
+    return response.data.user as AuthUser;
   },
 
   async logout() {

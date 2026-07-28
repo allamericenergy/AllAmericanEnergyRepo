@@ -582,6 +582,75 @@ nav a:hover {
   min-width: 180px;
 }
 
+.account-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.account-page > .MuiAlert-root {
+  margin-bottom: 1rem;
+}
+
+.account-page-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.account-profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e3e8ef;
+}
+
+.account-profile-heading h2,
+.account-profile-heading p {
+  margin: 0;
+}
+
+.account-profile-heading p {
+  margin-top: 0.25rem;
+  color: #64748b;
+}
+
+.account-profile-avatar {
+  width: 64px !important;
+  height: 64px !important;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: #e0f2fe !important;
+  color: #0f5da8 !important;
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+}
+
+.account-photo-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.account-photo-actions small {
+  width: 100%;
+  color: #64748b;
+  text-align: right;
+}
+
+.account-profile-form {
+  align-items: start;
+}
+
+.account-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
 .page {
   padding: 1.5rem;
 }
@@ -685,6 +754,84 @@ nav a:hover {
     url("/landing-hero.jpg") center / cover no-repeat fixed;
 }
 
+.login-auth-page {
+  position: relative;
+  place-items: start center;
+  padding-top: 15rem;
+  background:
+    linear-gradient(180deg, #f2f0eb 0%, rgba(242, 240, 235, 0.12) 72%),
+    url("/landing-hero.jpg") center 45% / cover no-repeat fixed;
+}
+
+.login-corner-logo {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.5rem;
+  z-index: 1;
+  display: inline-flex;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-corner-logo-image {
+  width: min(280px, 28vw);
+  max-height: 92px;
+  object-fit: contain;
+}
+
+.login-background-tagline {
+  position: absolute;
+  top: 7.5rem;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  display: grid;
+  gap: 0.35rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.login-background-tagline h1 {
+  margin: 0;
+  color: #151a21;
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  width: max-content;
+  animation: login-tagline-scroll 16s linear infinite;
+}
+
+.login-background-tagline h1 span {
+  margin-left: 1.25rem;
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 0.45em;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+@keyframes login-tagline-scroll {
+  from {
+    transform: translateX(100vw);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-background-tagline h1 {
+    width: auto;
+    text-align: center;
+    white-space: normal;
+    animation: none;
+  }
+}
+
 .auth-panel {
   position: relative;
   width: min(460px, 100%);
@@ -696,6 +843,36 @@ nav a:hover {
   background: rgba(255, 255, 255, 0.94) !important;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
+}
+
+.login-auth-page .auth-panel {
+  z-index: 2;
+}
+
+@media (max-width: 680px) {
+  .login-auth-page {
+    padding-top: 12.5rem;
+  }
+
+  .login-corner-logo {
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+
+  .login-corner-logo-image {
+    width: min(220px, 60vw);
+    max-height: 72px;
+  }
+
+  .login-background-tagline {
+    top: 7.25rem;
+    left: 0;
+    width: 100%;
+  }
+
+  .login-background-tagline h1 {
+    font-size: 28px;
+  }
 }
 
 .activity-nav-count {
@@ -1026,6 +1203,24 @@ nav a:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.company-activity-count .MuiBadge-badge {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 0.58rem;
+  line-height: 14px;
+  top: 1px;
+  right: 1px;
+}
+
+.notes-grid-cell-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .contract-months-label {
@@ -1507,6 +1702,7 @@ nav a:hover {
 .account-data-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
   color: #1683d8;
   text-transform: uppercase;

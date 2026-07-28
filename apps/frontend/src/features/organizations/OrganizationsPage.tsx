@@ -7,6 +7,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  MenuItem,
   TextField,
   Tooltip
 } from "@mui/material";
@@ -188,7 +189,20 @@ export function OrganizationsPage() {
 }
 
 const noteColumns: GridColumn<OrganizationNoteRow>[] = [
-  { field: "content", headerName: "Note", minWidth: 260, flex: 1, valueFormatter: (value) => plainText(String(value ?? "")) || "-" },
+  {
+    field: "content",
+    headerName: "Note",
+    minWidth: 260,
+    flex: 1,
+    renderCell: ({ value }) => {
+      const text = plainText(String(value ?? "")) || "-";
+      return (
+        <Tooltip title={text} arrow enterDelay={300}>
+          <span className="notes-grid-cell-text">{text}</span>
+        </Tooltip>
+      );
+    }
+  },
   { field: "relatedType", headerName: "Related Type", width: 140, valueFormatter: (value) => displayName(String(value ?? "")) },
   { field: "relatedName", headerName: "Related Record", minWidth: 180 },
   { field: "authorName", headerName: "Author", minWidth: 170 },
@@ -282,6 +296,10 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState("");
+  const [rateUploadOpen, setRateUploadOpen] = useState(false);
+  const [rateUploadUtilityId, setRateUploadUtilityId] = useState("");
+  const [rateUploadFile, setRateUploadFile] = useState<File | null>(null);
+  const [rateUploadError, setRateUploadError] = useState("");
   const [error, setError] = useState("");
 
   const records = useQuery({
@@ -290,7 +308,28 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     retry: false
   });
 
+  const utilities = useQuery({
+    queryKey: ["organization-table", "utilities", "rate-options"],
+    queryFn: async () => (await api.get("/reports/utilities")).data as RatesResponse,
+    enabled: endpoint === "rates",
+    retry: false
+  });
+
   const editableColumns = records.data?.columns.filter((column) => column.editable) ?? [];
+  const utilityColumn = endpoint === "rates"
+    ? editableColumns.find((column) => column.name.toLowerCase() === "utilityid")
+    : undefined;
+  const utilityOptions = useMemo(() => {
+    if (!utilities.data) return [];
+    const primaryKey = utilities.data.primaryKey;
+    const nameColumn = utilities.data.columns.find((column) => column.name.toLowerCase() === "utility")
+      ?? utilities.data.columns.find((column) => column.name !== primaryKey && ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType));
+    if (!primaryKey || !nameColumn) return [];
+    return utilities.data.data.map((row) => ({
+      id: String(row[primaryKey] ?? ""),
+      name: String(row[nameColumn.name] ?? "")
+    })).filter((option) => option.id && option.name);
+  }, [utilities.data]);
   const rows = useMemo(() => {
     const key = records.data?.primaryKey;
     return (records.data?.data ?? []).map((row, index) => ({
@@ -300,13 +339,18 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   }, [endpoint, records.data]);
 
   const columns = useMemo<GridColumn<RateRow>[]>(() => {
-    const dataColumns = (records.data?.columns ?? []).map((column): GridColumn<RateRow> => ({
-      field: column.name as keyof RateRow,
-      headerName: displayName(column.name),
-      minWidth: rateColumnWidth(column),
-      flex: ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType) ? 1 : undefined,
-      valueFormatter: (value) => formatRateValue(value, column.dataType)
-    }));
+    const dataColumns = (records.data?.columns ?? []).map((column): GridColumn<RateRow> => {
+      const isUtility = endpoint === "rates" && column.name.toLowerCase() === "utilityid";
+      return {
+        field: column.name as keyof RateRow,
+        headerName: isUtility ? "Utility" : displayName(column.name),
+        minWidth: isUtility ? 180 : rateColumnWidth(column),
+        flex: ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType) ? 1 : undefined,
+        valueFormatter: (value) => isUtility
+          ? utilityOptions.find((utility) => utility.id === String(value ?? ""))?.name ?? "-"
+          : formatRateValue(value, column.dataType)
+      };
+    });
     return [
       ...dataColumns,
       {
@@ -327,7 +371,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         )
       }
     ];
-  }, [records.data, singularName]);
+  }, [endpoint, records.data, singularName, utilityOptions]);
 
   function openCreate() {
     setEditing(null);
@@ -377,30 +421,76 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     }
   }
 
-  async function uploadRates(file: File | null) {
-    if (!file || endpoint !== "rates") return;
+  function openRateUpload() {
+    setRateUploadUtilityId("");
+    setRateUploadFile(null);
+    setRateUploadError("");
+    setRateUploadOpen(true);
+  }
+
+  async function downloadRateTemplate() {
+    const templateColumns = editableColumns.filter((column) => column.name !== utilityColumn?.name);
+    if (!templateColumns.length) return;
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Rates", { views: [{ state: "frozen", ySplit: 1 }] });
+    worksheet.columns = templateColumns.map((column) => ({
+      header: column.name,
+      key: column.name,
+      width: Math.max(16, Math.min(32, displayName(column.name).length + 6))
+    }));
+    worksheet.getRow(1).height = 24;
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1683D8" } };
+      cell.alignment = { vertical: "middle" };
+    });
+    worksheet.autoFilter = `A1:${excelColumnName(templateColumns.length)}1`;
+    const instructions = workbook.addWorksheet("Instructions");
+    instructions.getCell("A1").value = "Rate Upload Instructions";
+    instructions.getCell("A1").font = { bold: true, size: 14 };
+    instructions.getCell("A3").value = "1. Select the Utility in the upload dialog.";
+    instructions.getCell("A4").value = "2. Enter one rate per row on the Rates sheet.";
+    instructions.getCell("A5").value = "3. Do not rename or remove the column headers.";
+    instructions.getCell("A6").value = "4. Save as XLSX, XLS, or CSV and upload the file.";
+    instructions.getColumn("A").width = 70;
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "rate-upload-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function uploadRates() {
+    if (!rateUploadFile || !rateUploadUtilityId || endpoint !== "rates") return;
     setUploading(true);
     setUploadNotice("");
-    setError("");
+    setRateUploadError("");
     try {
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const workbook = XLSX.read(await rateUploadFile.arrayBuffer(), { type: "array", cellDates: true });
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) throw new Error("The uploaded file does not contain a worksheet.");
       const worksheet = workbook.Sheets[firstSheetName];
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "", raw: true })
         .filter((row) => Object.values(row).some((value) => String(value ?? "").trim() !== ""));
       if (!rows.length) throw new Error("The uploaded file does not contain any rate rows.");
-      const response = await api.post("/reports/rates/bulk", { rows }) as { data: { imported: number } };
+      const response = await api.post("/reports/rates/bulk", { rows, utilityId: Number(rateUploadUtilityId) }) as { data: { imported: number } };
       setUploadNotice(`${response.data.imported} rate${response.data.imported === 1 ? "" : "s"} imported successfully.`);
       await records.refetch();
+      setRateUploadOpen(false);
+      setRateUploadFile(null);
     } catch (uploadError) {
-      setError(apiError(uploadError) ?? (uploadError instanceof Error ? uploadError.message : "Unable to import rates."));
+      setRateUploadError(apiError(uploadError) ?? (uploadError instanceof Error ? uploadError.message : "Unable to import rates."));
     } finally {
       setUploading(false);
     }
   }
 
-  const formValid = editableColumns.every((column) => column.nullable || column.hasDefault || form[column.name] !== "");
+  const formValid = editableColumns.every((column) => column.nullable || column.hasDefault || form[column.name] !== "")
+    && (endpoint !== "rates" || Boolean(utilityColumn && form[utilityColumn.name] !== "" && !utilities.isLoading && !utilities.isError));
 
   return (
     <>
@@ -412,14 +502,8 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           </div>
           <div className="panel-title-actions">
             {endpoint === "rates" ? (
-              <Button variant="outlined" component="label" startIcon={<Upload size={18} />} disabled={uploading || !records.data}>
-                {uploading ? "Uploading..." : "Upload Excel/CSV"}
-                <input
-                  type="file"
-                  hidden
-                  accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={(event) => { void uploadRates(event.target.files?.[0] ?? null); event.target.value = ""; }}
-                />
+              <Button variant="outlined" startIcon={<Upload size={18} />} disabled={uploading || !records.data} onClick={openRateUpload}>
+                Upload Excel/CSV
               </Button>
             ) : null}
             <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate} disabled={!records.data}>Add New {singularName}</Button>
@@ -437,7 +521,24 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
           <div className="company-form-grid">
-            {editableColumns.map((column) => column.dataType === "bit" ? (
+            {endpoint === "rates" && utilityColumn ? (
+              <TextField
+                select
+                label="Utility"
+                required
+                value={form[utilityColumn.name] ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, [utilityColumn.name]: event.target.value }))}
+                disabled={utilities.isLoading || utilities.isError}
+                helperText={utilities.isLoading ? "Loading utilities..." : utilities.isError ? "Unable to load utilities." : "Required — rates belong to a utility"}
+              >
+                <MenuItem value="" disabled>Select utility</MenuItem>
+                {utilityOptions.map((utility) => (
+                  <MenuItem key={utility.id} value={utility.id}>{utility.name}</MenuItem>
+                ))}
+              </TextField>
+            ) : null}
+            {endpoint === "rates" && !utilityColumn ? <p className="error">Utility relationship is not configured for rates.</p> : null}
+            {editableColumns.filter((column) => column.name !== utilityColumn?.name).map((column) => column.dataType === "bit" ? (
               <FormControlLabel
                 key={column.name}
                 control={<Checkbox checked={Boolean(form[column.name])} onChange={(event) => setForm((current) => ({ ...current, [column.name]: event.target.checked }))} />}
@@ -460,6 +561,55 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           <Button onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
           <Button variant="contained" onClick={() => void saveRecord()} disabled={saving || !formValid}>
             {saving ? "Saving..." : editing ? `Update ${singularName}` : `Save ${singularName}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={rateUploadOpen} onClose={() => !uploading && setRateUploadOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Upload Rates</DialogTitle>
+        <DialogContent>
+          <p className="muted">Select the utility that these rates belong to, then upload the completed Excel or CSV template.</p>
+          {rateUploadError ? <p className="error">{rateUploadError}</p> : null}
+          <div className="company-form-grid">
+            <TextField
+              select
+              required
+              label="Utility"
+              value={rateUploadUtilityId}
+              onChange={(event) => {
+                setRateUploadUtilityId(event.target.value);
+                setRateUploadFile(null);
+                setRateUploadError("");
+              }}
+              disabled={uploading || utilities.isLoading || utilities.isError}
+              helperText={utilities.isLoading ? "Loading utilities..." : utilities.isError ? "Unable to load utilities." : "Applied to every rate in the selected file"}
+            >
+              <MenuItem value="" disabled>Select utility</MenuItem>
+              {utilityOptions.map((utility) => (
+                <MenuItem key={utility.id} value={utility.id}>{utility.name}</MenuItem>
+              ))}
+            </TextField>
+            <Button component="label" variant="outlined" startIcon={<Upload size={18} />} disabled={uploading || !rateUploadUtilityId}>
+              Choose Excel/CSV File
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => {
+                  setRateUploadFile(event.target.files?.[0] ?? null);
+                  setRateUploadError("");
+                  event.target.value = "";
+                }}
+              />
+            </Button>
+            <span className="muted">{rateUploadFile?.name ?? "No file selected"}</span>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => void downloadRateTemplate()} disabled={uploading || !editableColumns.length}>Download Template</Button>
+          <Button onClick={() => setRateUploadOpen(false)} disabled={uploading}>Cancel</Button>
+          <Button variant="contained" onClick={() => void uploadRates()} disabled={uploading || !rateUploadUtilityId || !rateUploadFile}>
+            {uploading ? "Uploading..." : "Upload Rates"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -498,6 +648,17 @@ function inputType(dataType: string) {
   if (dataType === "date") return "date";
   if (["datetime", "datetime2", "smalldatetime", "datetimeoffset"].includes(dataType)) return "datetime-local";
   return "text";
+}
+
+function excelColumnName(columnCount: number) {
+  let value = columnCount;
+  let name = "";
+  while (value > 0) {
+    value -= 1;
+    name = String.fromCharCode(65 + (value % 26)) + name;
+    value = Math.floor(value / 26);
+  }
+  return name || "A";
 }
 
 function rateColumnWidth(column: RateColumnMetadata) {

@@ -1,7 +1,7 @@
 import { Avatar, Menu, MenuItem } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Building2, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
-import { useState } from "react";
+import { Activity, Building2, CircleUserRound, Gauge, Handshake, LayoutDashboard, Shield, UserCog, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navByRole, normalizeRole, roleLabels, type Role } from "../lib/permissions";
 import { useAuthStore } from "../features/auth/authStore";
@@ -45,10 +45,18 @@ export function AppShell() {
 export function AuthenticatedTopbar() {
   const navigate = useNavigate();
   const logoutUser = useAuthStore((state) => state.logout);
+  const loadMe = useAuthStore((state) => state.loadMe);
   const user = useAuthStore((state) => state.user);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
   const role = normalizeRole(user?.role ?? localStorage.getItem("aae_role"));
   const nav = navByRole[role];
+  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || roleLabels[role];
+  const initials = [user?.firstName, user?.lastName].filter(Boolean).map((name) => name?.slice(0, 1)).join("").slice(0, 2) || roleLabels[role].slice(0, 1);
+
+  useEffect(() => {
+    if (!user?.firstName || !user?.lastName) void loadMe().catch(() => undefined);
+  }, [loadMe, user?.firstName, user?.lastName]);
+
   const activityCount = useQuery({
     queryKey: ["activity-unread-counts"],
     queryFn: async () => (await api.get("/reports/activity-unread-counts")).data as { total: number; byCompany: Record<string, number> },
@@ -100,9 +108,9 @@ export function AuthenticatedTopbar() {
         aria-haspopup="menu"
         aria-expanded={Boolean(accountMenuAnchor)}
       >
-        <Avatar className="user-avatar">{roleLabels[role].slice(0, 1)}</Avatar>
+        <Avatar className="user-avatar" src={user?.profilePhotoUrl ?? undefined}>{initials}</Avatar>
         <span>
-          <strong>{roleLabels[role]}</strong>
+          <strong>{displayName}</strong>
           <small>{role === "superadmin" ? "Administrator" : roleLabels[role]}</small>
         </span>
       </button>
@@ -114,6 +122,10 @@ export function AuthenticatedTopbar() {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
+        <MenuItem onClick={() => goTo("/account")}>
+          <CircleUserRound size={16} />
+          View Account
+        </MenuItem>
         {privilegedMenuItems.map(({ label, path, Icon }) => (
           <MenuItem key={label} onClick={() => goTo(path)}>
             <Icon size={16} />

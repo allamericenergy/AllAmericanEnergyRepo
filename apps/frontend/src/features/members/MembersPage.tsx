@@ -1,4 +1,4 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip } from "@mui/material";
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Eye, Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
@@ -42,6 +42,7 @@ interface MemberForm {
   company: string;
   department: string;
   designation: string;
+  memberType: "admin" | "member" | "user";
   notes: string;
   password: string;
 }
@@ -64,7 +65,7 @@ const memberColumns: GridColumn<MemberRow>[] = [
 ];
 
 function emptyMemberForm(): MemberForm {
-  return { firstName: "", lastName: "", email: "", phone: "", company: "", department: "", designation: "", notes: "", password: "" };
+  return { firstName: "", lastName: "", email: "", phone: "", company: "", department: "", designation: "", memberType: "member", notes: "", password: "" };
 }
 
 export function MembersPage(props: MembersPageProps) {
@@ -79,6 +80,9 @@ export function MembersPage(props: MembersPageProps) {
 }
 
 export function MembersPanel({ companyId, canAdd = false, compact = false }: MembersPageProps) {
+  const user = useAuthStore((state) => state.user);
+  const canAssignMemberType = user?.role === "superadmin" || user?.role === "admin";
+  const canCreateAdmin = user?.role === "superadmin";
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingMember, setEditingMember] = useState<MemberRow | null>(null);
@@ -146,6 +150,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
       company: member.company ?? "",
       department: member.department ?? "",
       designation: member.designation ?? "",
+      memberType: member.role === "admin" ? "admin" : member.role === "user" ? "user" : "member",
       notes: member.notes ?? "",
       password: ""
     });
@@ -164,7 +169,8 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
       companyId: companyId ? Number(companyId) : undefined,
       company: form.company.trim(),
       department: form.department.trim(),
-      designation: form.designation.trim()
+      designation: form.designation.trim(),
+      memberType: formMode === "create" && canAssignMemberType ? form.memberType : undefined
     };
     try {
       if (formMode === "edit" && editingMember) {
@@ -263,6 +269,20 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
             {!companyId ? <TextField label="Company" value={form.company} onChange={(event) => updateMember("company", event.target.value)} /> : null}
             <TextField label="Department" value={form.department} onChange={(event) => updateMember("department", event.target.value)} />
             <TextField label="Role" value={form.designation} onChange={(event) => updateMember("designation", event.target.value)} />
+            {formMode === "create" && canAssignMemberType ? (
+              <TextField
+                select
+                required
+                label="Member Type"
+                value={form.memberType}
+                helperText={canCreateAdmin ? "Select the account type." : "Admins can create Member or User accounts."}
+                onChange={(event) => updateMember("memberType", event.target.value as MemberForm["memberType"])}
+              >
+                {canCreateAdmin ? <MenuItem value="admin">Admin</MenuItem> : null}
+                <MenuItem value="member">Member</MenuItem>
+                <MenuItem value="user">User</MenuItem>
+              </TextField>
+            ) : null}
             <TextField label={formMode === "edit" ? "New password" : "Password"} type="password" required={formMode === "create"} value={form.password} helperText={formMode === "edit" ? "Leave blank to keep the current password; minimum 12 characters when changed." : "Minimum 12 characters."} onChange={(event) => updateMember("password", event.target.value)} />
             <RichTextEditor label="Notes" value={form.notes} onChange={(value) => updateMember("notes", value)} />
           </div>
@@ -311,7 +331,7 @@ function memberRow(member: MemberRow, index: number): MemberRow {
     ...member,
     id: member.id ?? member.email ?? `member-${index}`,
     fullName: [member.firstName, member.lastName].filter(Boolean).join(" ") || "-",
-    roleName: member.roleName ?? (member.role === "member" ? "Member" : "User")
+    roleName: member.roleName ?? (member.role === "admin" ? "Admin" : member.role === "member" ? "Member" : "User")
   };
 }
 
