@@ -24,8 +24,8 @@ export function LoginPage() {
   const passwordReset = searchParams.get("passwordReset") === "1";
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     defaultValues: {
-      email: "superadmin@allamericanenergy.local",
-      password: "ChangeMe123!",
+      email: "rjenergy411@gmail.com",
+      password: "RomanAllEnergy@411",
       rememberMe: true
     }
   });
@@ -46,6 +46,12 @@ export function LoginPage() {
       <Link className="login-corner-logo" to="/" aria-label="Go to All American Energy home page">
         <Box component="img" className="login-corner-logo-image" src="/logo-transparent.png" alt="All American Energy" />
       </Link>
+      <Box
+        component="img"
+        className="login-floating-usa-flag"
+        src="/usa-flag.gif"
+        alt="United States flag"
+      />
       <Box className="login-background-tagline">
         <Typography component="h1">
           The Future of Energy Management
