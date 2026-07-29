@@ -89,6 +89,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
   const [meterGridKey, setMeterGridKey] = useState(0);
   const [meterError, setMeterError] = useState("");
+  const [meterAvailabilityNotice, setMeterAvailabilityNotice] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
   const [isBulkMeterModalOpen, setIsBulkMeterModalOpen] = useState(false);
   const [bulkMeterRows, setBulkMeterRows] = useState<MeterForm[]>([]);
@@ -493,6 +494,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   async function openCreateContract() {
     setContractAvailabilityNotice("");
+    setContractError("");
+    const companyResult = companies.data ?? (await companies.refetch()).data;
+    const companyCount = companyResult?.total ?? companyResult?.data.length;
+    if (companyCount === 0) {
+      setContractAvailabilityNotice("A contract cannot be assigned without a company. Add a company before creating a contract.");
+      return;
+    }
     if (viewedCompany && !viewedCompany.isActive) {
       setContractError("Make company active to add contracts.");
       return;
@@ -628,7 +636,24 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
-  function openCreateMeter() {
+  async function companyIsAvailableForMeter() {
+    const companyResult = companies.data ?? (await companies.refetch()).data;
+    if (!companyResult) {
+      setMeterError("Unable to check available companies. Try again.");
+      return false;
+    }
+    const companyCount = companyResult.total ?? companyResult.data.length;
+    if (companyCount === 0) {
+      setMeterAvailabilityNotice("A meter cannot be assigned without a company. Add a company before creating or uploading meters.");
+      return false;
+    }
+    return true;
+  }
+
+  async function openCreateMeter() {
+    setMeterAvailabilityNotice("");
+    setMeterError("");
+    if (!await companyIsAvailableForMeter()) return;
     if (viewedCompany && !viewedCompany.isActive) {
       setMeterError("Make company active to add meters.");
       return;
@@ -640,7 +665,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setIsMeterModalOpen(true);
   }
 
-  function openBulkMeterUpload() {
+  async function openBulkMeterUpload() {
+    setMeterAvailabilityNotice("");
+    setMeterError("");
+    if (!await companyIsAvailableForMeter()) return;
     if (viewedCompany && !viewedCompany.isActive) {
       setMeterError("Make company active to add meters.");
       return;
@@ -1149,7 +1177,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Button variant="contained" onClick={() => void openCreateContract()}>Add New Contract</Button>
             </div>
           </div>
-          {contractAvailabilityNotice ? <Alert severity="error">{contractAvailabilityNotice}</Alert> : null}
+          {contractAvailabilityNotice ? <Alert severity="error" variant="filled">{contractAvailabilityNotice}</Alert> : null}
           {contractError ? <p className="error">{contractError}</p> : null}
           {contracts.isError ? <p className="error">Unable to load contracts.</p> : null}
           {contracts.isLoading ? <p className="muted">Loading contracts...</p> : null}
@@ -1184,10 +1212,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </Button>
                 </>
               ) : null}
-              <Button variant="outlined" startIcon={<Upload size={18} />} onClick={openBulkMeterUpload}>Add More Meters</Button>
-              <Button variant="contained" onClick={openCreateMeter}>Add New Meter</Button>
+              <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => void openBulkMeterUpload()}>Add More Meters</Button>
+              <Button variant="contained" onClick={() => void openCreateMeter()}>Add New Meter</Button>
             </div>
           </div>
+          {meterAvailabilityNotice ? (
+            <Alert severity="error" variant="filled" onClose={() => setMeterAvailabilityNotice("")}>
+              {meterAvailabilityNotice}
+            </Alert>
+          ) : null}
           {meterError ? <p className="error">{meterError}</p> : null}
           {meters.isError ? <p className="error">Unable to load meters.</p> : null}
           {meters.isLoading ? <p className="muted">Loading meters...</p> : null}
