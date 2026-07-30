@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Package, Pencil, Plug, Plus, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
+import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
@@ -93,23 +93,40 @@ const legacySections = [
   { key: "types", label: "Type", endpoint: "types", tableName: "tbl_Type", singularName: "Type", pluralName: "Types", icon: Tags }
 ] as const;
 
-type OrganizationSection = "organizations" | "notes" | typeof legacySections[number]["key"];
+const locationSections = [
+  { key: "states", label: "States", icon: MapIcon },
+  { key: "cities", label: "Cities", icon: MapPin },
+  { key: "zip-codes", label: "ZIP Codes", icon: Signpost }
+] as const;
+
+type LocationSection = typeof locationSections[number]["key"];
+type OrganizationSection = "organizations" | "notes" | LocationSection | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const companyNotesId = searchParams.get("companyId");
-  const [section, setSection] = useState<OrganizationSection>(requestedSection === "notes" ? "notes" : "organizations");
+  const validSections = [
+    "organizations",
+    "notes",
+    ...legacySections.map((item) => item.key),
+    ...locationSections.map((item) => item.key)
+  ] as string[];
+  const initialSection = requestedSection && validSections.includes(requestedSection)
+    ? requestedSection as OrganizationSection
+    : "organizations";
+  const [section, setSection] = useState<OrganizationSection>(initialSection);
   const [viewedOrganization, setViewedOrganization] = useState<OrganizationRow | null>(null);
   const selectedLegacySection = legacySections.find((item) => item.key === section);
+  const selectedLocationSection = locationSections.find((item) => item.key === section);
 
   useEffect(() => {
-    if (requestedSection === "notes") setSection("notes");
+    if (requestedSection && validSections.includes(requestedSection)) setSection(requestedSection as OrganizationSection);
   }, [requestedSection]);
 
   function selectSection(nextSection: OrganizationSection) {
     setSection(nextSection);
-    setSearchParams(nextSection === "notes" ? { section: "notes" } : {});
+    setSearchParams(nextSection === "organizations" ? {} : { section: nextSection });
   }
 
   const organizations = useQuery({
@@ -127,6 +144,14 @@ export function OrganizationsPage() {
           <Building2 size={18} /> Organizations
         </button>
         {legacySections.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
+              <Icon size={18} /> {item.label}
+            </button>
+          );
+        })}
+        {locationSections.map((item) => {
           const Icon = item.icon;
           return (
             <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
@@ -154,6 +179,8 @@ export function OrganizationsPage() {
             companyId={companyNotesId}
             onViewAll={() => setSearchParams({ section: "notes" })}
           />
+        ) : selectedLocationSection ? (
+          <LocationTablePanel kind={selectedLocationSection.key} />
         ) : selectedLegacySection ? (
           <LegacyTablePanel
             endpoint={selectedLegacySection.endpoint}
@@ -276,6 +303,268 @@ function OrganizationNotesPanel({ companyId, onViewAll }: { companyId: string | 
           ) : null}
         </DialogContent>
         <DialogActions><Button onClick={() => setViewingNote(null)}>Close</Button></DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
+interface LocationRow {
+  id: string | number;
+  name?: string;
+  code?: string;
+  capital?: string;
+  stateId?: string | number;
+  state?: string;
+  stateName?: string;
+  cityId?: string | number;
+  city?: string;
+  isCapital?: boolean;
+  isActive?: boolean;
+}
+
+interface LocationResponse {
+  total: number;
+  data: LocationRow[];
+}
+
+function LocationTablePanel({ kind }: { kind: LocationSection }) {
+  const singularName = kind === "states" ? "State" : kind === "cities" ? "City" : "ZIP Code";
+  const pluralName = kind === "states" ? "States" : kind === "cities" ? "Cities" : "ZIP Codes";
+  const [formOpen, setFormOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [uploadFileName, setUploadFileName] = useState("");
+  const [uploadRows, setUploadRows] = useState<Array<Record<string, unknown>>>([]);
+  const [stateForm, setStateForm] = useState({ name: "", code: "", capital: "" });
+  const [cityForm, setCityForm] = useState({ stateId: "", name: "", isCapital: false });
+  const [zipForm, setZipForm] = useState({ stateId: "", cityId: "", code: "", isActive: true });
+
+  const records = useQuery({
+    queryKey: ["organization-locations", kind],
+    queryFn: async () => (await api.get(`/reports/location-${kind}`)).data as LocationResponse,
+    retry: false
+  });
+  const states = useQuery({
+    queryKey: ["organization-locations", "state-options"],
+    queryFn: async () => (await api.get("/reports/location-states")).data as LocationResponse,
+    enabled: kind === "cities" || kind === "zip-codes",
+    retry: false
+  });
+  const zipCities = useQuery({
+    queryKey: ["organization-locations", "zip-city-options", zipForm.stateId],
+    queryFn: async () => (await api.get("/reports/us-cities", { params: { state: zipForm.stateId } })).data as LocationResponse,
+    enabled: kind === "zip-codes" && Boolean(zipForm.stateId),
+    retry: false
+  });
+
+  const columns = useMemo<GridColumn<LocationRow>[]>(() => {
+    if (kind === "states") {
+      return [
+        { field: "name", headerName: "State", minWidth: 200, flex: 1 },
+        { field: "code", headerName: "Code", width: 110 },
+        { field: "capital", headerName: "Capital", minWidth: 200, flex: 1 }
+      ];
+    }
+    if (kind === "cities") {
+      return [
+        { field: "name", headerName: "City", minWidth: 220, flex: 1 },
+        { field: "stateName", headerName: "State", minWidth: 180 },
+        { field: "state", headerName: "State Code", width: 130 },
+        { field: "isCapital", headerName: "Capital City", width: 130, valueFormatter: (value) => value ? "Yes" : "No" }
+      ];
+    }
+    return [
+      { field: "code", headerName: "ZIP Code", minWidth: 160 },
+      { field: "city", headerName: "City", minWidth: 220, flex: 1 },
+      { field: "stateName", headerName: "State", minWidth: 180 },
+      { field: "state", headerName: "State Code", width: 130 },
+      { field: "isActive", headerName: "Active", width: 110, valueFormatter: (value) => value ? "Yes" : "No" }
+    ];
+  }, [kind]);
+
+  function openCreate() {
+    setError("");
+    setNotice("");
+    setStateForm({ name: "", code: "", capital: "" });
+    setCityForm({ stateId: "", name: "", isCapital: false });
+    setZipForm({ stateId: "", cityId: "", code: "", isActive: true });
+    setFormOpen(true);
+  }
+
+  async function saveRecord() {
+    setSaving(true);
+    setError("");
+    try {
+      const payload = kind === "states"
+        ? stateForm
+        : kind === "cities"
+          ? { ...cityForm, stateId: Number(cityForm.stateId) }
+          : { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive };
+      await api.post(`/reports/location-${kind}`, payload);
+      await records.refetch();
+      if (kind === "states") await states.refetch();
+      setFormOpen(false);
+      setNotice(`${singularName} added successfully.`);
+    } catch (saveError) {
+      setError(apiError(saveError) ?? `Unable to add the ${singularName.toLowerCase()}.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openUpload() {
+    setUploadRows([]);
+    setUploadFileName("");
+    setUploadError("");
+    setNotice("");
+    setUploadOpen(true);
+  }
+
+  async function selectUploadFile(file?: File) {
+    setUploadRows([]);
+    setUploadFileName(file?.name ?? "");
+    setUploadError("");
+    if (!file) return;
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) throw new Error("The file does not contain a worksheet.");
+      const parsed = parseLocationUpload(kind, workbook.Sheets[sheetName]);
+      if (!parsed.length) throw new Error("The file does not contain any location rows.");
+      setUploadRows(parsed);
+    } catch (parseError) {
+      setUploadError(parseError instanceof Error ? parseError.message : "Unable to read the file.");
+    }
+  }
+
+  async function uploadRecords() {
+    if (!uploadRows.length) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const response = await api.post(`/reports/location-${kind}/bulk`, { rows: uploadRows });
+      const result = response.data as { imported: number; existing: number; citiesCreated?: number };
+      await records.refetch();
+      setUploadOpen(false);
+      setNotice(
+        `Imported ${result.imported} ${result.imported === 1 ? singularName.toLowerCase() : pluralName.toLowerCase()}.`
+        + (result.existing ? ` ${result.existing} existing row(s) skipped.` : "")
+        + (result.citiesCreated ? ` ${result.citiesCreated} missing city record(s) also created.` : "")
+      );
+    } catch (uploadFailure) {
+      setUploadError(apiError(uploadFailure) ?? "Unable to upload the location records.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function downloadTemplate() {
+    const headers = kind === "states"
+      ? ["State Name", "State Code", "Capital"]
+      : kind === "cities"
+        ? ["State", "City", "Is Capital"]
+        : ["State", "City", "ZIP", "Is Active"];
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, pluralName);
+    XLSX.writeFile(workbook, `${kind}-upload-template.xlsx`);
+  }
+
+  const formValid = kind === "states"
+    ? Boolean(stateForm.name.trim() && stateForm.code.trim().length === 2 && stateForm.capital.trim())
+    : kind === "cities"
+      ? Boolean(cityForm.stateId && cityForm.name.trim())
+      : Boolean(zipForm.cityId && zipForm.code.trim());
+  const uploadHelp = kind === "states"
+    ? "Required columns: State Name, State Code, Capital."
+    : kind === "cities"
+      ? "Required columns: State, City. Optional: Is Capital. State may be a code or full name."
+      : "Required columns: State, City, ZIP. Optional: Is Active. Missing cities are created automatically.";
+
+  return (
+    <>
+      <section className="panel companies-panel">
+        <div className="panel-title-row">
+          <div>
+            <h2>{pluralName}</h2>
+            <span className="muted">{records.isLoading ? "Loading..." : `${records.data?.total ?? 0} total`}</span>
+          </div>
+          <div className="panel-title-actions">
+            <Button variant="outlined" startIcon={<Upload size={18} />} onClick={openUpload}>Upload Excel/CSV</Button>
+            <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate}>Add New {singularName}</Button>
+          </div>
+        </div>
+        {notice ? <p className="success-message">{notice}</p> : null}
+        {error ? <p className="error">{error}</p> : null}
+        {records.isError ? <p className="error">{apiError(records.error) ?? `Unable to load ${pluralName.toLowerCase()}.`}</p> : null}
+        <IntiliGrid columns={columns} rows={records.data?.data ?? []} />
+      </section>
+
+      <Dialog open={formOpen} onClose={() => !saving && setFormOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Add New {singularName}</DialogTitle>
+        <DialogContent>
+          {error ? <p className="error">{error}</p> : null}
+          <div className="company-form-grid">
+            {kind === "states" ? (
+              <>
+                <TextField required label="State Name" value={stateForm.name} onChange={(event) => setStateForm((current) => ({ ...current, name: event.target.value }))} />
+                <TextField required label="State Code" value={stateForm.code} onChange={(event) => setStateForm((current) => ({ ...current, code: event.target.value.toUpperCase().slice(0, 2) }))} />
+                <TextField required label="Capital" value={stateForm.capital} onChange={(event) => setStateForm((current) => ({ ...current, capital: event.target.value }))} />
+              </>
+            ) : kind === "cities" ? (
+              <>
+                <TextField select required label="State" value={cityForm.stateId} onChange={(event) => setCityForm((current) => ({ ...current, stateId: event.target.value }))}>
+                  <MenuItem value="">Select state</MenuItem>
+                  {states.data?.data.map((state) => <MenuItem key={state.id} value={String(state.id)}>{state.name} ({state.code})</MenuItem>)}
+                </TextField>
+                <TextField required label="City" value={cityForm.name} onChange={(event) => setCityForm((current) => ({ ...current, name: event.target.value }))} />
+                <FormControlLabel control={<Checkbox checked={cityForm.isCapital} onChange={(event) => setCityForm((current) => ({ ...current, isCapital: event.target.checked }))} />} label="Capital city" />
+              </>
+            ) : (
+              <>
+                <TextField select required label="State" value={zipForm.stateId} onChange={(event) => setZipForm((current) => ({ ...current, stateId: event.target.value, cityId: "" }))}>
+                  <MenuItem value="">Select state</MenuItem>
+                  {states.data?.data.map((state) => <MenuItem key={state.id} value={String(state.id)}>{state.name} ({state.code})</MenuItem>)}
+                </TextField>
+                <TextField select required label="City" value={zipForm.cityId} onChange={(event) => setZipForm((current) => ({ ...current, cityId: event.target.value }))}>
+                  <MenuItem value="">Select city</MenuItem>
+                  {zipCities.data?.data.map((city) => <MenuItem key={city.id} value={String(city.id)}>{city.name}</MenuItem>)}
+                </TextField>
+                <TextField required label="ZIP Code" value={zipForm.code} onChange={(event) => setZipForm((current) => ({ ...current, code: event.target.value.slice(0, 10) }))} />
+                <FormControlLabel control={<Checkbox checked={zipForm.isActive} onChange={(event) => setZipForm((current) => ({ ...current, isActive: event.target.checked }))} />} label="Active" />
+              </>
+            )}
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveRecord()} disabled={saving || !formValid}>{saving ? "Saving..." : `Save ${singularName}`}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={uploadOpen} onClose={() => !uploading && setUploadOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Upload {pluralName}</DialogTitle>
+        <DialogContent>
+          <p className="muted">{uploadHelp} Maximum {kind === "states" ? 500 : 1000} rows.</p>
+          {uploadError ? <p className="error">{uploadError}</p> : null}
+          <div className="bulk-upload-controls">
+            <Button component="label" variant="outlined" startIcon={<Upload size={18} />} disabled={uploading}>
+              Choose Excel/CSV File
+              <input hidden type="file" accept=".xlsx,.xls,.csv" onChange={(event) => void selectUploadFile(event.target.files?.[0])} />
+            </Button>
+            <span>{uploadFileName || "No file selected"}</span>
+          </div>
+          {uploadRows.length ? <p className="muted">{uploadRows.length} row(s) ready to upload.</p> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={downloadTemplate} disabled={uploading}>Download Template</Button>
+          <Button onClick={() => setUploadOpen(false)} disabled={uploading}>Cancel</Button>
+          <Button variant="contained" onClick={() => void uploadRecords()} disabled={uploading || !uploadRows.length}>{uploading ? "Uploading..." : `Upload ${pluralName}`}</Button>
+        </DialogActions>
       </Dialog>
     </>
   );
@@ -675,6 +964,54 @@ function formatRateValue(value: unknown, dataType: string) {
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
   }
   return String(value);
+}
+
+function parseLocationUpload(kind: LocationSection, worksheet: XLSX.WorkSheet) {
+  const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "", raw: true })
+    .filter((row) => Object.values(row).some((value) => String(value ?? "").trim()));
+  const normalized = (row: Record<string, unknown>) => new Map(
+    Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value])
+  );
+  const text = (row: Map<string, unknown>, ...keys: string[]) => {
+    for (const key of keys) {
+      const value = String(row.get(key) ?? "").trim();
+      if (value) return value;
+    }
+    return "";
+  };
+  const boolean = (value: unknown, defaultValue: boolean) => {
+    if (value === "" || value === undefined || value === null) return defaultValue;
+    if (typeof value === "boolean") return value;
+    const normalizedValue = String(value).trim().toLowerCase();
+    if (["true", "yes", "y", "1", "active"].includes(normalizedValue)) return true;
+    if (["false", "no", "n", "0", "inactive"].includes(normalizedValue)) return false;
+    throw new Error(`"${String(value)}" is not a valid Yes/No value.`);
+  };
+
+  return sourceRows.map((source, index) => {
+    const row = normalized(source);
+    const rowNumber = index + 2;
+    if (kind === "states") {
+      const name = text(row, "statename", "state");
+      const code = text(row, "statecode", "code").toUpperCase();
+      const capital = text(row, "capital");
+      if (!name || code.length !== 2 || !capital) {
+        throw new Error(`Row ${rowNumber}: State Name, a 2-character State Code, and Capital are required.`);
+      }
+      return { name, code, capital };
+    }
+    if (kind === "cities") {
+      const state = text(row, "state", "statecode", "statename");
+      const city = text(row, "city", "cityname");
+      if (!state || !city) throw new Error(`Row ${rowNumber}: State and City are required.`);
+      return { state, city, isCapital: boolean(row.get("iscapital"), false) };
+    }
+    const state = text(row, "state", "statecode", "statename");
+    const city = text(row, "city", "cityname");
+    const zip = text(row, "zip", "zipcode", "postalcode");
+    if (!state || !city || !zip) throw new Error(`Row ${rowNumber}: State, City, and ZIP are required.`);
+    return { state, city, zip, isActive: boolean(row.get("isactive"), true) };
+  });
 }
 
 function plainText(value: string) {
