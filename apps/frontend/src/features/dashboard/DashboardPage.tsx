@@ -34,13 +34,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const isCompanyFormValid = [
     newCompany.companyName,
     newCompany.legalEntityName,
-    newCompany.email,
     newCompany.phoneNumber,
     newCompany.mailingAddress,
     newCompany.city,
     newCompany.state,
     newCompany.postalCode
-  ].every((value) => value.trim()) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim());
+  ].every((value) => value.trim())
+    && (!newCompany.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim()));
   const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
   const [bulkCompanyRows, setBulkCompanyRows] = useState<NewCompanyForm[]>([]);
   const [bulkCompanyFileName, setBulkCompanyFileName] = useState("");
@@ -171,6 +171,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
     enabled: Boolean(isMeterModalOpen && meterForm.zip.trim().length >= 2),
     retry: false
   });
+  const normalizedMeterZip = meterForm.zip.trim();
+  const exactMeterZipMatch = meterZipMatches.data?.data.find(
+    (item) => String(item.code).trim() === normalizedMeterZip
+  );
+  const isMeterZipUnavailable = normalizedMeterZip.length >= 5
+    && meterZipMatches.isSuccess
+    && !exactMeterZipMatch;
   useEffect(() => {
     const normalizedZip = meterForm.zip.trim();
     const match = meterZipMatches.data?.data.find((item) => String(item.code).trim() === normalizedZip);
@@ -724,6 +731,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
       setMeterError("Company is required.");
       return;
     }
+    if (isMeterZipUnavailable && (!meterForm.city.trim() || !meterForm.state.trim())) {
+      setMeterError("Enter the city and state for this new ZIP code.");
+      return;
+    }
 
     setMeterError("");
     setSavingMeter(true);
@@ -766,19 +777,18 @@ export function DashboardPage({ view }: DashboardPageProps) {
     const requiredFields = [
       ["Company name", newCompany.companyName],
       ["Legal name", newCompany.legalEntityName],
-      ["Email", newCompany.email],
       ["Phone number", newCompany.phoneNumber],
       ["Mailing address", newCompany.mailingAddress],
       ["City", newCompany.city],
       ["State", newCompany.state],
-      ["PIN / Postal code", newCompany.postalCode]
+      ["ZIP", newCompany.postalCode]
     ] as const;
     const missingField = requiredFields.find(([, value]) => !value.trim());
     if (missingField) {
       setCompanyError(`${missingField[0]} is required.`);
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim())) {
+    if (newCompany.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim())) {
       setCompanyError("Enter a valid email address.");
       return;
     }
@@ -1241,7 +1251,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <div className="company-form-grid">
             <TextField label="Company Name" required value={newCompany.companyName} onChange={(event) => updateNewCompany("companyName", event.target.value)} />
             <TextField label="Legal Entity Name" required value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
-            <TextField label="Email" type="email" required value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
+            <TextField label="Email" type="email" value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
             <TextField label="Phone Number" type="tel" required value={newCompany.phoneNumber} onChange={(event) => updateNewCompany("phoneNumber", event.target.value)} />
             <TextField label="Mailing Address" required value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
             <TextField label="City" required value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
@@ -1251,7 +1261,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
               ))}
             </TextField>
-            <TextField label="PIN / Postal Code" required value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
+            <TextField label="ZIP" required value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
             <TextField label="URL" value={newCompany.url} onChange={(event) => updateNewCompany("url", event.target.value)} />
             <FormControlLabel control={<Checkbox checked={newCompany.isActive} onChange={(event) => updateNewCompany("isActive", event.target.checked)} />} label="Active" />
             <RichTextEditor label="Company Notes" value={newCompany.notes} onChange={(value) => updateNewCompany("notes", value)} />
@@ -1670,11 +1680,39 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 label="Zip"
                 value={meterForm.zip}
                 onChange={(event) => updateMeterZip(event.target.value)}
-                helperText={meterZipMatches.isLoading ? "Finding city and state..." : "Enter or select a ZIP code"}
+                helperText={
+                  meterZipMatches.isFetching
+                    ? "Finding city and state..."
+                    : isMeterZipUnavailable
+                      ? "ZIP not found. Enter its city and state; they will be added when you save."
+                      : "Enter or select a ZIP code"
+                }
                 slotProps={{ htmlInput: { list: "meter-zip-options", autoComplete: "postal-code" } }}
               />
-              <TextField label="City" value={meterForm.city} slotProps={{ htmlInput: { readOnly: true } }} />
-              <TextField label="State" value={meterForm.state} slotProps={{ htmlInput: { readOnly: true } }} />
+              <TextField
+                label="City"
+                value={meterForm.city}
+                onChange={(event) => updateMeterForm("city", event.target.value)}
+                required={isMeterZipUnavailable}
+                slotProps={{ htmlInput: { readOnly: !isMeterZipUnavailable } }}
+              />
+              {isMeterZipUnavailable ? (
+                <TextField
+                  select
+                  required
+                  label="State"
+                  value={meterForm.state}
+                  onChange={(event) => updateMeterForm("state", event.target.value)}
+                  disabled={usStates.isLoading}
+                >
+                  <MenuItem value="">Select state</MenuItem>
+                  {usStates.data?.data.map((state) => (
+                    <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
+                  ))}
+                </TextField>
+              ) : (
+                <TextField label="State" value={meterForm.state} slotProps={{ htmlInput: { readOnly: true } }} />
+              )}
               <TextField label="Service Address" value={meterForm.serviceAddress} onChange={(event) => updateMeterForm("serviceAddress", event.target.value)} />
               <datalist id="meter-zip-options">
                 {(meterZipMatches.data?.data ?? []).map((zip) => (
