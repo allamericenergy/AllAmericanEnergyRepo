@@ -464,6 +464,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterForm((current) => ({ ...current, productId: value }));
   }
 
+  function updateMeterUtility(value: number) {
+    setMeterForm((current) => ({
+      ...current,
+      utilityId: value,
+      rate: current.utilityId === value ? current.rate : 0
+    }));
+  }
+
   function openCreateCompany() {
     setCompanyError("");
     setCompanyFormMode("create");
@@ -1039,6 +1047,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       { header: "Product", key: "product", width: 18 },
       { header: "Utility", key: "utility", width: 20 },
       { header: "Rate", key: "rate", width: 16 },
+      { header: "Utility / Rate Alert", key: "utilityRateAlert", width: 34 },
       { header: "Status", key: "status", width: 16 },
       { header: "Notes", key: "notes", width: 28 },
       { header: "Active", key: "active", width: 12 }
@@ -1052,7 +1061,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       zip: "012345",
       active: "TRUE"
     });
-    meterSheet.autoFilter = "A1:V1";
+    meterSheet.autoFilter = "A1:W1";
     meterSheet.getRow(1).height = 24;
     meterSheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -1081,6 +1090,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
       lookupSheet.addRows(lookup.options.map((option) => ({ id: option.id, name: option.name ?? "" })));
       lookupSheet.getRow(1).font = { bold: true };
       workbook.definedNames.add(`'${lookup.sheet}'!$B$2:$B$${lookup.options.length + 1}`, lookup.range);
+      if (lookup.range === "UtilityOptions") {
+        workbook.definedNames.add(`'${lookup.sheet}'!$A$2:$A$${lookup.options.length + 1}`, "UtilityIds");
+      }
       for (let row = 2; row <= 501; row += 1) {
         meterSheet.getRow(row).getCell(lookup.column).dataValidation = {
           type: "list",
@@ -1121,19 +1133,54 @@ export function DashboardPage({ view }: DashboardPageProps) {
       }
 
       const utilityColumnLetter = meterSheet.getColumn("utility").letter;
-      const utilityLastRow = utilities.length + 1;
       for (let row = 2; row <= 501; row += 1) {
         meterSheet.getRow(row).getCell("rate").dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [
-            `INDIRECT("RateUtility_"&IFERROR(INDEX(Utilities!$A$2:$A$${utilityLastRow},MATCH(${utilityColumnLetter}${row},Utilities!$B$2:$B$${utilityLastRow},0)),"None"))`
+            `INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH(${utilityColumnLetter}${row},UtilityOptions,0)),"None"))`
           ],
+          showInputMessage: true,
+          promptTitle: "Rate depends on Utility",
+          prompt: "After changing Utility, select a new Rate from this dropdown.",
           showErrorMessage: true,
           errorTitle: "Invalid rate",
           error: "Choose a rate assigned to the selected Utility."
         };
       }
+      const rateColumnLetter = meterSheet.getColumn("rate").letter;
+      const alertColumnLetter = meterSheet.getColumn("utilityRateAlert").letter;
+      for (let row = 2; row <= 501; row += 1) {
+        meterSheet.getRow(row).getCell("utilityRateAlert").value = {
+          formula: `IF(OR(${utilityColumnLetter}${row}="",${rateColumnLetter}${row}=""),"",IF(COUNTIF(INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH(${utilityColumnLetter}${row},UtilityOptions,0)),"None")),${rateColumnLetter}${row})>0,"","ALERT: Row "&ROW()&" - Rate does not match Utility"))`
+        };
+      }
+      meterSheet.addConditionalFormatting({
+        ref: `${rateColumnLetter}2:${rateColumnLetter}501`,
+        rules: [{
+          type: "expression",
+          priority: 1,
+          formulae: [
+            `AND($${utilityColumnLetter}2<>"",$${rateColumnLetter}2<>"",COUNTIF(INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH($${utilityColumnLetter}2,UtilityOptions,0)),"None")),$${rateColumnLetter}2)=0)`
+          ],
+          style: {
+            font: { color: { argb: "FF9C0006" } },
+            fill: { type: "pattern", pattern: "solid", bgColor: { argb: "FFFFC7CE" }, fgColor: { argb: "FFFFC7CE" } }
+          }
+        }]
+      });
+      meterSheet.addConditionalFormatting({
+        ref: `${alertColumnLetter}2:${alertColumnLetter}501`,
+        rules: [{
+          type: "expression",
+          priority: 2,
+          formulae: [`$${alertColumnLetter}2<>""`],
+          style: {
+            font: { bold: true, color: { argb: "FF9C0006" } },
+            fill: { type: "pattern", pattern: "solid", bgColor: { argb: "FFFFC7CE" }, fgColor: { argb: "FFFFC7CE" } }
+          }
+        }]
+      });
     }
 
     for (let row = 2; row <= 501; row += 1) {
@@ -1782,10 +1829,16 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 label="Utility"
                 value={meterForm.utilityId}
                 options={meterLookups.data?.utilities ?? []}
-                onChange={(value) => updateMeterForm("utilityId", value)}
+                onChange={updateMeterUtility}
                 placeholder="Select Utility"
               />
-              <MeterSelect label="Rate" value={meterForm.rate} options={meterLookups.data?.rates ?? []} onChange={(value) => updateMeterForm("rate", value)} />
+              <MeterSelect
+                label="Rate"
+                value={meterForm.rate}
+                options={(meterLookups.data?.rates ?? []).filter((rate) => String(rate.utilityId ?? "") === String(meterForm.utilityId))}
+                onChange={(value) => updateMeterForm("rate", value)}
+                disabled={!meterForm.utilityId}
+              />
             </div>
 
             <div className="meter-form-row meter-form-row-four">
@@ -2436,7 +2489,10 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
       const rawValue = text(...keys);
       if (!rawValue) return 0;
       const numericValue = Number(rawValue);
-      if (Number.isInteger(numericValue) && numericValue > 0) return numericValue;
+      if (Number.isInteger(numericValue) && numericValue > 0) {
+        if (!options || options.some((option) => Number(option.id) === numericValue)) return numericValue;
+        throw new Error(`Row ${rowNumber}: Unknown ${label} ID "${rawValue}". Use a value from the template reference sheets.`);
+      }
       const normalizedValue = rawValue.toLowerCase();
       const match = options?.find((option) => String(option.name ?? "").trim().toLowerCase() === normalizedValue);
       if (match) return Number(match.id);
@@ -2450,6 +2506,9 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
     const demand = text("demand");
     const annualUsage = text("annualusage", "annusagedthkwh", "usage");
     const activeValue = text("active", "isactive").toLowerCase();
+    const utilityId = lookupId("Utility", lookups?.utilities, "utility", "utilityid");
+    const utilityRates = lookups?.rates.filter((rate) => String(rate.utilityId ?? "") === String(utilityId));
+    const rate = lookupId("Rate for the selected Utility", utilityRates, "rate", "rateid");
 
     return {
       companyId,
@@ -2463,7 +2522,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
       zip: text("zip", "zipcode", "postalcode"),
       taxExempt: lookupId("Tax Exempt", lookups?.taxExempts, "taxexempt", "taxexemptid"),
       cycleReadDay: text("cyclereadday", "cycleday", "readday"),
-      rate: lookupId("Rate", lookups?.rates, "rate", "rateid"),
+      rate,
       demand,
       annualUsage,
       loadProfile: text("loadprofile") || calculateMeterLoadProfile(demand, annualUsage),
@@ -2472,7 +2531,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
       onSiteGenerationId: lookupId("OnSiteGeneration", lookups?.onSiteGenerations, "onsitegeneration", "onsitegenerationid"),
       typeId: lookupId("Type", lookups?.types, "type", "typeid"),
       productId: lookupId("Product", lookups?.products, "product", "productid"),
-      utilityId: lookupId("Utility", lookups?.utilities, "utility", "utilityid"),
+      utilityId,
       statusId: lookupId("Status", lookups?.statuses, "status", "statusid"),
       notes: text("notes", "note"),
       isActive: activeValue ? !["false", "no", "0", "inactive"].includes(activeValue) : true
