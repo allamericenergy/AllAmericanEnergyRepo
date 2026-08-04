@@ -1026,6 +1026,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   async function downloadMeterTemplate() {
     const ExcelJS = await import("exceljs");
     const workbook = new ExcelJS.Workbook();
+    workbook.calcProperties.fullCalcOnLoad = true;
     const meterSheet = workbook.addWorksheet("Meters", { views: [{ state: "frozen", ySplit: 1 }] });
     meterSheet.columns = [
       { header: "Account Number", key: "accountNumber", width: 18 },
@@ -1050,7 +1051,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
       { header: "Utility / Rate Alert", key: "utilityRateAlert", width: 34 },
       { header: "Status", key: "status", width: 16 },
       { header: "Notes", key: "notes", width: 28 },
-      { header: "Active", key: "active", width: 12 }
+      { header: "Active", key: "active", width: 12 },
+      { header: "Utility Rate Range", key: "utilityRateRange", width: 2, hidden: true }
     ];
     meterSheet.addRow({
       accountNumber: "10001234",
@@ -1133,13 +1135,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
       }
 
       const utilityColumnLetter = meterSheet.getColumn("utility").letter;
+      const utilityRateRangeColumnLetter = meterSheet.getColumn("utilityRateRange").letter;
       for (let row = 2; row <= 501; row += 1) {
+        meterSheet.getRow(row).getCell("utilityRateRange").value = {
+          formula: `"RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH(${utilityColumnLetter}${row},UtilityOptions,0)),"None")`
+        };
         meterSheet.getRow(row).getCell("rate").dataValidation = {
           type: "list",
           allowBlank: true,
-          formulae: [
-            `INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH(${utilityColumnLetter}${row},UtilityOptions,0)),"None"))`
-          ],
+          formulae: [`INDIRECT($${utilityRateRangeColumnLetter}${row})`],
           showInputMessage: true,
           promptTitle: "Rate depends on Utility",
           prompt: "After changing Utility, select a new Rate from this dropdown.",
@@ -1152,7 +1156,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       const alertColumnLetter = meterSheet.getColumn("utilityRateAlert").letter;
       for (let row = 2; row <= 501; row += 1) {
         meterSheet.getRow(row).getCell("utilityRateAlert").value = {
-          formula: `IF(OR(${utilityColumnLetter}${row}="",${rateColumnLetter}${row}=""),"",IF(COUNTIF(INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH(${utilityColumnLetter}${row},UtilityOptions,0)),"None")),${rateColumnLetter}${row})>0,"","ALERT: Row "&ROW()&" - Rate does not match Utility"))`
+          formula: `IF(OR(${utilityColumnLetter}${row}="",${rateColumnLetter}${row}=""),"",IF(COUNTIF(INDIRECT($${utilityRateRangeColumnLetter}${row}),${rateColumnLetter}${row})>0,"","ALERT: Row "&ROW()&" - Rate does not match Utility"))`
         };
       }
       meterSheet.addConditionalFormatting({
@@ -1161,7 +1165,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           type: "expression",
           priority: 1,
           formulae: [
-            `AND($${utilityColumnLetter}2<>"",$${rateColumnLetter}2<>"",COUNTIF(INDIRECT("RateUtility_"&IFERROR(INDEX(UtilityIds,MATCH($${utilityColumnLetter}2,UtilityOptions,0)),"None")),$${rateColumnLetter}2)=0)`
+            `AND($${utilityColumnLetter}2<>"",$${rateColumnLetter}2<>"",COUNTIF(INDIRECT($${utilityRateRangeColumnLetter}2),$${rateColumnLetter}2)=0)`
           ],
           style: {
             font: { color: { argb: "FF9C0006" } },
