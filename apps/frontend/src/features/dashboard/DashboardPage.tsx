@@ -1030,7 +1030,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
       { header: "Zip", key: "zip", width: 12, style: { numFmt: "@" } },
       { header: "Tax Exempt", key: "taxExempt", width: 18 },
       { header: "Cycle/Read Day", key: "cycleReadDay", width: 18 },
-      { header: "Rate", key: "rate", width: 16 },
       { header: "Demand", key: "demand", width: 14 },
       { header: "Annual Usage", key: "annualUsage", width: 16 },
       { header: "iEnergyBill", key: "iEnergyBill", width: 18 },
@@ -1039,6 +1038,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       { header: "Type", key: "type", width: 16 },
       { header: "Product", key: "product", width: 18 },
       { header: "Utility", key: "utility", width: 20 },
+      { header: "Rate", key: "rate", width: 16 },
       { header: "Status", key: "status", width: 16 },
       { header: "Notes", key: "notes", width: 28 },
       { header: "Active", key: "active", width: 12 }
@@ -1062,7 +1062,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
     const lookupColumns = [
       { column: "taxExempt", sheet: "Tax Exempt", range: "TaxExemptOptions", options: meterLookups.data?.taxExempts },
-      { column: "rate", sheet: "Rates", range: "RateOptions", options: meterLookups.data?.rates },
       { column: "iEnergyBill", sheet: "iEnergyBill", range: "IEnergyBillOptions", options: meterLookups.data?.iEnergyBills },
       { column: "energyDashboard", sheet: "Energy Dashboard", range: "EnergyDashboardOptions", options: meterLookups.data?.energyDashboards },
       { column: "onSiteGeneration", sheet: "On Site Generation", range: "OnSiteGenerationOptions", options: meterLookups.data?.onSiteGenerations },
@@ -1090,6 +1089,49 @@ export function DashboardPage({ view }: DashboardPageProps) {
           showErrorMessage: true,
           errorTitle: "Invalid value",
           error: `Choose a ${lookup.sheet} value from the dropdown.`
+        };
+      }
+    }
+
+    const utilities = meterLookups.data?.utilities ?? [];
+    const rates = meterLookups.data?.rates ?? [];
+    if (utilities.length) {
+      const rateSheet = workbook.addWorksheet("Rates", { views: [{ state: "frozen", ySplit: 1 }] });
+      rateSheet.columns = [
+        { header: "Utility ID", key: "utilityId", width: 14 },
+        { header: "Utility", key: "utility", width: 32 },
+        { header: "Rate", key: "rate", width: 24 },
+        { header: "Blank", key: "blank", width: 2 }
+      ];
+      rateSheet.getRow(1).font = { bold: true };
+      workbook.definedNames.add("'Rates'!$D$2", "RateUtility_None");
+
+      let rateRow = 2;
+      for (const utility of utilities) {
+        const utilityRates = rates.filter((rate) => String(rate.utilityId ?? "") === String(utility.id));
+        const firstRateRow = rateRow;
+        for (const rate of utilityRates) {
+          rateSheet.addRow({ utilityId: utility.id, utility: utility.name ?? "", rate: rate.name ?? "" });
+          rateRow += 1;
+        }
+        const range = utilityRates.length
+          ? `'Rates'!$C$${firstRateRow}:$C$${rateRow - 1}`
+          : "'Rates'!$D$2";
+        workbook.definedNames.add(range, `RateUtility_${utility.id}`);
+      }
+
+      const utilityColumnLetter = meterSheet.getColumn("utility").letter;
+      const utilityLastRow = utilities.length + 1;
+      for (let row = 2; row <= 501; row += 1) {
+        meterSheet.getRow(row).getCell("rate").dataValidation = {
+          type: "list",
+          allowBlank: true,
+          formulae: [
+            `INDIRECT("RateUtility_"&IFERROR(INDEX(Utilities!$A$2:$A$${utilityLastRow},MATCH(${utilityColumnLetter}${row},Utilities!$B$2:$B$${utilityLastRow},0)),"None"))`
+          ],
+          showErrorMessage: true,
+          errorTitle: "Invalid rate",
+          error: "Choose a rate assigned to the selected Utility."
         };
       }
     }
@@ -2590,7 +2632,7 @@ interface MeterLookups {
   utilities: LookupOption[];
   statuses: LookupOption[];
   taxExempts: LookupOption[];
-  rates: LookupOption[];
+  rates: Array<LookupOption & { utilityId?: string | number | null }>;
 }
 
 interface CompanyDocumentsResponse {
