@@ -345,7 +345,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     { field: "zip", headerName: "Zip", width: 110 },
     { field: "taxExempt", headerName: "Tax Exempt", minWidth: 140, valueFormatter: (value) => lookupName(value, meterLookups.data?.taxExempts) },
     { field: "cycleReadDay", headerName: "Cycle/Read Day", minWidth: 150 },
-    { field: "rate", headerName: "Rate", minWidth: 120 },
+    { field: "rate", headerName: "Rate", minWidth: 120, valueFormatter: (value) => lookupName(value, meterLookups.data?.rates) },
     { field: "demand", headerName: "Demand", minWidth: 120 },
     { field: "annualUsage", headerName: "Ann. Usage-Dth/kWh", minWidth: 190 },
     {
