@@ -157,7 +157,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterLookups = useQuery({
     queryKey: ["meter-lookups"],
     queryFn: async () => (await api.get("/reports/meter-lookups")).data as MeterLookups,
-    enabled: Boolean(viewedCompany) || isMeterModalOpen || isBulkMeterModalOpen,
+    enabled: Boolean(viewedCompany) || isMetersView || isMeterModalOpen || isBulkMeterModalOpen,
     retry: false
   });
   const usStates = useQuery({
@@ -343,15 +343,20 @@ export function DashboardPage({ view }: DashboardPageProps) {
     { field: "city", headerName: "City", minWidth: 130 },
     { field: "state", headerName: "State", width: 110 },
     { field: "zip", headerName: "Zip", width: 110 },
-    { field: "taxExempt", headerName: "Tax Exempt", minWidth: 140 },
+    { field: "taxExempt", headerName: "Tax Exempt", minWidth: 140, valueFormatter: (value) => lookupName(value, meterLookups.data?.taxExempts) },
     { field: "cycleReadDay", headerName: "Cycle/Read Day", minWidth: 150 },
     { field: "rate", headerName: "Rate", minWidth: 120 },
     { field: "demand", headerName: "Demand", minWidth: 120 },
     { field: "annualUsage", headerName: "Ann. Usage-Dth/kWh", minWidth: 190 },
-    { field: "loadProfile", headerName: "Load Profile", minWidth: 150 },
-    { field: "iEnergyBill", headerName: "iEnergyBill", minWidth: 130 },
-    { field: "energyDashboard", headerName: "EnergyDashboard", minWidth: 170 },
-    { field: "onSiteGeneration", headerName: "OnSiteGeneration", minWidth: 180 },
+    {
+      field: "loadProfile",
+      headerName: "Load Profile",
+      minWidth: 150,
+      renderCell: ({ row, value }) => String(row.demand ?? "").trim() ? String(value ?? "") : ""
+    },
+    { field: "iEnergyBill", headerName: "iEnergyBill", minWidth: 130, valueFormatter: (value) => lookupName(value, meterLookups.data?.iEnergyBills) },
+    { field: "energyDashboard", headerName: "EnergyDashboard", minWidth: 170, valueFormatter: (value) => lookupName(value, meterLookups.data?.energyDashboards) },
+    { field: "onSiteGeneration", headerName: "OnSiteGeneration", minWidth: 180, valueFormatter: (value) => lookupName(value, meterLookups.data?.onSiteGenerations) },
     { field: "status", headerName: "Status", minWidth: 140 },
     { field: "type", headerName: "Type", minWidth: 140 },
     { field: "product", headerName: "Product", minWidth: 140 },
@@ -2665,6 +2670,11 @@ function RichTextEditor({ label, value, onChange }: { label: string; value: stri
 interface LookupOption {
   id: string | number;
   name?: string;
+}
+
+function lookupName(value: unknown, options?: LookupOption[]) {
+  if (value === null || value === undefined || value === "") return "";
+  return options?.find((option) => String(option.id) === String(value))?.name ?? String(value);
 }
 
 interface ZipDetailOption {
