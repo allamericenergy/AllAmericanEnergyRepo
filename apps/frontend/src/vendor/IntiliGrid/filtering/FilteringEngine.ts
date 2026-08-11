@@ -43,10 +43,13 @@ export class FilteringEngine<T extends GridRowModel> {
         return rows.filter((row) =>
             visibleColumns.some((column) => {
                 const value = row[column.field];
+                const formattedValue = column.valueFormatter?.(value);
 
-                return String(value ?? "")
-                    .toLowerCase()
-                    .includes(query);
+                return [value, formattedValue].some((searchValue) =>
+                    String(searchValue ?? "")
+                        .toLowerCase()
+                        .includes(query)
+                );
             })
         );
     }
