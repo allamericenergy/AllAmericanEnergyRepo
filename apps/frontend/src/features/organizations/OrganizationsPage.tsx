@@ -180,9 +180,10 @@ export function OrganizationsPage() {
             onViewAll={() => setSearchParams({ section: "notes" })}
           />
         ) : selectedLocationSection ? (
-          <LocationTablePanel kind={selectedLocationSection.key} />
+          <LocationTablePanel key={selectedLocationSection.key} kind={selectedLocationSection.key} />
         ) : selectedLegacySection ? (
           <LegacyTablePanel
+            key={selectedLegacySection.key}
             endpoint={selectedLegacySection.endpoint}
             tableName={selectedLegacySection.tableName}
             singularName={selectedLegacySection.singularName}
@@ -584,11 +585,16 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const [form, setForm] = useState<RateForm>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadNotice, setUploadNotice] = useState("");
+  const [notice, setNotice] = useState("");
   const [rateUploadOpen, setRateUploadOpen] = useState(false);
   const [rateUploadUtilityId, setRateUploadUtilityId] = useState("");
   const [rateUploadFile, setRateUploadFile] = useState<File | null>(null);
   const [rateUploadError, setRateUploadError] = useState("");
+  const [ratePasteOpen, setRatePasteOpen] = useState(false);
+  const [ratePasteUtilityId, setRatePasteUtilityId] = useState("");
+  const [ratePasteValues, setRatePasteValues] = useState("");
+  const [ratePasteError, setRatePasteError] = useState("");
+  const [savingPastedRates, setSavingPastedRates] = useState(false);
   const [error, setError] = useState("");
 
   const records = useQuery({
@@ -607,6 +613,11 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const editableColumns = records.data?.columns.filter((column) => column.editable) ?? [];
   const utilityColumn = endpoint === "rates"
     ? editableColumns.find((column) => column.name.toLowerCase() === "utilityid")
+    : undefined;
+  const rateValueColumn = endpoint === "rates"
+    ? editableColumns.find((column) => column.name.toLowerCase() === "rate")
+      ?? editableColumns.find((column) => column.name.toLowerCase() === "name")
+      ?? editableColumns.find((column) => column.name !== utilityColumn?.name && ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType))
     : undefined;
   const utilityOptions = useMemo(() => {
     if (!utilities.data) return [];
@@ -665,6 +676,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   function openCreate() {
     setEditing(null);
     setError("");
+    setNotice("");
     setForm(formFromColumns(editableColumns));
     setFormOpen(true);
   }
@@ -672,6 +684,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   function openEdit(row: RateRow) {
     setEditing(row);
     setError("");
+    setNotice("");
     setForm(formFromColumns(editableColumns, row));
     setFormOpen(true);
   }
@@ -679,7 +692,9 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   async function saveRecord() {
     setSaving(true);
     setError("");
+    setNotice("");
     try {
+      const wasEditing = Boolean(editing && records.data?.primaryKey);
       if (editing && records.data?.primaryKey) {
         await api.patch(`/reports/${endpoint}/${encodeURIComponent(String(editing[records.data.primaryKey]))}`, form);
       } else {
@@ -687,6 +702,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       }
       await records.refetch();
       setFormOpen(false);
+      setNotice(`${singularName} ${wasEditing ? "updated" : "added"} successfully.`);
     } catch (saveError) {
       setError(apiError(saveError) ?? `Unable to save the ${singularName.toLowerCase()}.`);
     } finally {
@@ -698,10 +714,12 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     if (!deleting || !records.data?.primaryKey) return;
     setSaving(true);
     setError("");
+    setNotice("");
     try {
       await api.delete(`/reports/${endpoint}/${encodeURIComponent(String(deleting[records.data.primaryKey]))}`);
       setDeleting(null);
       await records.refetch();
+      setNotice(`${singularName} deleted successfully.`);
     } catch (deleteError) {
       setError(apiError(deleteError) ?? `Unable to delete the ${singularName.toLowerCase()}.`);
       setDeleting(null);
@@ -715,6 +733,42 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     setRateUploadFile(null);
     setRateUploadError("");
     setRateUploadOpen(true);
+  }
+
+  function openRatePaste() {
+    setRatePasteUtilityId("");
+    setRatePasteValues("");
+    setRatePasteError("");
+    setRatePasteOpen(true);
+  }
+
+  async function savePastedRates() {
+    if (!ratePasteUtilityId || !rateValueColumn || endpoint !== "rates") return;
+    const values = ratePasteValues.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    if (!values.length) {
+      setRatePasteError("Paste at least one rate.");
+      return;
+    }
+    if (values.length > 1000) {
+      setRatePasteError("You can add a maximum of 1,000 rates at a time.");
+      return;
+    }
+
+    setSavingPastedRates(true);
+    setNotice("");
+    setRatePasteError("");
+    try {
+      const rows = values.map((value) => ({ [rateValueColumn.name]: value }));
+      const response = await api.post("/reports/rates/bulk", { rows, utilityId: Number(ratePasteUtilityId) }) as { data: { imported: number } };
+      setNotice(`${response.data.imported} rate${response.data.imported === 1 ? "" : "s"} added successfully.`);
+      await records.refetch();
+      setRatePasteOpen(false);
+      setRatePasteValues("");
+    } catch (pasteError) {
+      setRatePasteError(apiError(pasteError) ?? (pasteError instanceof Error ? pasteError.message : "Unable to add rates."));
+    } finally {
+      setSavingPastedRates(false);
+    }
   }
 
   async function downloadRateTemplate() {
@@ -756,7 +810,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   async function uploadRates() {
     if (!rateUploadFile || !rateUploadUtilityId || endpoint !== "rates") return;
     setUploading(true);
-    setUploadNotice("");
+    setNotice("");
     setRateUploadError("");
     try {
       const workbook = XLSX.read(await rateUploadFile.arrayBuffer(), { type: "array", cellDates: true });
@@ -767,7 +821,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         .filter((row) => Object.values(row).some((value) => String(value ?? "").trim() !== ""));
       if (!rows.length) throw new Error("The uploaded file does not contain any rate rows.");
       const response = await api.post("/reports/rates/bulk", { rows, utilityId: Number(rateUploadUtilityId) }) as { data: { imported: number } };
-      setUploadNotice(`${response.data.imported} rate${response.data.imported === 1 ? "" : "s"} imported successfully.`);
+      setNotice(`${response.data.imported} rate${response.data.imported === 1 ? "" : "s"} imported successfully.`);
       await records.refetch();
       setRateUploadOpen(false);
       setRateUploadFile(null);
@@ -791,14 +845,19 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           </div>
           <div className="panel-title-actions">
             {endpoint === "rates" ? (
-              <Button variant="outlined" startIcon={<Upload size={18} />} disabled={uploading || !records.data} onClick={openRateUpload}>
-                Upload Excel/CSV
-              </Button>
+              <>
+                <Button variant="outlined" startIcon={<Upload size={18} />} disabled={uploading || !records.data} onClick={openRateUpload}>
+                  Upload Excel/CSV
+                </Button>
+                <Button variant="outlined" startIcon={<Plus size={18} />} disabled={!records.data || !rateValueColumn} onClick={openRatePaste}>
+                  Add More Rates
+                </Button>
+              </>
             ) : null}
             <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate} disabled={!records.data}>Add New {singularName}</Button>
           </div>
         </div>
-        {uploadNotice ? <p className="success-message">{uploadNotice}</p> : null}
+        {notice ? <p className="success-message">{notice}</p> : null}
         {endpoint === "rates" ? <p className="muted rate-upload-help">Use the first row for headers matching the Rate fields. Maximum 1,000 rows per upload.</p> : null}
         {error ? <p className="error">{error}</p> : null}
         {records.isError ? <p className="error">{apiError(records.error) ?? `Unable to load ${tableName} records.`}</p> : null}
@@ -850,6 +909,57 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           <Button onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
           <Button variant="contained" onClick={() => void saveRecord()} disabled={saving || !formValid}>
             {saving ? "Saving..." : editing ? `Update ${singularName}` : `Save ${singularName}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={ratePasteOpen} onClose={() => !savingPastedRates && setRatePasteOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Add More Rates</DialogTitle>
+        <DialogContent>
+          <p className="muted">Select a utility, then paste one rate per line. Blank lines are ignored.</p>
+          {ratePasteError ? <p className="error">{ratePasteError}</p> : null}
+          <div className="company-form-grid">
+            <TextField
+              select
+              required
+              label="Utility"
+              value={ratePasteUtilityId}
+              onChange={(event) => {
+                setRatePasteUtilityId(event.target.value);
+                setRatePasteError("");
+              }}
+              disabled={savingPastedRates || utilities.isLoading || utilities.isError}
+              helperText={utilities.isLoading ? "Loading utilities..." : utilities.isError ? "Unable to load utilities." : "Applied to every pasted rate"}
+            >
+              <MenuItem value="" disabled>Select utility</MenuItem>
+              {utilityOptions.map((utility) => (
+                <MenuItem key={utility.id} value={utility.id}>{utility.name}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              required
+              multiline
+              minRows={8}
+              label="Rates"
+              placeholder={"Rate 1\nRate 2\nRate 3"}
+              value={ratePasteValues}
+              onChange={(event) => {
+                setRatePasteValues(event.target.value);
+                setRatePasteError("");
+              }}
+              disabled={savingPastedRates}
+              helperText={`${ratePasteValues.split(/\r?\n/).filter((value) => value.trim()).length} of 1,000 rates`}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRatePasteOpen(false)} disabled={savingPastedRates}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => void savePastedRates()}
+            disabled={savingPastedRates || !ratePasteUtilityId || !ratePasteValues.trim() || !rateValueColumn}
+          >
+            {savingPastedRates ? "Adding..." : "Add Rates"}
           </Button>
         </DialogActions>
       </Dialog>
