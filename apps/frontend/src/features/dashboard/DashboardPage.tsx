@@ -237,6 +237,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     { field: "legalEntityName", headerName: "Legal Entity", minWidth: 220 },
     { field: "email", headerName: "Email", minWidth: 220 },
     { field: "phoneNumber", headerName: "Phone", width: 150 },
+    { field: "mailingAddress", headerName: "Address", minWidth: 240 },
     { field: "city", headerName: "City", width: 140 },
     { field: "state", headerName: "State", width: 120 },
     {
@@ -985,7 +986,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   async function updateSelectedCompanyStatus(isActive: boolean) {
-    if (selectedCompanies.length < 2) return;
+    if (!selectedCompanies.length) return;
     setCompanyError("");
     setIsUpdatingCompanyStatus(true);
     try {
@@ -1246,14 +1247,18 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <div className="panel-title-row">
             <h2>Companies</h2>
             <div className="panel-title-actions">
-              {selectedCompanies.length > 1 ? (
+              {selectedCompanies.length ? (
                 <>
-                  <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
-                    {isUpdatingCompanyStatus ? "Updating..." : "Make Active"}
-                  </Button>
-                  <Button variant="outlined" color="warning" onClick={() => void updateSelectedCompanyStatus(false)} disabled={isUpdatingCompanyStatus}>
-                    {isUpdatingCompanyStatus ? "Updating..." : "Make Inactive"}
-                  </Button>
+                  {selectedCompanies.length > 1 || !selectedCompanies[0].isActive ? (
+                    <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
+                      {isUpdatingCompanyStatus ? "Updating..." : "Active"}
+                    </Button>
+                  ) : null}
+                  {selectedCompanies.length > 1 || selectedCompanies[0].isActive ? (
+                    <Button variant="outlined" color="warning" onClick={() => void updateSelectedCompanyStatus(false)} disabled={isUpdatingCompanyStatus}>
+                      {isUpdatingCompanyStatus ? "Updating..." : "Inactive"}
+                    </Button>
+                  ) : null}
                 </>
               ) : null}
               <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => setIsBulkCompanyModalOpen(true)}>Add Multiple Companies</Button>
