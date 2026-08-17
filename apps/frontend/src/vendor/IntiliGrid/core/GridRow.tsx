@@ -6,11 +6,15 @@ import { useGridStore } from "../store/useGridStore";
 import { useGridRuntime } from "../runtime";
 
 import GridCell from "./GridCell";
+import type { GridTreeNodeMeta } from "../hooks/useTreeDataRows";
 interface GridRowProps<T extends GridRowModel> {
     row: T;
     rowIndex: number;
     rowHeight?: number;
     onRowClick?: (row: T) => void;
+    treeNode?: GridTreeNodeMeta & { key: string };
+    treeDataColumnField?: keyof T;
+    onToggleTreeNode?: (key: string, expanded: boolean) => void;
 }
 
 export default function GridRow<T extends GridRowModel>({
@@ -18,6 +22,9 @@ export default function GridRow<T extends GridRowModel>({
     rowIndex,
     rowHeight = 38,
     onRowClick,
+    treeNode,
+    treeDataColumnField,
+    onToggleTreeNode,
 }: GridRowProps<T>) {
     const runtime = useGridRuntime<T>();
 
@@ -90,6 +97,8 @@ export default function GridRow<T extends GridRowModel>({
                         column={column}
                         row={row}
                         rowIndex={rowIndex}
+                        treeNode={column.field === treeDataColumnField ? treeNode : undefined}
+                        onToggleTreeNode={onToggleTreeNode}
                     />
                 ))}
         </Box>
