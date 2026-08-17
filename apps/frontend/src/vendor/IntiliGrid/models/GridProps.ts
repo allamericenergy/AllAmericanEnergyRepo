@@ -20,6 +20,16 @@ export interface GridProps<T extends GridRowModel> {
 
     checkboxSelection?: boolean;
 
+    /** Enables expandable parent-child rows. Paths must be unique and ordered root-to-row. */
+    treeData?: boolean;
+
+    getTreeDataPath?: (row: T) => readonly (string | number)[];
+
+    treeDataColumnField?: keyof T;
+
+    /** -1 expands the complete tree; 0 collapses all roots. Defaults to -1. */
+    defaultTreeExpansionDepth?: number;
+
     rowModelType?: GridRowModelType;
 
     serverSideDatasource?: GridServerSideDatasource<T>;
