@@ -1,6 +1,8 @@
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import type { GridColumn, GridRowModel } from "../models";
 
@@ -9,6 +11,7 @@ import { useGridRuntime } from "../runtime";
 
 import GridCheckboxCell from "../selection/GridCheckboxCell";
 import GridEditCell from "../editing/GridEditCell";
+import type { GridTreeNodeMeta } from "../hooks/useTreeDataRows";
 
 import {
     GRID_SELECTION_FIELD,
@@ -26,12 +29,16 @@ interface GridCellProps<T extends GridRowModel> {
     column: GridColumn<T>;
     row: T;
     rowIndex: number;
+    treeNode?: GridTreeNodeMeta & { key: string };
+    onToggleTreeNode?: (key: string, expanded: boolean) => void;
 }
 
 export default function GridCell<T extends GridRowModel>({
     column,
     row,
     rowIndex,
+    treeNode,
+    onToggleTreeNode,
 }: GridCellProps<T>) {
     const runtime = useGridRuntime<T>();
 
@@ -154,7 +161,31 @@ export default function GridCell<T extends GridRowModel>({
             rowIndex,
         })
         : displayText;
-    const textElement = (
+    const textElement = treeNode ? (
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0, width: "100%", pl: treeNode.depth * 2 }}>
+            {treeNode.hasChildren ? (
+                <IconButton
+                    size="small"
+                    aria-label={treeNode.expanded ? "Collapse row" : "Expand row"}
+                    aria-expanded={treeNode.expanded}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleTreeNode?.(treeNode.key, treeNode.expanded);
+                    }}
+                    sx={{ p: 0.25, mr: 0.5 }}
+                >
+                    {treeNode.expanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+                </IconButton>
+            ) : <Box sx={{ width: 25, flexShrink: 0 }} />}
+            <Typography
+                noWrap
+                variant="body2"
+                sx={{ color: "text.primary", fontSize: 13, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+            >
+                {cellContent}
+            </Typography>
+        </Box>
+    ) : (
         <Typography
             noWrap
             variant="body2"
