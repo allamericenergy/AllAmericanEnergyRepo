@@ -1008,6 +1008,41 @@ nav a:hover {
   min-width: 0;
 }
 
+.utility-value-size-panel {
+  min-height: 280px;
+}
+
+.utility-value-size-panel .panel-title-row p {
+  margin: 0.4rem 0 0;
+}
+
+.utility-value-size-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  max-width: 860px;
+}
+
+.utility-value-size-form .MuiButton-root {
+  min-height: 56px;
+}
+
+.utility-value-size-grid {
+  height: 420px;
+  min-height: 280px;
+  margin-top: 1.5rem;
+}
+
+.utility-value-current-setting {
+  margin: 0 0 1rem;
+  color: #475569;
+}
+
+.utility-value-current-setting strong {
+  color: #0f5da8;
+}
+
 .rate-row-actions {
   display: flex;
   align-items: center;
@@ -2058,6 +2093,10 @@ nav a:hover {
   }
 
   .organization-page {
+    grid-template-columns: 1fr;
+  }
+
+  .utility-value-size-form {
     grid-template-columns: 1fr;
   }
 
