@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
+import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Hash, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
@@ -99,8 +99,14 @@ const locationSections = [
   { key: "zip-codes", label: "ZIP Codes", icon: Signpost }
 ] as const;
 
+const meterValueSections = [
+  { key: "account-number-values", label: "Add Account Value", field: "account-number" },
+  { key: "service-ref-values", label: "Add ServiceRef Value", field: "service-ref" }
+] as const;
+
 type LocationSection = typeof locationSections[number]["key"];
-type OrganizationSection = "organizations" | "notes" | LocationSection | typeof legacySections[number]["key"];
+type MeterValueSection = typeof meterValueSections[number]["key"];
+type OrganizationSection = "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -110,7 +116,8 @@ export function OrganizationsPage() {
     "organizations",
     "notes",
     ...legacySections.map((item) => item.key),
-    ...locationSections.map((item) => item.key)
+    ...locationSections.map((item) => item.key),
+    ...meterValueSections.map((item) => item.key)
   ] as string[];
   const initialSection = requestedSection && validSections.includes(requestedSection)
     ? requestedSection as OrganizationSection
@@ -119,6 +126,7 @@ export function OrganizationsPage() {
   const [viewedOrganization, setViewedOrganization] = useState<OrganizationRow | null>(null);
   const selectedLegacySection = legacySections.find((item) => item.key === section);
   const selectedLocationSection = locationSections.find((item) => item.key === section);
+  const selectedMeterValueSection = meterValueSections.find((item) => item.key === section);
 
   useEffect(() => {
     if (requestedSection && validSections.includes(requestedSection)) setSection(requestedSection as OrganizationSection);
@@ -159,6 +167,11 @@ export function OrganizationsPage() {
             </button>
           );
         })}
+        {meterValueSections.map((item) => (
+          <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
+            <Hash size={18} /> {item.label}
+          </button>
+        ))}
         <button type="button" className={section === "notes" ? "active" : ""} onClick={() => selectSection("notes")}>
           <StickyNote size={18} /> Notes
         </button>
@@ -181,6 +194,11 @@ export function OrganizationsPage() {
           />
         ) : selectedLocationSection ? (
           <LocationTablePanel key={selectedLocationSection.key} kind={selectedLocationSection.key} />
+        ) : selectedMeterValueSection ? (
+          <MeterValueSizePanel
+            key={selectedMeterValueSection.key}
+            field={selectedMeterValueSection.field}
+          />
         ) : selectedLegacySection ? (
           <LegacyTablePanel
             key={selectedLegacySection.key}
@@ -212,6 +230,141 @@ export function OrganizationsPage() {
           <Button onClick={() => setViewedOrganization(null)}>Close</Button>
         </DialogActions>
       </Dialog>
+    </section>
+  );
+}
+
+interface UtilityMeterValueSize {
+  id: number;
+  name: string | null;
+  accountNumberSize: number | null;
+  serviceRefSize: number | null;
+}
+
+function MeterValueSizePanel({ field }: { field: "account-number" | "service-ref" }) {
+  const isAccountNumber = field === "account-number";
+  const title = isAccountNumber ? "Add Account Value" : "Add ServiceRef Value";
+  const valueLabel = isAccountNumber ? "Account Number Size" : "Service Ref/POD Size";
+  const [utilityId, setUtilityId] = useState("");
+  const [size, setSize] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const utilities = useQuery({
+    queryKey: ["utility-meter-value-sizes"],
+    queryFn: async () => (await api.get("/reports/utility-meter-value-sizes")).data as { data: UtilityMeterValueSize[] },
+    retry: false
+  });
+
+  const selectedUtility = utilities.data?.data.find((utility) => String(utility.id) === utilityId);
+  const gridColumns = useMemo<GridColumn<UtilityMeterValueSize>[]>(() => [
+    { field: "name", headerName: "Utility", minWidth: 240, flex: 1, valueFormatter: (value) => String(value ?? "-") },
+    {
+      field: isAccountNumber ? "accountNumberSize" : "serviceRefSize",
+      headerName: valueLabel,
+      minWidth: 220,
+      valueFormatter: (value) => Number(value) === 0 ? "NO" : value == null ? "-" : String(value)
+    }
+  ], [isAccountNumber, valueLabel]);
+
+  function selectUtility(nextUtilityId: string) {
+    setUtilityId(nextUtilityId);
+    setError("");
+    setNotice("");
+    const utility = utilities.data?.data.find((item) => String(item.id) === nextUtilityId);
+    const currentSize = isAccountNumber ? utility?.accountNumberSize : utility?.serviceRefSize;
+    setSize(currentSize === null || currentSize === undefined ? "" : String(currentSize));
+  }
+
+  async function submit() {
+    const numericSize = Number(size);
+    if (!utilityId) {
+      setError("Select a utility type.");
+      return;
+    }
+    if (!Number.isInteger(numericSize) || numericSize < 0 || numericSize > 1000) {
+      setError("Enter a whole-number size from 0 to 1,000. Zero means NO.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await api.put(`/reports/utility-meter-value-sizes/${field}`, {
+        utilityId: Number(utilityId),
+        size: numericSize
+      });
+      await utilities.refetch();
+      setNotice(`${valueLabel} for ${selectedUtility?.name ?? "the selected utility"} was saved as ${numericSize === 0 ? "NO" : numericSize}.`);
+    } catch (submitError) {
+      setError(apiError(submitError) ?? `Unable to save the ${valueLabel.toLowerCase()}.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="panel companies-panel utility-value-size-panel">
+      <div className="panel-title-row">
+        <div>
+          <h2>{title}</h2>
+          <p className="muted">Set the exact number of characters required for each utility in tbl_MeterList.</p>
+        </div>
+      </div>
+      {notice ? <p className="success-message">{notice}</p> : null}
+      {error ? <p className="error">{error}</p> : null}
+      {utilities.isError ? <p className="error">Unable to load utility types.</p> : null}
+      {selectedUtility ? (
+        <p className="utility-value-current-setting">
+          Current setting: <strong>{(() => {
+            const currentValue = isAccountNumber ? selectedUtility.accountNumberSize : selectedUtility.serviceRefSize;
+            return currentValue === 0 ? "NO" : currentValue ?? "Not set";
+          })()}</strong>
+        </p>
+      ) : null}
+      <div className="utility-value-size-form">
+        <TextField
+          select
+          required
+          label="Utility Type"
+          value={utilityId}
+          onChange={(event) => selectUtility(event.target.value)}
+          disabled={saving || utilities.isLoading || utilities.isError}
+          helperText={utilities.isLoading ? "Loading utilities..." : "Select the utility this rule applies to"}
+        >
+          <MenuItem value="">Select utility type</MenuItem>
+          {(utilities.data?.data ?? []).map((utility) => (
+            <MenuItem key={utility.id} value={String(utility.id)}>{utility.name ?? `Utility ${utility.id}`}</MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          required
+          type="number"
+          label={valueLabel}
+          value={size}
+          onChange={(event) => {
+            setSize(event.target.value);
+            setError("");
+            setNotice("");
+          }}
+          disabled={saving}
+          helperText="Exact character count; enter 0 for NO"
+          slotProps={{ htmlInput: { min: 0, max: 1000, step: 1 } }}
+        />
+        <Button variant="contained" onClick={() => void submit()} disabled={saving || !utilityId || !size}>
+          {saving ? "Saving..." : "Submit"}
+        </Button>
+      </div>
+      <div className="utility-value-size-grid">
+        <IntiliGrid
+          loading={utilities.isLoading}
+          columns={gridColumns}
+          rows={utilities.data?.data ?? []}
+          onRowClick={(utility) => selectUtility(String(utility.id))}
+        />
+      </div>
     </section>
   );
 }
@@ -641,6 +794,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const columns = useMemo<GridColumn<RateRow>[]>(() => {
     const dataColumns = (records.data?.columns ?? []).map((column): GridColumn<RateRow> => {
       const isUtility = endpoint === "rates" && column.name.toLowerCase() === "utilityid";
+      const isUtilityMeterSize = endpoint === "utilities" && ["accountnumbersize", "servicerefsize"].includes(column.name.toLowerCase());
       return {
         field: column.name as keyof RateRow,
         headerName: isUtility ? "Utility" : displayName(column.name),
@@ -648,6 +802,8 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         flex: ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType) ? 1 : undefined,
         valueFormatter: (value) => isUtility
           ? utilityOptions.find((utility) => utility.id === String(value ?? ""))?.name ?? "-"
+          : isUtilityMeterSize && Number(value) === 0
+            ? "NO"
           : formatRateValue(value, column.dataType)
       };
     });
