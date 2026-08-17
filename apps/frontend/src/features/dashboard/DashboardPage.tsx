@@ -1,8 +1,8 @@
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Eye, FileText, Folder, FolderOpen, Pencil, Plus, Power, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Activity, Building2, Eye, FileText, Folder, FolderOpen, GitBranch, Pencil, Plus, Power, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
@@ -215,6 +215,35 @@ export function DashboardPage({ view }: DashboardPageProps) {
     retry: false
   });
 
+  const companyTreeDataPaths = useMemo(() => {
+    const rows = companies.data?.data ?? [];
+    const byId = new Map(rows.map((company) => [String(company.id), company]));
+    const paths = new Map<string, string[]>();
+
+    const resolvePath = (company: TblCompanyRow, visiting = new Set<string>()): string[] => {
+      const id = String(company.id);
+      const cached = paths.get(id);
+      if (cached) return cached;
+      if (visiting.has(id)) return [id];
+
+      const parentId = company.parentCompanyId == null ? "" : String(company.parentCompanyId);
+      const parent = parentId ? byId.get(parentId) : undefined;
+      const path = parent
+        ? [...resolvePath(parent, new Set(visiting).add(id)), id]
+        : [id];
+      paths.set(id, path);
+      return path;
+    };
+
+    rows.forEach((company) => resolvePath(company));
+    return paths;
+  }, [companies.data?.data]);
+
+  const getCompanyTreeDataPath = useMemo(
+    () => (company: TblCompanyRow) => companyTreeDataPaths.get(String(company.id)) ?? [String(company.id)],
+    [companyTreeDataPaths]
+  );
+
   const companyColumns: GridColumn<TblCompanyRow>[] = [
 
     {
@@ -243,7 +272,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     {
       field: "id",
       headerName: "Actions",
-      width: 190,
+      width: 230,
       pinned: "right",
       renderCell: ({ row }) => (
         <span className="grid-action-buttons">
@@ -255,6 +284,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <Tooltip title="Edit company">
             <IconButton size="small" aria-label="Edit company" onClick={(event) => { event.stopPropagation(); editCompany(row); }}>
               <Pencil size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={`Add subcompany to ${row.companyName ?? "company"}`}>
+            <IconButton size="small" aria-label="Add subcompany" onClick={(event) => { event.stopPropagation(); openCreateSubcompany(row); }}>
+              <GitBranch size={16} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Company activity">
@@ -483,6 +517,23 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setCompanyFormMode("create");
     setEditingCompanyId(null);
     setNewCompany(emptyCompanyForm());
+    setIsCompanyModalOpen(true);
+  }
+
+  function openCreateSubcompany(parent: TblCompanyRow) {
+    setCompanyError("");
+    setCompanyFormMode("create");
+    setEditingCompanyId(null);
+    setNewCompany({
+      ...emptyCompanyForm(),
+      parentCompanyId: Number(parent.id),
+      mailingAddress: parent.mailingAddress ?? "",
+      city: parent.city ?? "",
+      state: parent.state ?? "",
+      country: parent.country ?? "",
+      postalCode: parent.postalCode ?? "",
+      phoneNumber: parent.phoneNumber ?? ""
+    });
     setIsCompanyModalOpen(true);
   }
 
@@ -812,6 +863,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       const payload = {
         ...newCompany,
         organizationId: newCompany.organizationId || 1,
+        parentCompanyId: newCompany.parentCompanyId || (companyFormMode === "edit" ? null : undefined),
         companyName: newCompany.companyName.trim(),
         legalEntityName: newCompany.legalEntityName.trim(),
         mailingAddress: newCompany.mailingAddress.trim(),
@@ -856,7 +908,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       if (!worksheet) throw new Error("The workbook does not contain a worksheet.");
-      const rows = parseBulkCompanies(worksheet);
+      const rows = parseBulkCompanies(worksheet, companies.data?.data ?? []);
       if (!rows.length) throw new Error("No company rows were found in the file.");
       if (rows.length > 500) throw new Error("A maximum of 500 companies can be uploaded at once.");
       setBulkCompanyRows(rows);
@@ -990,10 +1042,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setCompanyError("");
     setIsUpdatingCompanyStatus(true);
     try {
-      await api.patch("/reports/tbl-companies/bulk-status", {
-        ids: selectedCompanies.map((company) => company.id),
-        isActive
-      });
+      if (selectedCompanies.length === 1) {
+        await api.patch(`/reports/tbl-companies/${selectedCompanies[0].id}`, { isActive });
+      } else {
+        await api.patch("/reports/tbl-companies/bulk-status", {
+          ids: selectedCompanies.map((company) => company.id),
+          isActive
+        });
+      }
       await companies.refetch();
       setSelectedCompanies([]);
       setCompanyGridKey((current) => current + 1);
@@ -1008,25 +1064,94 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
-  function downloadCompanyTemplate() {
-    const worksheet = XLSX.utils.json_to_sheet([{
-      "Organization ID": 1,
-      "Company Name": "Example Company",
-      "Legal Entity Name": "Example Company LLC",
-      Email: "company@example.com",
-      "Phone Number": "555-0100",
-      "Mailing Address": "100 Main Street",
-      City: "Austin",
-      State: "TX",
-      Country: "USA",
-      "Postal Code": "78701",
-      "Tax ID": "",
-      URL: "",
-      Active: true
-    }]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Companies");
-    XLSX.writeFile(workbook, "company-upload-template.xlsx");
+  async function downloadCompanyTemplate() {
+    const companyRows = companies.data?.data ?? (await companies.refetch()).data?.data ?? [];
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    workbook.calcProperties.fullCalcOnLoad = true;
+
+    const worksheet = workbook.addWorksheet("Companies", { views: [{ state: "frozen", ySplit: 1 }] });
+    worksheet.columns = [
+      { header: "Organization ID", key: "organizationId", width: 16 },
+      { header: "Parent Company", key: "parentCompany", width: 34 },
+      { header: "Parent Company ID", key: "parentCompanyId", width: 2, hidden: true },
+      { header: "Company Name", key: "companyName", width: 32 },
+      { header: "Legal Entity Name", key: "legalEntityName", width: 34 },
+      { header: "Email", key: "email", width: 28 },
+      { header: "Phone Number", key: "phoneNumber", width: 18 },
+      { header: "Mailing Address", key: "mailingAddress", width: 32 },
+      { header: "City", key: "city", width: 18 },
+      { header: "State", key: "state", width: 12 },
+      { header: "Country", key: "country", width: 16 },
+      { header: "Postal Code", key: "postalCode", width: 14, style: { numFmt: "@" } },
+      { header: "Tax ID", key: "taxId", width: 18 },
+      { header: "URL", key: "url", width: 28 },
+      { header: "Active", key: "active", width: 12 }
+    ];
+    worksheet.addRow({
+      organizationId: 1,
+      companyName: "Example Company",
+      legalEntityName: "Example Company LLC",
+      email: "company@example.com",
+      phoneNumber: "555-0100",
+      mailingAddress: "100 Main Street",
+      city: "Austin",
+      state: "TX",
+      country: "USA",
+      postalCode: "78701",
+      active: "TRUE"
+    });
+    worksheet.autoFilter = "A1:O1";
+    worksheet.getRow(1).height = 24;
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1683D8" } };
+      cell.alignment = { vertical: "middle" };
+    });
+
+    if (companyRows.length) {
+      const parentSheet = workbook.addWorksheet("Parent Companies", { views: [{ state: "frozen", ySplit: 1 }] });
+      parentSheet.columns = [
+        { header: "Company ID", key: "id", width: 14 },
+        { header: "Company Name", key: "name", width: 40 }
+      ];
+      parentSheet.addRows(companyRows.map((company) => ({ id: company.id, name: company.companyName ?? "" })));
+      parentSheet.getRow(1).font = { bold: true };
+      workbook.definedNames.add(`'Parent Companies'!$A$2:$A$${companyRows.length + 1}`, "ParentCompanyIds");
+      workbook.definedNames.add(`'Parent Companies'!$B$2:$B$${companyRows.length + 1}`, "ParentCompanyNames");
+
+      const parentNameColumn = worksheet.getColumn("parentCompany").letter;
+      for (let row = 2; row <= 501; row += 1) {
+        worksheet.getRow(row).getCell("parentCompany").dataValidation = {
+          type: "list",
+          allowBlank: true,
+          formulae: ["ParentCompanyNames"],
+          showErrorMessage: true,
+          errorTitle: "Invalid parent company",
+          error: "Choose a parent company from the dropdown."
+        };
+        worksheet.getRow(row).getCell("parentCompanyId").value = {
+          formula: `IFERROR(INDEX(ParentCompanyIds,MATCH(${parentNameColumn}${row},ParentCompanyNames,0)),"")`
+        };
+      }
+    }
+
+    for (let row = 2; row <= 501; row += 1) {
+      worksheet.getRow(row).getCell("active").dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: ['"TRUE,FALSE"']
+      };
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "company-upload-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async function downloadMeterTemplate() {
@@ -1249,12 +1374,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <div className="panel-title-actions">
               {selectedCompanies.length ? (
                 <>
-                  {selectedCompanies.length > 1 || !selectedCompanies[0].isActive ? (
+                  {selectedCompanies.some((company) => !company.isActive) ? (
                     <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
                       {isUpdatingCompanyStatus ? "Updating..." : "Active"}
                     </Button>
                   ) : null}
-                  {selectedCompanies.length > 1 || selectedCompanies[0].isActive ? (
+                  {selectedCompanies.some((company) => company.isActive) ? (
                     <Button variant="outlined" color="warning" onClick={() => void updateSelectedCompanyStatus(false)} disabled={isUpdatingCompanyStatus}>
                       {isUpdatingCompanyStatus ? "Updating..." : "Inactive"}
                     </Button>
@@ -1272,7 +1397,18 @@ export function DashboardPage({ view }: DashboardPageProps) {
           ) : null}
           {/*  <p className="muted">Detailed company list from SQL Server table tblCompany.</p> */}
           {companies.isError ? <p className="error">Unable to load tblCompany records.</p> : null}
-          <IntiliGrid key={companyGridKey} checkboxSelection columns={companyColumns} rows={companies.data?.data ?? []} onRowClick={viewCompany} onSelectionChange={(_ids, rows) => setSelectedCompanies(rows)} />
+          <IntiliGrid
+            key={companyGridKey}
+            checkboxSelection
+            treeData
+            treeDataColumnField="companyName"
+            getTreeDataPath={getCompanyTreeDataPath}
+            defaultTreeExpansionDepth={0}
+            columns={companyColumns}
+            rows={companies.data?.data ?? []}
+            onRowClick={viewCompany}
+            onSelectionChange={(_ids, rows) => setSelectedCompanies(rows)}
+          />
         </section>
       ) : null}
 
@@ -1348,10 +1484,32 @@ export function DashboardPage({ view }: DashboardPageProps) {
       ) : null}
 
       <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>{companyFormMode === "edit" ? "Edit Company" : "Add New Company"}</DialogTitle>
+        <DialogTitle>
+          {companyFormMode === "edit"
+            ? "Edit Company"
+            : newCompany.parentCompanyId
+              ? `Add Subcompany to ${companies.data?.data.find((company) => Number(company.id) === newCompany.parentCompanyId)?.companyName ?? "Company"}`
+              : "Add New Company"}
+        </DialogTitle>
         <DialogContent>
           {companyError ? <p className="error">{companyError}</p> : null}
           <div className="company-form-grid">
+            <TextField
+              select
+              label="Parent Company"
+              value={newCompany.parentCompanyId}
+              onChange={(event) => updateNewCompany("parentCompanyId", Number(event.target.value))}
+              helperText="Leave blank for a top-level company"
+            >
+              <MenuItem value={0}>None (top-level company)</MenuItem>
+              {(companies.data?.data ?? [])
+                .filter((company) => company.id !== editingCompanyId)
+                .map((company) => (
+                  <MenuItem key={company.id} value={Number(company.id)}>
+                    {company.companyName}{company.parentCompanyName ? ` — under ${company.parentCompanyName}` : ""}
+                  </MenuItem>
+                ))}
+            </TextField>
             <TextField label="Company Name" required value={newCompany.companyName} onChange={(event) => updateNewCompany("companyName", event.target.value)} />
             <TextField label="Legal Entity Name" required value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
             <TextField label="Email" type="email" value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
@@ -1381,7 +1539,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       <Dialog open={isBulkCompanyModalOpen} onClose={() => !isUploadingCompanies && setIsBulkCompanyModalOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Bulk Upload Companies</DialogTitle>
         <DialogContent>
-          <p className="muted">Upload an Excel or CSV file containing up to 500 companies. Company Name is required. Organization ID defaults to 1 and Active defaults to true when omitted.</p>
+          <p className="muted">Upload an Excel or CSV file containing up to 500 companies. Company Name is required. Use the template&apos;s Parent Company dropdown to create subcompanies. Organization ID defaults to 1 and Active defaults to true when omitted.</p>
           {bulkCompanyError ? <p className="error">{bulkCompanyError}</p> : null}
           {bulkCompanyResult ? (
             <Alert severity={bulkCompanyResult.failed ? "warning" : "success"}>
@@ -1446,7 +1604,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     </span>
                   </p>
                 </div>
-                <div className="company-account-actions">
+                  <div className="company-account-actions">
+                  <Button startIcon={<GitBranch size={17} />} onClick={() => { const parent = viewedCompany; setViewedCompany(null); openCreateSubcompany(parent); }}>
+                    Add Subcompany
+                  </Button>
                   {!viewedCompany.isActive ? (
                     <Button
                       variant="contained"
@@ -1475,6 +1636,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <dd>{viewedCompany.customerId ?? "-"}</dd>
                       <dt>Company Name</dt>
                       <dd>{viewedCompany.companyName ?? "-"}</dd>
+                      <dt>Type</dt>
+                      <dd>{viewedCompany.companyType ?? (viewedCompany.parentCompanyId ? "Subcompany" : "Company")}</dd>
+                      <dt>Parent Company</dt>
+                      <dd>{viewedCompany.parentCompanyName ?? "-"}</dd>
                       <dt>Legal Name</dt>
                       <dd>{viewedCompany.legalEntityName ?? "-"}</dd>
                       <dt>Address</dt>
@@ -2435,6 +2600,7 @@ function formatDate(value: unknown) {
 
 interface NewCompanyForm {
   organizationId: number;
+  parentCompanyId: number;
   companyName: string;
   legalEntityName: string;
   mailingAddress: string;
@@ -2464,17 +2630,32 @@ interface BulkMeterResult {
   errors: Array<{ row: number; meter: string; error: string }>;
 }
 
-function parseBulkCompanies(worksheet: XLSX.WorkSheet): NewCompanyForm[] {
+function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[] = []): NewCompanyForm[] {
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
-  return rows.map((source) => {
+  const companiesByName = new Map<string, TblCompanyRow>();
+  companies.forEach((company) => {
+    const normalizedName = company.companyName?.trim().toLowerCase();
+    if (normalizedName && !companiesByName.has(normalizedName)) companiesByName.set(normalizedName, company);
+  });
+
+  return rows.map((source, index) => {
     const row = new Map(Object.entries(source).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value]));
     const value = (...keys: string[]) => keys.map((key) => row.get(key)).find((item) => item !== undefined);
     const text = (...keys: string[]) => String(value(...keys) ?? "").trim();
     const activeValue = text("active", "isactive").toLowerCase();
     const organizationValue = Number(value("organizationid", "orgid"));
+    const parentCompanyValue = Number(value("parentcompanyid", "parentid"));
+    const parentCompanyName = text("parentcompany", "parentcompanyname");
+    const parentCompany = parentCompanyName ? companiesByName.get(parentCompanyName.toLowerCase()) : undefined;
+    if (parentCompanyName && !parentCompany && !(Number.isInteger(parentCompanyValue) && parentCompanyValue > 0)) {
+      throw new Error(`Row ${index + 2}: Parent company "${parentCompanyName}" was not found. Choose a value from the template dropdown.`);
+    }
 
     return {
       organizationId: Number.isInteger(organizationValue) && organizationValue > 0 ? organizationValue : 1,
+      parentCompanyId: Number.isInteger(parentCompanyValue) && parentCompanyValue > 0
+        ? parentCompanyValue
+        : Number(parentCompany?.id ?? 0),
       companyName: text("companyname", "company"),
       legalEntityName: text("legalentityname", "legalname"),
       mailingAddress: text("mailingaddress", "address"),
@@ -2556,6 +2737,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
 function emptyCompanyForm(): NewCompanyForm {
   return {
     organizationId: 1,
+    parentCompanyId: 0,
     companyName: "",
     legalEntityName: "",
     mailingAddress: "",
@@ -2575,6 +2757,7 @@ function emptyCompanyForm(): NewCompanyForm {
 function companyToForm(company: TblCompanyRow): NewCompanyForm {
   return {
     organizationId: Number(company.organizationId ?? 1),
+    parentCompanyId: Number(company.parentCompanyId ?? 0),
     companyName: company.companyName ?? "",
     legalEntityName: company.legalEntityName ?? "",
     mailingAddress: company.mailingAddress ?? "",
@@ -2600,6 +2783,9 @@ function companyApiError(error: unknown) {
 interface TblCompanyRow {
   id: string | number;
   organizationId?: string | number;
+  parentCompanyId?: string | number | null;
+  parentCompanyName?: string | null;
+  companyType?: "Company" | "Subcompany";
   customerId?: string;
   companyName?: string;
   legalEntityName?: string;
