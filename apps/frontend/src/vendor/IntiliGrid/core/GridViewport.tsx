@@ -9,6 +9,7 @@ import { useGridStore } from "../store/useGridStore";
 import { useSortedRows } from "../hooks/useSortedRows";
 import { useFilteredRows } from "../hooks/useFilteredRows";
 import { usePaginatedRows } from "../hooks/usePaginatedRows";
+import { useTreeDataRows } from "../hooks/useTreeDataRows";
 import { useGridVirtualizer } from "../virtualization";
 import GridHeader from "./GridHeader";
 
@@ -38,8 +39,14 @@ export default function GridViewport<T extends GridRowModel>({
     const filteredRows =
         useFilteredRows<T>(sortedRows, rowModelType);
 
-    const rows =
-        usePaginatedRows<T>(filteredRows, rowModelType);
+    const treeRows = useTreeDataRows(
+        filteredRows,
+        Boolean(props.treeData),
+        props.getTreeDataPath,
+        props.defaultTreeExpansionDepth
+    );
+
+    const rows = usePaginatedRows<T>(treeRows.rows, rowModelType);
 
     const {
         containerRef,
@@ -198,6 +205,8 @@ export default function GridViewport<T extends GridRowModel>({
                         )}
                         rowOffset={range.startIndex}
                         rowHeight={rowHeight}
+                        treeMetadata={treeRows.metadata}
+                        onToggleTreeNode={treeRows.toggleNode}
                     />
                 </Box>
             </Box>
