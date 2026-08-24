@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
+import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
 import { MembersPanel } from "../members/MembersPage";
@@ -370,8 +371,18 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterColumns: GridColumn<MeterRow>[] = [
 
     { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
-    { field: "accountNumber", headerName: "Account Number", minWidth: 170 },
-    { field: "serviceRefPod", headerName: "Service Ref/POD", minWidth: 170 },
+    {
+      field: "accountNumber",
+      headerName: "Account Number",
+      minWidth: 170,
+      renderCell: ({ row, value }) => row.accountNumberSize === 0 ? "NO" : String(value ?? "")
+    },
+    {
+      field: "serviceRefPod",
+      headerName: "Service Ref/POD",
+      minWidth: 170,
+      renderCell: ({ row, value }) => row.serviceRefSize === 0 ? "NO" : String(value ?? "")
+    },
     { field: "nameKey", headerName: "Name Key", minWidth: 140 },
     { field: "meter", headerName: "Meter", minWidth: 140 },
     { field: "serviceAddress", headerName: "Service Address", minWidth: 220 },
@@ -505,10 +516,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function updateMeterUtility(value: number) {
+    const utility = meterLookups.data?.utilities.find((option) => Number(option.id) === value);
     setMeterForm((current) => ({
       ...current,
       utilityId: value,
-      rate: current.utilityId === value ? current.rate : 0
+      rate: current.utilityId === value ? current.rate : 0,
+      accountNumber: utility?.accountNumberSize === 0 ? "" : current.accountNumber,
+      serviceRefPod: utility?.serviceRefSize === 0 ? "" : current.serviceRefPod
     }));
   }
 
@@ -622,6 +636,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   const contractMonths = calculateContractMonths(contractForm.startDate, contractForm.endDate);
   const meterLoadProfile = calculateMeterLoadProfile(meterForm.demand, meterForm.annualUsage);
+  const selectedMeterUtility = meterLookups.data?.utilities.find((utility) => Number(utility.id) === meterForm.utilityId);
+  const accountNumberDisabled = selectedMeterUtility?.accountNumberSize === 0;
+  const serviceRefDisabled = selectedMeterUtility?.serviceRefSize === 0;
   const bulkMeterCompany = viewedCompany ?? companies.data?.data.find((company) => Number(company.id) === bulkMeterCompanyId);
   const contractNotesText = contractForm.notes.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim();
   const requiredContractFieldsValid = Boolean(
@@ -2021,8 +2038,20 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
 
             <div className="meter-form-row meter-form-row-four">
-              <TextField label="Account Number" value={meterForm.accountNumber} onChange={(event) => updateMeterForm("accountNumber", event.target.value)} />
-              <TextField label="Service Ref/POD" value={meterForm.serviceRefPod} onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)} />
+              <TextField
+                label="Account Number"
+                value={accountNumberDisabled ? "NO" : meterForm.accountNumber}
+                onChange={(event) => updateMeterForm("accountNumber", event.target.value)}
+                disabled={accountNumberDisabled}
+                helperText={accountNumberDisabled ? "Not used for this utility" : selectedMeterUtility?.accountNumberSize ? `Exactly ${selectedMeterUtility.accountNumberSize} numeric digits; separators are ignored` : ""}
+              />
+              <TextField
+                label="Service Ref/POD"
+                value={serviceRefDisabled ? "NO" : meterForm.serviceRefPod}
+                onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)}
+                disabled={serviceRefDisabled}
+                helperText={serviceRefDisabled ? "Not used for this utility" : selectedMeterUtility?.serviceRefSize ? `Exactly ${selectedMeterUtility.serviceRefSize} numeric digits; separators are ignored` : ""}
+              />
               <TextField label="Meter" value={meterForm.meter} onChange={(event) => updateMeterForm("meter", event.target.value)} />
               <TextField label="Name Key" value={meterForm.nameKey} onChange={(event) => updateMeterForm("nameKey", event.target.value)} />
             </div>
@@ -2058,9 +2087,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {viewedMeter ? (
             <dl className="company-detail-list">
               <dt>Account Number</dt>
-              <dd>{viewedMeter.accountNumber ?? "-"}</dd>
+              <dd>{viewedMeter.accountNumberSize === 0 ? "NO" : viewedMeter.accountNumber ?? "-"}</dd>
               <dt>Service Ref/POD</dt>
-              <dd>{viewedMeter.serviceRefPod ?? "-"}</dd>
+              <dd>{viewedMeter.serviceRefSize === 0 ? "NO" : viewedMeter.serviceRefPod ?? "-"}</dd>
               <dt>Name Key</dt>
               <dd>{viewedMeter.nameKey ?? "-"}</dd>
               <dt>Meter</dt>
@@ -2674,9 +2703,12 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
 }
 
 function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?: MeterLookups): MeterForm[] {
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+  const rows = XLSX.utils
+    .sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" })
+    .filter(hasMeterInputData);
   return rows.map((source, index) => {
-    const rowNumber = index + 2;
+    const worksheetRowIndex = source.__rowNum__;
+    const rowNumber = typeof worksheetRowIndex === "number" ? worksheetRowIndex + 1 : index + 2;
     const row = new Map(Object.entries(source).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value]));
     const value = (...keys: string[]) => keys.map((key) => row.get(key)).find((item) => item !== undefined);
     const text = (...keys: string[]) => String(value(...keys) ?? "").trim();
@@ -2861,6 +2893,8 @@ function RichTextEditor({ label, value, onChange }: { label: string; value: stri
 interface LookupOption {
   id: string | number;
   name?: string;
+  accountNumberSize?: number | null;
+  serviceRefSize?: number | null;
 }
 
 function lookupName(value: unknown, options?: LookupOption[]) {
@@ -2972,6 +3006,8 @@ interface MeterRow {
   product?: string | null;
   utilityId?: string | number | null;
   utility?: string | null;
+  accountNumberSize?: number | null;
+  serviceRefSize?: number | null;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
