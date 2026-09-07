@@ -953,6 +953,120 @@ nav a:hover {
   /* Fill remaining viewport */
 }
 
+.meter-grid-layout {
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  gap: 1rem;
+}
+
+.meter-title-block {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+}
+
+.meter-columns-toggle {
+  border: 1px solid #d7e0e9 !important;
+  border-radius: 6px !important;
+  color: #64748b !important;
+  background: #fff !important;
+}
+
+.meter-columns-toggle:hover,
+.meter-columns-toggle.active {
+  color: #0f5da8 !important;
+  border-color: #9ec3e5 !important;
+  background: #eef6fd !important;
+}
+
+.meter-grid-layout.menu-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.meter-grid-area {
+  min-width: 0;
+  min-height: 0;
+}
+
+.meter-column-menu {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #dce4ed;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.meter-column-menu-heading,
+.meter-column-menu-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.meter-column-menu-heading {
+  color: #12385c;
+  background: #eef4fa;
+  border-bottom: 1px solid #dce4ed;
+}
+
+.meter-column-menu-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.meter-column-menu-summary {
+  color: #64748b;
+  font-size: 0.78rem;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.meter-column-menu-summary button {
+  padding: 0;
+  color: #0f5da8;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.meter-column-menu-summary button:disabled {
+  color: #94a3b8;
+}
+
+.meter-column-options {
+  display: grid;
+  align-content: start;
+  padding: 0.35rem;
+  overflow-y: auto;
+}
+
+.meter-column-option {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  min-height: 38px;
+  padding: 0 0.45rem;
+  border-radius: 6px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.86rem;
+}
+
+.meter-column-option:hover {
+  color: #0f5da8;
+  background: #f1f6fb;
+}
+
+.meter-column-option .MuiCheckbox-root {
+  padding: 5px;
+}
+
 .panel-title-row {
   display: flex;
   align-items: center;
@@ -2122,6 +2236,10 @@ nav a:hover {
 
   .meter-check-row span:nth-of-type(n + 3) {
     display: none;
+  }
+
+  .meter-grid-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
   }
 
   .company-account-dialog {
