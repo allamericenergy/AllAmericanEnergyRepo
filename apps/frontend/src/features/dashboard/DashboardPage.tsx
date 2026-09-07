@@ -1,7 +1,7 @@
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Eye, FileText, Folder, FolderOpen, GitBranch, Pencil, Plus, Power, Upload } from "lucide-react";
+import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -89,6 +89,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [selectedMeters, setSelectedMeters] = useState<MeterRow[]>([]);
   const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
   const [meterGridKey, setMeterGridKey] = useState(0);
+  const [isMeterColumnMenuOpen, setIsMeterColumnMenuOpen] = useState(true);
+  const [meterColumnVisibility, setMeterColumnVisibility] = useState<Record<string, boolean>>({});
   const [meterError, setMeterError] = useState("");
   const [meterAvailabilityNotice, setMeterAvailabilityNotice] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
@@ -450,6 +452,25 @@ export function DashboardPage({ view }: DashboardPageProps) {
     },
 
   ];
+  const visibleMeterColumns = meterColumns.map((column) => ({
+    ...column,
+    hidden: meterColumnVisibility[String(column.field)] === false
+  }));
+  const visibleMeterColumnCount = meterColumns.filter(
+    (column) => meterColumnVisibility[String(column.field)] !== false
+  ).length;
+
+  function toggleMeterColumn(field: keyof MeterRow) {
+    const key = String(field);
+    setMeterColumnVisibility((current) => ({
+      ...current,
+      [key]: current[key] === false
+    }));
+  }
+
+  function showAllMeterColumns() {
+    setMeterColumnVisibility({});
+  }
 
   function updateNewCompany<K extends keyof NewCompanyForm>(field: K, value: NewCompanyForm[K]) {
     setNewCompany((current) => ({ ...current, [field]: value }));
@@ -1454,7 +1475,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
       {isMetersView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
-            <h2>Meters</h2>
+            <div className="meter-title-block">
+              <h2>Meters</h2>
+              <Tooltip title={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}>
+                <IconButton
+                  size="small"
+                  className={`meter-columns-toggle ${isMeterColumnMenuOpen ? "active" : ""}`}
+                  onClick={() => setIsMeterColumnMenuOpen((current) => !current)}
+                  aria-label={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}
+                  aria-expanded={isMeterColumnMenuOpen}
+                  aria-controls="meter-column-menu"
+                >
+                  <Columns3 size={18} />
+                </IconButton>
+              </Tooltip>
+            </div>
             <div className="panel-title-actions">
               {selectedMeters.length ? (
                 <>
@@ -1490,13 +1525,48 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {meterError ? <p className="error">{meterError}</p> : null}
           {meters.isError ? <p className="error">Unable to load meters.</p> : null}
           {meters.isLoading ? <p className="muted">Loading meters...</p> : null}
-          <IntiliGrid
-            key={meterGridKey}
-            checkboxSelection
-            columns={meterColumns}
-            rows={meters.data?.data ?? []}
-            onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
-          />
+          <div className={`meter-grid-layout ${isMeterColumnMenuOpen ? "" : "menu-hidden"}`}>
+            {isMeterColumnMenuOpen ? (
+              <aside id="meter-column-menu" className="meter-column-menu" aria-label="Meter grid columns">
+                <div className="meter-column-menu-heading">
+                  <span><Columns3 size={18} /><strong>Grid Columns</strong></span>
+                  <IconButton size="small" aria-label="Hide column menu" onClick={() => setIsMeterColumnMenuOpen(false)}>
+                    <PanelLeftClose size={17} />
+                  </IconButton>
+                </div>
+                <div className="meter-column-menu-summary">
+                  <span>{visibleMeterColumnCount} of {meterColumns.length} shown</span>
+                  <button type="button" onClick={showAllMeterColumns} disabled={visibleMeterColumnCount === meterColumns.length}>Show all</button>
+                </div>
+                <div className="meter-column-options">
+                  {meterColumns.map((column) => {
+                    const field = String(column.field);
+                    const checked = meterColumnVisibility[field] !== false;
+                    return (
+                      <label className="meter-column-option" key={field}>
+                        <Checkbox
+                          size="small"
+                          checked={checked}
+                          onChange={() => toggleMeterColumn(column.field)}
+                          slotProps={{ input: { "aria-label": `${checked ? "Hide" : "Show"} ${column.headerName} column` } }}
+                        />
+                        <span>{column.headerName}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </aside>
+            ) : null}
+            <div className="meter-grid-area">
+              <IntiliGrid
+                key={meterGridKey}
+                checkboxSelection
+                columns={visibleMeterColumns}
+                rows={meters.data?.data ?? []}
+                onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
+              />
+            </div>
+          </div>
         </section>
       ) : null}
 
