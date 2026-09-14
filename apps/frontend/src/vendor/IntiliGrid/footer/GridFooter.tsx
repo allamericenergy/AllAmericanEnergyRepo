@@ -53,7 +53,7 @@ export default function GridFooter<
                     fontSize: 12,
                 }}
             >
-                Page {pagination.page + 1} of {totalRows}
+                Page {pagination.page + 1} of {totalRows} · {totalRows} rows
             </Typography>
 
             <Box
