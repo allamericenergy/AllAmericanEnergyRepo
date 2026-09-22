@@ -33,6 +33,9 @@ export default function Grid<T extends GridRowModel>(
 
     if (!storeRef.current) {
         storeRef.current = createGridStore<T>();
+        if (props.initialPageSize && Number.isInteger(props.initialPageSize) && props.initialPageSize > 0) {
+            storeRef.current.getState().setPageSize(props.initialPageSize);
+        }
     }
 
     const store = storeRef.current;
