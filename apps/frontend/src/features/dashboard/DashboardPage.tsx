@@ -1,3 +1,4 @@
+import { loadAllMeters } from "../../lib/loadAllMeters";
 import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
@@ -146,11 +147,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   });
   const meters = useQuery({
     queryKey: ["meters", isMetersView ? "all" : viewedCompany?.id, user?.id],
-    queryFn: async () => (
-      await api.get("/reports/meters", {
-        params: { companyId: isMetersView ? undefined : viewedCompany?.id }
-      })
-    ).data as { total: number; data: MeterRow[] },
+    queryFn: ({ signal }) => loadAllMeters<MeterRow>({ companyId: isMetersView ? undefined : viewedCompany?.id }, signal),
     enabled: Boolean(viewedCompany?.id) || isMetersView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
@@ -194,14 +191,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }, [meterForm.zip, meterZipMatches.data]);
   const contractMeters = useQuery({
     queryKey: ["contract-meters", contractCompanyId, contractForm.productId, user?.id],
-    queryFn: async () => (
-      await api.get("/reports/meters", {
-        params: {
-          companyId: contractCompanyId || undefined,
-          productId: contractForm.productId || undefined
-        }
-      })
-    ).data as { total: number; data: MeterRow[] },
+    queryFn: ({ signal }) => loadAllMeters<MeterRow>({
+      companyId: contractCompanyId || undefined,
+      productId: contractForm.productId || undefined
+    }, signal),
     enabled: Boolean(isContractModalOpen && contractCompanyId),
     retry: false
   });
@@ -1473,7 +1466,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       ) : null}
 
       {isMetersView ? (
-        <section className="panel companies-panel">
+        <section className="panel companies-panel meters-page-panel">
           <div className="panel-title-row">
             <div className="meter-title-block">
               <h2>Meters</h2>
@@ -1560,6 +1553,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <div className="meter-grid-area">
               <IntiliGrid
                 key={meterGridKey}
+                initialPageSize={50}
                 checkboxSelection
                 columns={visibleMeterColumns}
                 rows={meters.data?.data ?? []}
