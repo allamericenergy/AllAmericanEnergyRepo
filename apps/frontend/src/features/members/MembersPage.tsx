@@ -20,9 +20,11 @@ interface MemberRow {
   lastName?: string | null;
   email?: string | null;
   loginEmail?: string | null;
+  password?: string | null;
   phone?: string | null;
   companyId?: string | number | null;
   company?: string | null;
+  companyName?: string | null;
   department?: string | null;
   designation?: string | null;
   notes?: string | null;
@@ -52,7 +54,7 @@ const memberColumns: GridColumn<MemberRow>[] = [
   { field: "email", headerName: "Personal Email", minWidth: 220, flex: 1 },
   { field: "loginEmail", headerName: "Login ID", minWidth: 250, flex: 1 },
   { field: "phone", headerName: "Phone", width: 150 },
-  { field: "company", headerName: "Company", minWidth: 180 },
+  { field: "companyName", headerName: "Company", minWidth: 180 },
   { field: "roleName", headerName: "Member Type", width: 130 },
   { field: "department", headerName: "Department", minWidth: 160 },
   { field: "designation", headerName: "Role", minWidth: 160 },
@@ -95,7 +97,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
   const [createdLoginEmail, setCreatedLoginEmail] = useState("");
   const [form, setForm] = useState<MemberForm>(emptyMemberForm());
   const members = useQuery({
-    queryKey: ["members", companyId ?? "all"],
+    queryKey: ["members", companyId ?? "all", user?.id],
     queryFn: async () => (
       await api.get("/reports/members", { params: { companyId: companyId || undefined } })
     ).data as { total: number; data: MemberRow[] },
@@ -105,6 +107,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
   const rows = (members.data?.data ?? []).map(memberRow);
   const columns: GridColumn<MemberRow>[] = [
     ...memberColumns,
+    ...(user?.role === "superadmin" ? [{ field: "password", headerName: "Temporary Password", minWidth: 220, renderCell: ({ row }) => row.password || "Not available" } satisfies GridColumn<MemberRow>] : []),
     {
       field: "__actions",
       headerName: "Actions",
@@ -166,7 +169,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
       lastName: form.lastName.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      companyId: companyId ? Number(companyId) : undefined,
+      companyId: formMode === "create" && companyId ? Number(companyId) : undefined,
       company: form.company.trim(),
       department: form.department.trim(),
       designation: form.designation.trim(),
@@ -249,7 +252,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
           </div>
         </div>
         {error ? <p className="error">{error}</p> : null}
-        {createdLoginEmail ? <Alert severity="success" onClose={() => setCreatedLoginEmail("")}>Member created. Login ID: <strong>{createdLoginEmail}</strong>. A welcome email was sent to the personal email address.</Alert> : null}
+        {createdLoginEmail ? <Alert severity="success" onClose={() => setCreatedLoginEmail("")}>Member created. Login ID: <strong>{createdLoginEmail}</strong>.</Alert> : null}
         {members.isError ? <p className="error">{memberError(members.error) ?? "Unable to load members."}</p> : null}
         {members.isLoading ? <p className="muted">Loading members...</p> : null}
         <div className={compact ? "contract-grid-wrap members-grid-wrap" : "members-grid-wrap"}>
@@ -264,7 +267,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
           <div className="company-form-grid">
             <TextField label="First name" required value={form.firstName} onChange={(event) => updateMember("firstName", event.target.value)} />
             <TextField label="Last name" required value={form.lastName} onChange={(event) => updateMember("lastName", event.target.value)} />
-            <TextField label="Personal Email" type="email" required value={form.email} helperText={formMode === "create" ? "The generated @allamericanenergy.com login ID will be emailed here." : "Welcome and account messages are sent here."} onChange={(event) => updateMember("email", event.target.value)} />
+            <TextField label="Personal Email" type="email" required value={form.email} helperText={formMode === "create" ? "Contact email address. No welcome email is sent." : "Member contact email address."} onChange={(event) => updateMember("email", event.target.value)} />
             <TextField label="Phone" value={form.phone} onChange={(event) => updateMember("phone", event.target.value)} />
             {!companyId ? <TextField label="Company" value={form.company} onChange={(event) => updateMember("company", event.target.value)} /> : null}
             <TextField label="Department" value={form.department} onChange={(event) => updateMember("department", event.target.value)} />
@@ -302,7 +305,7 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
               <dt>Personal Email</dt><dd>{viewingMember.email ?? "-"}</dd>
               <dt>Login ID</dt><dd>{viewingMember.loginEmail ?? "-"}</dd>
               <dt>Phone</dt><dd>{viewingMember.phone ?? "-"}</dd>
-              <dt>Company</dt><dd>{viewingMember.company ?? "-"}</dd>
+              <dt>Company</dt><dd>{viewingMember.companyName ?? "-"}</dd>
               <dt>Department</dt><dd>{viewingMember.department ?? "-"}</dd>
               <dt>Role</dt><dd>{viewingMember.designation ?? "-"}</dd>
               <dt>Member Type</dt><dd>{viewingMember.roleName ?? "-"}</dd>
@@ -377,3 +380,4 @@ function memberError(error: unknown) {
     ? error.response?.data.details?.issues?.[0]?.message ?? error.response?.data.error
     : undefined;
 }
+
