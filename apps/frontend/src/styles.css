@@ -953,6 +953,15 @@ nav a:hover {
   /* Fill remaining viewport */
 }
 
+.meters-page-panel {
+  height: auto;
+}
+
+.meters-page-panel .meter-grid-layout {
+  height: max(720px, 85vh);
+  flex: none;
+}
+
 .meter-grid-layout {
   display: grid;
   grid-template-columns: 238px minmax(0, 1fr);
