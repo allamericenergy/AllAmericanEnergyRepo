@@ -1,3 +1,4 @@
+import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -23,6 +24,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const isMetersView = view === "meters";
   const isDashboardView = !view || view === "reports";
   const hasAdminDashboard = user?.role === "superadmin" || user?.role === "admin";
+  const hasCompanyDashboard = hasAdminDashboard || user?.role === "member";
   const canManageMembers = hasAdminDashboard;
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [companyFormMode, setCompanyFormMode] = useState<"create" | "edit">("create");
@@ -108,24 +110,25 @@ export function DashboardPage({ view }: DashboardPageProps) {
     return () => window.clearTimeout(timeoutId);
   }, [contractAvailabilityNotice]);
   const pipeline = useQuery({
-    queryKey: ["pipeline"],
+    queryKey: ["pipeline", user?.id],
     queryFn: async () => (await api.get("/reports/pipeline")).data,
+    enabled: isDashboardView && user?.role !== "member",
     retry: false
   });
   const companies = useQuery({
-    queryKey: ["tbl-companies"],
+    queryKey: ["tbl-companies", user?.id],
     queryFn: async () => (await api.get("/reports/tbl-companies")).data as { total: number; data: TblCompanyRow[] },
-    enabled: hasAdminDashboard || isCompaniesView || isContractsView || isMetersView,
+    enabled: hasCompanyDashboard || isCompaniesView || isContractsView || isMetersView,
     retry: false
   });
   const contracts = useQuery({
-    queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id],
+    queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get("/reports/contracts", {
         params: { companyId: isContractsView ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: ContractRow[] },
-    enabled: Boolean(viewedCompany) || isContractsView || (hasAdminDashboard && isDashboardView),
+    enabled: Boolean(viewedCompany) || isContractsView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
   const contractLookups = useQuery({
@@ -142,17 +145,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
     retry: false
   });
   const meters = useQuery({
-    queryKey: ["meters", isMetersView ? "all" : viewedCompany?.id],
+    queryKey: ["meters", isMetersView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get("/reports/meters", {
         params: { companyId: isMetersView ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: MeterRow[] },
-    enabled: Boolean(viewedCompany?.id) || isMetersView || (hasAdminDashboard && isDashboardView),
+    enabled: Boolean(viewedCompany?.id) || isMetersView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
   const members = useQuery({
-    queryKey: ["members", "dashboard"],
+    queryKey: ["members", "dashboard", user?.id],
     queryFn: async () => (await api.get("/reports/members")).data as { total: number },
     enabled: hasAdminDashboard && isDashboardView,
     retry: false
@@ -190,7 +193,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       : { ...current, state: match.state, city: match.city });
   }, [meterForm.zip, meterZipMatches.data]);
   const contractMeters = useQuery({
-    queryKey: ["contract-meters", contractCompanyId, contractForm.productId],
+    queryKey: ["contract-meters", contractCompanyId, contractForm.productId, user?.id],
     queryFn: async () => (
       await api.get("/reports/meters", {
         params: {
@@ -210,7 +213,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       : { ...current, meterIds: [meterId] });
   }, [contractFormMode, contractMeters.data, isContractModalOpen]);
   const companyDocuments = useQuery({
-    queryKey: ["company-documents", viewedCompany?.id],
+    queryKey: ["company-documents", viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get(`/reports/tbl-companies/${viewedCompany?.id}/documents`)
     ).data as CompanyDocumentsResponse,
@@ -373,6 +376,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterColumns: GridColumn<MeterRow>[] = [
 
     { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
+    { field: "utilityAccountName", headerName: "Utility Account Name", minWidth: 220 },
     {
       field: "accountNumber",
       headerName: "Account Number",
@@ -502,8 +506,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function updateContractFile(file: File | null) {
+    setContractError("");
     if (!file) {
       setContractForm((current) => ({ ...current, contractFile: null, cFile: "" }));
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setContractForm((current) => ({ ...current, contractFile: null, cFile: "" }));
+      setContractError("Contract file must be 15 MB or smaller.");
       return;
     }
 
@@ -608,10 +619,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
       setContractAvailabilityNotice("A contract cannot be assigned without a company. Add a company before creating a contract.");
       return;
     }
-    if (viewedCompany && !viewedCompany.isActive) {
-      setContractError("Make company active to add contracts.");
-      return;
-    }
     if (viewedCompany?.id) {
       try {
         const response = await api.get("/reports/meters", { params: { companyId: viewedCompany.id } });
@@ -683,7 +690,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ));
   const selectedContractMeterNumbers = (contractMeters.data?.data ?? [])
     .filter((meter) => contractForm.meterIds.includes(Number(meter.id)))
-    .map((meter) => meter.meter || meter.accountNumber || `Meter ${meter.id}`);
+    .map(contractMeterLabel);
   const displayedContractFileName = shortenFileName(contractForm.cFile);
 
   function requestContractSubmit() {
@@ -764,10 +771,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
-    if (viewedCompany && !viewedCompany.isActive) {
-      setMeterError("Make company active to add meters.");
-      return;
-    }
     setMeterError("");
     setMeterFormMode("create");
     setEditingMeterId(null);
@@ -779,10 +782,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
-    if (viewedCompany && !viewedCompany.isActive) {
-      setMeterError("Make company active to add meters.");
-      return;
-    }
     setBulkMeterError("");
     setBulkMeterResult(null);
     setBulkMeterRows([]);
@@ -1198,6 +1197,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     workbook.calcProperties.fullCalcOnLoad = true;
     const meterSheet = workbook.addWorksheet("Meters", { views: [{ state: "frozen", ySplit: 1 }] });
     meterSheet.columns = [
+      { header: "Utility Account Name", key: "utilityAccountName", width: 24 },
       { header: "Account Number", key: "accountNumber", width: 18 },
       { header: "Service Ref/POD", key: "serviceRefPod", width: 18 },
       { header: "Name Key", key: "nameKey", width: 14 },
@@ -1378,19 +1378,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
     <section className="page">
       {isDashboardView ? (
       <div className="kpi-grid">
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/companies")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/companies"); }}>
             <span>Companies</span>
             <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
             <span>Contracts</span>
             <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
             <span>Meters</span>
             <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
@@ -1405,7 +1405,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       </div>
       ) : null}
 
-      {(hasAdminDashboard && isDashboardView) || isCompaniesView ? (
+      {(hasCompanyDashboard && isDashboardView) || isCompaniesView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Companies</h2>
@@ -1794,7 +1794,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     error={contractError}
                     availabilityNotice={contractAvailabilityNotice}
                     onAdd={() => void openCreateContract()}
-                    addDisabled={!viewedCompany.isActive}
                   />
                   <MeterListPanel
                     columns={meterColumns}
@@ -1804,7 +1803,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     error={meterError}
                     onAdd={openCreateMeter}
                     onAddMore={openBulkMeterUpload}
-                    addDisabled={!viewedCompany.isActive}
                   />
                   {canManageMembers ? (
                     <MembersPanel companyId={viewedCompany.id} canAdd compact />
@@ -1859,7 +1857,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
             <div className="file-upload-field">
               <Button variant="outlined" component="label">
-                Upload Contract File *
+                Upload Contract File (max 15 MB) *
                 <input type="file" hidden onChange={(event) => updateContractFile(event.target.files?.[0] ?? null)} />
               </Button>
               <Tooltip title={contractForm.cFile.length > 20 ? contractForm.cFile : ""} followCursor>
@@ -1886,7 +1884,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                         checked={contractForm.meterIds.includes(meterId)}
                         onChange={(event) => toggleContractMeter(meterId, event.target.checked)}
                       />
-                      <span>{meter.accountNumber || meter.meter || `Meter ${meter.id}`}</span>
+                      <span>{contractMeterLabel(meter)}</span>
                       <span>{meter.serviceAddress || "-"}</span>
                       <span>{meter.city || "-"}</span>
                       <span>{meter.utility || "-"}</span>
@@ -1981,7 +1979,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             >
               <MenuItem value={0}>Select company</MenuItem>
               {(companies.data?.data ?? []).map((company) => (
-                <MenuItem key={company.id} value={Number(company.id)} disabled={!company.isActive}>
+                <MenuItem key={company.id} value={Number(company.id)}>
                   {company.companyName}{company.isActive ? "" : " (Inactive)"}
                 </MenuItem>
               ))}
@@ -2108,6 +2106,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
 
             <div className="meter-form-row meter-form-row-four">
+              <TextField label="Utility Account Name" value={meterForm.utilityAccountName} onChange={(event) => updateMeterForm("utilityAccountName", event.target.value)} />
               <TextField
                 label="Account Number"
                 value={accountNumberDisabled ? "NO" : meterForm.accountNumber}
@@ -2156,6 +2155,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogContent>
           {viewedMeter ? (
             <dl className="company-detail-list">
+              <dt>Utility Account Name</dt>
+              <dd>{viewedMeter.utilityAccountName || "-"}</dd>
               <dt>Account Number</dt>
               <dd>{viewedMeter.accountNumberSize === 0 ? "NO" : viewedMeter.accountNumber ?? "-"}</dd>
               <dt>Service Ref/POD</dt>
@@ -2188,7 +2189,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
-      {isDashboardView ? (
+      {isDashboardView && user?.role !== "member" ? (
       <div className="content-grid">
         <section className="panel">
           <h2>Pipeline by stage</h2>
@@ -2219,7 +2220,6 @@ interface ContractListPanelProps {
   error: string;
   availabilityNotice?: string;
   onAdd: () => void;
-  addDisabled?: boolean;
 }
 
 export function CompanyDocumentsPage() {
@@ -2419,7 +2419,7 @@ function DocumentTreeNode({
   );
 }
 
-function ContractListPanel({ columns, contracts, isLoading, isError, error, availabilityNotice, onAdd, addDisabled = false }: ContractListPanelProps) {
+function ContractListPanel({ columns, contracts, isLoading, isError, error, availabilityNotice, onAdd }: ContractListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
@@ -2428,9 +2428,9 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, avai
           {/*  <IconButton size="small" aria-label="Search contracts">
             <Search size={17} />
           </IconButton> */}
-          <Tooltip title={addDisabled ? "Make company active to add contracts" : "Add new contract"}>
+          <Tooltip title="Add new contract">
             <span>
-              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />} disabled={addDisabled}>Add New Contract</Button>
+              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />}>Add New Contract</Button>
             </span>
           </Tooltip>
           {/*  <IconButton size="small" aria-label="Choose contract columns">
@@ -2460,10 +2460,9 @@ interface MeterListPanelProps {
   error: string;
   onAdd: () => void;
   onAddMore: () => void;
-  addDisabled?: boolean;
 }
 
-function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, addDisabled = false }: MeterListPanelProps) {
+function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore }: MeterListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
@@ -2472,14 +2471,14 @@ function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onA
           {/*  <IconButton size="small" aria-label="Search meters">
             <Search size={17} />
           </IconButton> */}
-          <Tooltip title={addDisabled ? "Make company active to add meters" : "Add new meter"}>
+          <Tooltip title="Add new meter">
             <span>
-              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />} disabled={addDisabled}>Add New Meter</Button>
+              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />}>Add New Meter</Button>
             </span>
           </Tooltip>
-          <Tooltip title={addDisabled ? "Make company active to add meters" : "Add multiple meters to this company"}>
+          <Tooltip title="Add multiple meters to this company">
             <span>
-              <Button size="small" variant="outlined" onClick={onAddMore} startIcon={<Upload size={16} />} disabled={addDisabled}>Add More Meters</Button>
+              <Button size="small" variant="outlined" onClick={onAddMore} startIcon={<Upload size={16} />}>Add More Meters</Button>
             </span>
           </Tooltip>
           {/* <IconButton size="small" aria-label="Choose meter columns">
@@ -2586,6 +2585,7 @@ function contractToForm(contract: ContractRow): ContractForm {
 
 interface MeterForm {
   companyId: number;
+  utilityAccountName: string;
   accountNumber: string;
   serviceRefPod: string;
   nameKey: string;
@@ -2614,6 +2614,7 @@ interface MeterForm {
 function emptyMeterForm(): MeterForm {
   return {
     companyId: 0,
+    utilityAccountName: "",
     accountNumber: "",
     serviceRefPod: "",
     nameKey: "",
@@ -2643,6 +2644,7 @@ function emptyMeterForm(): MeterForm {
 function meterToForm(meter: MeterRow): MeterForm {
   return {
     companyId: Number(meter.companyId ?? 0),
+    utilityAccountName: meter.utilityAccountName ?? "",
     accountNumber: meter.accountNumber ?? "",
     serviceRefPod: meter.serviceRefPod ?? "",
     nameKey: meter.nameKey ?? "",
@@ -2809,6 +2811,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
 
     return {
       companyId,
+      utilityAccountName: text("utilityaccountname"),
       accountNumber,
       serviceRefPod: text("servicerefpod", "serviceref", "pod"),
       nameKey: text("namekey"),
@@ -3050,6 +3053,9 @@ interface MeterRow {
   id: string | number;
   companyId?: string | number | null;
   companyName?: string | null;
+  utilityAccountName?: string | null;
+  masterAccountNumber?: boolean | number | null;
+  masterServiceRefPodId?: boolean | number | null;
   accountNumber?: string | null;
   serviceRefPod?: string | null;
   nameKey?: string | null;
