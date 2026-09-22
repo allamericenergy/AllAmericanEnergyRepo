@@ -1,3 +1,4 @@
+import { MasterAccountNumberPanel } from "./MasterAccountNumberPanel";
 import {
   Button,
   Checkbox,
@@ -106,13 +107,14 @@ const meterValueSections = [
 
 type LocationSection = typeof locationSections[number]["key"];
 type MeterValueSection = typeof meterValueSections[number]["key"];
-type OrganizationSection = "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
+type OrganizationSection = "master-account-numbers" | "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const companyNotesId = searchParams.get("companyId");
   const validSections = [
+    "master-account-numbers",
     "organizations",
     "notes",
     ...legacySections.map((item) => item.key),
@@ -167,6 +169,7 @@ export function OrganizationsPage() {
             </button>
           );
         })}
+        <button type="button" className={section === "master-account-numbers" ? "active" : ""} onClick={() => selectSection("master-account-numbers")}><Hash size={18} /> MasterAccount Number</button>
         {meterValueSections.map((item) => (
           <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
             <Hash size={18} /> {item.label}
@@ -187,6 +190,8 @@ export function OrganizationsPage() {
             {organizations.isError ? <p className="error">Unable to load organization records.</p> : null}
             <IntiliGrid checkboxSelection columns={organizationColumns} rows={organizations.data?.data ?? []} onRowClick={setViewedOrganization} />
           </section>
+        ) : section === "master-account-numbers" ? (
+          <MasterAccountNumberPanel />
         ) : section === "notes" ? (
           <OrganizationNotesPanel
             companyId={companyNotesId}
@@ -310,7 +315,7 @@ function MeterValueSizePanel({ field }: { field: "account-number" | "service-ref
       <div className="panel-title-row">
         <div>
           <h2>{title}</h2>
-          <p className="muted">Set the exact number of characters required for each utility in tbl_MeterList.</p>
+          <p className="muted">Set the exact number of numeric digits required for each utility in tbl_MeterList. Separators such as - and _ are not counted.</p>
         </div>
       </div>
       {notice ? <p className="success-message">{notice}</p> : null}
@@ -350,7 +355,7 @@ function MeterValueSizePanel({ field }: { field: "account-number" | "service-ref
             setNotice("");
           }}
           disabled={saving}
-          helperText="Exact character count; enter 0 for NO"
+          helperText="Exact numeric digit count; enter 0 for NO"
           slotProps={{ htmlInput: { min: 0, max: 1000, step: 1 } }}
         />
         <Button variant="contained" onClick={() => void submit()} disabled={saving || !utilityId || !size}>
@@ -1171,7 +1176,9 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
 
       <Dialog open={Boolean(deleting)} onClose={() => !saving && setDeleting(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Delete {singularName}?</DialogTitle>
-        <DialogContent>This permanently deletes the selected record from {tableName}.</DialogContent>
+        <DialogContent>{endpoint === "utilities"
+          ? "This permanently deletes the utility and its state/product mappings and MasterAccount Number settings. Existing rates and meters will be kept with their utility assignment cleared."
+          : `This permanently deletes the selected record from ${tableName}.`}</DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleting(null)} disabled={saving}>Cancel</Button>
           <Button color="error" variant="contained" onClick={() => void deleteRecord()} disabled={saving}>{saving ? "Deleting..." : "Delete"}</Button>
