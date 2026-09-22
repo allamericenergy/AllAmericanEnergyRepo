@@ -37,6 +37,8 @@ export default function GridFooter<
         <Box
             sx={{
                 height: 42,
+                minHeight: 42,
+                flexShrink: 0,
                 px: 1.5,
                 display: "flex",
                 alignItems: "center",
@@ -53,7 +55,7 @@ export default function GridFooter<
                     fontSize: 12,
                 }}
             >
-                Page {pagination.page + 1} of {totalRows} · {totalRows} rows
+                Page {pagination.page + 1} of {totalPages} · {totalRows} rows
             </Typography>
 
             <Box
