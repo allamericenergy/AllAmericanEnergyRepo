@@ -3,6 +3,16 @@ import type {
     GridRowModel,
 } from "../models";
 
+export function csvCell(value: unknown, preserveLeadingZeros = false): string {
+    let text = String(value ?? "");
+    // Only digits are allowed in the Excel text formula; never interpolate
+    // arbitrary database content into a formula.
+    if (preserveLeadingZeros && typeof value === "string" && /^0\d+$/.test(value)) {
+        text = `="${value}"`;
+    }
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
 export function exportRowsToCsv<T extends GridRowModel>(
     rows: T[],
     columns: GridColumn<T>[],
@@ -13,15 +23,14 @@ export function exportRowsToCsv<T extends GridRowModel>(
 
     const headers =
         visibleColumns.map(
-            (column) => column.headerName
+            (column) => csvCell(column.headerName)
         );
 
     const records = rows.map((row) =>
         visibleColumns.map((column) => {
             const value = row[column.field];
 
-            return `"${String(value ?? "")
-                .replace(/"/g, '""')}"`;
+            return csvCell(value, column.csvPreserveLeadingZeros);
         })
     );
 
