@@ -3,16 +3,16 @@ interface ContractMeterIdentifier {
   accountNumber?: string | null;
   serviceRefPod?: string | null;
   meter?: string | null;
-  masterAccountNumber?: boolean | number | null;
-  masterServiceRefPodId?: boolean | number | null;
+  masterAccountNumberType?: "Account Number" | "Service Ref/POD ID" | "BOTH" | null;
 }
 
 export function contractMeterLabel(meter: ContractMeterIdentifier): string {
-  if (meter.masterAccountNumber == null && meter.masterServiceRefPodId == null) {
-    return meter.accountNumber || meter.meter || `Meter ${meter.id}`;
+  const accountNumber = meter.accountNumber?.trim() || "-";
+  const serviceRefPod = meter.serviceRefPod?.trim() || "-";
+  switch (meter.masterAccountNumberType) {
+    case "Account Number": return accountNumber;
+    case "Service Ref/POD ID": return serviceRefPod;
+    case "BOTH": return `${accountNumber}${serviceRefPod}`;
+    default: return meter.accountNumber || meter.meter || `Meter ${meter.id}`;
   }
-  const values: string[] = [];
-  if (meter.masterAccountNumber) values.push(meter.accountNumber?.trim() || "-");
-  if (meter.masterServiceRefPodId) values.push(meter.serviceRefPod?.trim() || "-");
-  return values.join("") || "-";
 }
