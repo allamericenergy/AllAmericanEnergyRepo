@@ -46,6 +46,9 @@ export interface GridColumn<
 
     hidden?: boolean;
 
+    /** Preserve zero-prefixed numeric text when a CSV is opened in Excel. */
+    csvPreserveLeadingZeros?: boolean;
+
     sortable?: boolean;
 
     sortComparer?: (a: unknown, b: unknown) => number;
