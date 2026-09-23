@@ -451,6 +451,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ];
   const visibleMeterColumns = meterColumns.map((column) => ({
     ...column,
+    csvPreserveLeadingZeros: true,
     hidden: meterColumnVisibility[String(column.field)] === false
   }));
   const visibleMeterColumnCount = meterColumns.filter(
@@ -2104,9 +2105,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <TextField
                 label="Account Number"
                 value={accountNumberDisabled ? "NO" : meterForm.accountNumber}
-                onChange={(event) => updateMeterForm("accountNumber", event.target.value)}
+                onChange={(event) => updateMeterForm("accountNumber", event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
                 disabled={accountNumberDisabled}
-                helperText={accountNumberDisabled ? "Not used for this utility" : selectedMeterUtility?.accountNumberSize ? `Exactly ${selectedMeterUtility.accountNumberSize} numeric digits; separators are ignored` : ""}
+                helperText={accountNumberDisabled ? "Not used for this utility" : selectedMeterUtility?.accountNumberSize ? `Exactly ${selectedMeterUtility.accountNumberSize} numeric digits; spaces and special characters are removed` : "Spaces and special characters are removed"}
               />
               <TextField
                 label="Service Ref/POD"
@@ -3049,6 +3050,7 @@ interface MeterRow {
   companyName?: string | null;
   utilityAccountName?: string | null;
   masterAccountNumber?: boolean | number | null;
+  masterAccountNumberType?: "Account Number" | "Service Ref/POD ID" | "BOTH" | null;
   masterServiceRefPodId?: boolean | number | null;
   accountNumber?: string | null;
   serviceRefPod?: string | null;
