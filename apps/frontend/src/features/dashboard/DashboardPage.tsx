@@ -1,10 +1,12 @@
 import { loadAllMeters } from "../../lib/loadAllMeters";
+import { formatCompanyPhone } from "../../lib/companyPhone";
 import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
@@ -27,9 +29,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const hasAdminDashboard = user?.role === "superadmin" || user?.role === "admin";
   const hasCompanyDashboard = hasAdminDashboard || user?.role === "member";
   const canManageMembers = hasAdminDashboard;
+  const canDeleteCompanies = user?.role === "superadmin";
+  const [companiesToDelete, setCompaniesToDelete] = useState<TblCompanyRow[]>([]);
+  const [isDeletingCompanies, setIsDeletingCompanies] = useState(false);
+  const [deleteCompanyError, setDeleteCompanyError] = useState("");
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [companyFormMode, setCompanyFormMode] = useState<"create" | "edit">("create");
   const [viewedCompany, setViewedCompany] = useState<TblCompanyRow | null>(null);
+  const [companyTray, setCompanyTray] = useState(false);
+  const [isCompanyMeterListDismissed, setIsCompanyMeterListDismissed] = useState(false);
+  useEffect(() => {
+    setCompanyTray(false);
+    setIsCompanyMeterListDismissed(false);
+  }, [viewedCompany?.id]);
   const [editingCompanyId, setEditingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [activatingCompanyId, setActivatingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
@@ -44,6 +56,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     newCompany.state,
     newCompany.postalCode
   ].every((value) => value.trim())
+    && /^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)
     && (!newCompany.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim()));
   const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
   const [bulkCompanyRows, setBulkCompanyRows] = useState<NewCompanyForm[]>([]);
@@ -97,6 +110,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [meterError, setMeterError] = useState("");
   const [meterAvailabilityNotice, setMeterAvailabilityNotice] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
+  const meterDuplicateSession = useRef(0);
+  const meterDuplicateApproved = useRef(new Set<string>());
+  const meterDuplicateRequests = useRef(new Map<string, Promise<boolean>>());
+  const [meterDuplicates, setMeterDuplicates] = useState<Array<{ field: "accountNumber" | "serviceRefPod"; value: string }>>([]);
+  const latestMeterForm = useRef(meterForm);
+  latestMeterForm.current = meterForm;
+  const accountNumberInput = useRef<HTMLInputElement>(null);
+  const serviceRefInput = useRef<HTMLInputElement>(null);
   const [isBulkMeterModalOpen, setIsBulkMeterModalOpen] = useState(false);
   const [bulkMeterRows, setBulkMeterRows] = useState<MeterForm[]>([]);
   const [bulkMeterFileName, setBulkMeterFileName] = useState("");
@@ -285,6 +306,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Pencil size={16} />
             </IconButton>
           </Tooltip>
+          {canDeleteCompanies ? (
+            <Tooltip title="Delete company">
+              <IconButton size="small" color="error" aria-label="Delete company" disabled={isDeletingCompanies} onClick={(event) => {
+                event.stopPropagation(); setDeleteCompanyError(""); setCompaniesToDelete([row]);
+              }}><Trash2 size={16} /></IconButton>
+            </Tooltip>
+          ) : null}
           <Tooltip title={`Add subcompany to ${row.companyName ?? "company"}`}>
             <IconButton size="small" aria-label="Add subcompany" onClick={(event) => { event.stopPropagation(); openCreateSubcompany(row); }}>
               <GitBranch size={16} />
@@ -547,8 +575,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
       ...current,
       utilityId: value,
       rate: current.utilityId === value ? current.rate : 0,
-      accountNumber: utility?.accountNumberSize === 0 ? "" : current.accountNumber,
-      serviceRefPod: utility?.serviceRefSize === 0 ? "" : current.serviceRefPod
+      accountNumber: utility?.accountNumberSize === 0 && !utility.accountNumberRequired ? "" : current.accountNumber,
+      serviceRefPod: utility?.serviceRefSize === 0 && !utility.serviceRefRequired ? "" : current.serviceRefPod
     }));
   }
 
@@ -572,7 +600,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       state: parent.state ?? "",
       country: parent.country ?? "",
       postalCode: parent.postalCode ?? "",
-      phoneNumber: parent.phoneNumber ?? ""
+      phoneNumber: formatCompanyPhone(parent.phoneNumber ?? "")
     });
     setIsCompanyModalOpen(true);
   }
@@ -659,8 +687,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const contractMonths = calculateContractMonths(contractForm.startDate, contractForm.endDate);
   const meterLoadProfile = calculateMeterLoadProfile(meterForm.demand, meterForm.annualUsage);
   const selectedMeterUtility = meterLookups.data?.utilities.find((utility) => Number(utility.id) === meterForm.utilityId);
-  const accountNumberDisabled = selectedMeterUtility?.accountNumberSize === 0;
-  const serviceRefDisabled = selectedMeterUtility?.serviceRefSize === 0;
+  const accountNumberDisabled = selectedMeterUtility?.accountNumberSize === 0 && !selectedMeterUtility.accountNumberRequired;
+  const serviceRefDisabled = selectedMeterUtility?.serviceRefSize === 0 && !selectedMeterUtility.serviceRefRequired;
   const bulkMeterCompany = viewedCompany ?? companies.data?.data.find((company) => Number(company.id) === bulkMeterCompanyId);
   const contractNotesText = contractForm.notes.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim();
   const requiredContractFieldsValid = Boolean(
@@ -765,6 +793,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
+    resetMeterDuplicateChecks();
     setMeterError("");
     setMeterFormMode("create");
     setEditingMeterId(null);
@@ -793,6 +822,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function closeMeterModal() {
+    resetMeterDuplicateChecks();
     setIsMeterModalOpen(false);
     setEditingMeterId(null);
     setMeterFormMode("create");
@@ -800,6 +830,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function editMeter(meter: MeterRow) {
+    resetMeterDuplicateChecks();
     setMeterError("");
     setMeterFormMode("edit");
     setEditingMeterId(meter.id);
@@ -821,10 +852,67 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  function resetMeterDuplicateChecks() {
+    meterDuplicateSession.current += 1;
+    meterDuplicateApproved.current.clear();
+    meterDuplicateRequests.current.clear();
+    setMeterDuplicates([]);
+  }
+
+  function checkMeterDuplicate(field: "accountNumber" | "serviceRefPod"): Promise<boolean> {
+    const value = latestMeterForm.current[field].trim();
+    if (meterFormMode !== "create" || !value || (field === "accountNumber" ? accountNumberDisabled : serviceRefDisabled)) return Promise.resolve(true);
+    const key = `${field}:${value}`;
+    if (meterDuplicateApproved.current.has(key)) return Promise.resolve(true);
+    const existing = meterDuplicateRequests.current.get(key);
+    if (existing) return existing;
+    const session = meterDuplicateSession.current;
+    const request = (async () => {
+      try {
+        const response = await api.get<{ exists: boolean }>("/reports/meters/check-duplicate", { params: { field, value } });
+        if (session !== meterDuplicateSession.current || latestMeterForm.current[field].trim() !== value) return false;
+        if (response.data.exists) {
+          setMeterDuplicates((current) => current.some((item) => item.field === field && item.value === value) ? current : [...current, { field, value }]);
+          return false;
+        }
+        return true;
+      } catch {
+        if (session === meterDuplicateSession.current && latestMeterForm.current[field].trim() === value) {
+          setMeterError("Unable to check for duplicate meter details. Please try again before saving.");
+        }
+        return false;
+      } finally {
+        if (session === meterDuplicateSession.current) meterDuplicateRequests.current.delete(key);
+      }
+    })();
+    meterDuplicateRequests.current.set(key, request);
+    return request;
+  }
+
+  function resolveMeterDuplicate(keepValue: boolean) {
+    const duplicate = meterDuplicates[0];
+    if (!duplicate) return;
+    if (keepValue) meterDuplicateApproved.current.add(`${duplicate.field}:${duplicate.value}`);
+    else {
+      if (latestMeterForm.current[duplicate.field].trim() === duplicate.value) updateMeterForm(duplicate.field, "");
+      window.setTimeout(() => (duplicate.field === "accountNumber" ? accountNumberInput : serviceRefInput).current?.focus(), 0);
+    }
+    setMeterDuplicates((current) => current.slice(1));
+  }
+
   async function saveMeter() {
+    if (savingMeter) return;
     const companyId = viewedCompany?.id ? Number(viewedCompany.id) : meterForm.companyId;
     if (!companyId) {
       setMeterError("Company is required.");
+      return;
+    }
+    if (selectedMeterUtility?.accountNumberRequired && !meterForm.accountNumber.trim()) {
+      setMeterError("Account Number is required for the selected utility.");
+      return;
+    }
+    if (selectedMeterUtility?.serviceRefRequired && !meterForm.serviceRefPod.trim()) {
+      setMeterError("Service Ref/POD is required for the selected utility.");
       return;
     }
     if (isMeterZipUnavailable && (!meterForm.city.trim() || !meterForm.state.trim())) {
@@ -835,6 +923,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterError("");
     setSavingMeter(true);
     try {
+      const session = meterDuplicateSession.current;
+      const results = await Promise.all([checkMeterDuplicate("accountNumber"), checkMeterDuplicate("serviceRefPod")]);
+      if (results.some((allowed) => !allowed) || session !== meterDuplicateSession.current || latestMeterForm.current !== meterForm) return;
       const payload = {
         ...meterForm,
         companyId,
@@ -889,6 +980,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
       return;
     }
 
+    if (!/^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)) {
+      setCompanyError("Enter a phone number in xxx-xxx-xxxx format.");
+      return;
+    }
     setIsSavingCompany(true);
     try {
       const payload = {
@@ -910,7 +1005,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
       };
 
       if (companyFormMode === "edit" && editingCompanyId !== null) {
-        await api.patch(`/reports/tbl-companies/${editingCompanyId}`, payload);
+        const response = await api.patch<{ data: TblCompanyRow }>(`/reports/tbl-companies/${editingCompanyId}`, payload);
+        setViewedCompany((current) => current?.id === editingCompanyId ? response.data.data : current);
       } else {
         await api.post("/reports/tbl-companies", payload);
       }
@@ -1068,6 +1164,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  async function confirmDeleteCompanies() {
+    if (!canDeleteCompanies || !companiesToDelete.length || isDeletingCompanies) return;
+    setIsDeletingCompanies(true);
+    setDeleteCompanyError("");
+    try {
+      const ids = companiesToDelete.map((company) => company.id);
+      const response = ids.length === 1
+        ? await api.delete(`/reports/tbl-companies/${ids[0]}`)
+        : await api.delete("/reports/tbl-companies/bulk", { data: { ids } });
+      if (viewedCompany && ids.includes(viewedCompany.id)) setViewedCompany(null);
+      setCompaniesToDelete([]);
+      setSelectedCompanies([]);
+      setCompanyGridKey((current) => current + 1);
+      await companies.refetch();
+      setCompanyUploadNotice({ severity: "success", message: `${response.data.deleted} compan${response.data.deleted === 1 ? "y" : "ies"} deleted.` });
+    } catch (error) {
+      setDeleteCompanyError(companyApiError(error) ?? "Unable to delete companies.");
+    } finally { setIsDeletingCompanies(false); }
+  }
+
   async function updateSelectedCompanyStatus(isActive: boolean) {
     if (!selectedCompanies.length) return;
     setCompanyError("");
@@ -1124,7 +1240,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       companyName: "Example Company",
       legalEntityName: "Example Company LLC",
       email: "company@example.com",
-      phoneNumber: "555-0100",
+      phoneNumber: "212-555-0100",
       mailingAddress: "100 Main Street",
       city: "Austin",
       state: "TX",
@@ -1406,6 +1522,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <div className="panel-title-actions">
               {selectedCompanies.length ? (
                 <>
+                  {canDeleteCompanies ? (
+                    <Button variant="outlined" color="error" startIcon={<Trash2 size={16} />} disabled={isDeletingCompanies || selectedCompanies.length > 500} onClick={() => {
+                      setDeleteCompanyError(""); setCompaniesToDelete([...selectedCompanies]);
+                    }}>Delete Selected ({selectedCompanies.length})</Button>
+                  ) : null}
                   {selectedCompanies.some((company) => !company.isActive) ? (
                     <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
                       {isUpdatingCompanyStatus ? "Updating..." : "Active"}
@@ -1595,7 +1716,22 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <TextField label="Company Name" required value={newCompany.companyName} onChange={(event) => updateNewCompany("companyName", event.target.value)} />
             <TextField label="Legal Entity Name" required value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
             <TextField label="Email" type="email" value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
-            <TextField label="Phone Number" type="tel" required value={newCompany.phoneNumber} onChange={(event) => updateNewCompany("phoneNumber", event.target.value)} />
+            <TextField
+              label="Phone Number"
+              type="tel"
+              required
+              value={newCompany.phoneNumber}
+              placeholder="xxx-xxx-xxxx"
+              helperText="Format: xxx-xxx-xxxx (e.g. 212-555-0100)"
+              error={Boolean(newCompany.phoneNumber) && !/^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)}
+              slotProps={{ htmlInput: { pattern: "[0-9]{3}-[0-9]{3}-[0-9]{4}", inputMode: "numeric" } }}
+              onChange={(event) => {
+                const value = companyFormMode === "edit"
+                  ? event.target.value.replace(/\D/g, "").slice(0, 10)
+                  : event.target.value;
+                updateNewCompany("phoneNumber", formatCompanyPhone(value));
+              }}
+            />
             <TextField label="Mailing Address" required value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
             <TextField label="City" required value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
             <TextField select label="State" required value={newCompany.state} onChange={(event) => updateNewCompany("state", event.target.value)}>
@@ -1622,6 +1758,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogTitle>Bulk Upload Companies</DialogTitle>
         <DialogContent>
           <p className="muted">Upload an Excel or CSV file containing up to 500 companies. Company Name is required. Use the template&apos;s Parent Company dropdown to create subcompanies. Organization ID defaults to 1 and Active defaults to true when omitted.</p>
+          <p className="muted">Phone numbers must contain 10 digits. They are formatted as xxx-xxx-xxxx (for example, 212-555-0100).</p>
           {bulkCompanyError ? <p className="error">{bulkCompanyError}</p> : null}
           {bulkCompanyResult ? (
             <Alert severity={bulkCompanyResult.failed ? "warning" : "success"}>
@@ -1672,6 +1809,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={companiesToDelete.length > 0} onClose={() => !isDeletingCompanies && setCompaniesToDelete([])} fullWidth maxWidth="sm">
+        <DialogTitle>Delete {companiesToDelete.length === 1 ? "Company" : "Selected Companies"}</DialogTitle>
+        <DialogContent>
+          <p>Are you sure you want to delete {companiesToDelete.length === 1 ? "this company" : "these companies"}? This action cannot be undone.</p>
+          <ul>{companiesToDelete.map((company) => <li key={company.id}>{company.companyName ?? company.id}</li>)}</ul>
+          {deleteCompanyError ? <Alert severity="error">{deleteCompanyError}</Alert> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isDeletingCompanies} onClick={() => setCompaniesToDelete([])}>Cancel</Button>
+          <Button variant="contained" color="error" disabled={isDeletingCompanies} onClick={() => void confirmDeleteCompanies()}>{isDeletingCompanies ? "Deleting..." : "Delete"}</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(viewedCompany)} onClose={() => setViewedCompany(null)} fullWidth maxWidth="xl" slotProps={{ paper: { className: "company-account-dialog" } }}>
         <DialogContent className="company-account-view">
           {viewedCompany ? (
@@ -1703,10 +1853,27 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 </div>
               </div>
 
-              <div className="company-account-layout">
+              <div className={`company-account-layout${companyTray ? "" : " company-account-layout-collapsed"}`}>
                 <div className="company-account-side">
-                  <section className="account-card">
-                    <h2>Account Information</h2>
+                  <div className="company-account-tray" role="group" aria-label="Company details">
+                      <Tooltip title={`${companyTray ? "Hide" : "Show"} Account Information, Notes, and Documents`}>
+                        <IconButton
+                          size="small"
+                          aria-label="Account Information, Notes, and Documents"
+                          aria-expanded={companyTray}
+                          aria-controls="company-tray-info company-tray-notes company-tray-documents"
+                          color={companyTray ? "primary" : "default"}
+                          onClick={() => setCompanyTray((current) => !current)}
+                        >
+                          {companyTray ? <PanelLeftClose size={20} /> : <Building2 size={20} />}
+                        </IconButton>
+                      </Tooltip>
+                  </div>
+                  <section id="company-tray-info" className="account-card" hidden={!companyTray}>
+                    <div className="account-card-heading">
+                      <h2><Building2 size={16} aria-hidden="true" />Account Information</h2>
+                      <Button size="small" className="account-info-edit" startIcon={<Pencil size={13} />} onClick={() => editCompany(viewedCompany)}>Edit</Button>
+                    </div>
                     <dl className="account-info-list">
                       <dt>Status</dt>
                       <dd>
@@ -1735,8 +1902,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     </dl>
                   </section>
 
-                  <section className="account-card notes-card">
-                    <h2>Notes</h2>
+                  <section id="company-tray-notes" className="account-card notes-card" hidden={!companyTray}>
+                    <h2><FileText size={16} aria-hidden="true" />Notes</h2>
                     {viewedCompany.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? (
                       <>
                         <div
@@ -1764,8 +1931,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     )}
                   </section>
 
-                  <section className="account-card documents-card">
-                    <h2>Documents</h2>
+                  <section id="company-tray-documents" className="account-card documents-card" hidden={!companyTray}>
+                    <h2><Folder size={16} aria-hidden="true" />Documents</h2>
                     <div className="documents-section">
                       {companyDocuments.isLoading ? <p className="muted">Loading documents...</p> : null}
                       {companyDocuments.isError ? <p className="error">Unable to load documents.</p> : null}
@@ -1798,6 +1965,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     error={meterError}
                     onAdd={openCreateMeter}
                     onAddMore={openBulkMeterUpload}
+                    onExpand={() => setIsCompanyMeterListDismissed(false)}
                   />
                   {canManageMembers ? (
                     <MembersPanel companyId={viewedCompany.id} canAdd compact />
@@ -1808,6 +1976,30 @@ export function DashboardPage({ view }: DashboardPageProps) {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {viewedCompany && meters.data?.data.length && !isCompanyMeterListDismissed ? (
+      <CompanyMeterWindow
+        key={viewedCompany.id}
+        title={`${viewedCompany.companyName ?? "Company"} — Meter List`}
+        onClose={() => setIsCompanyMeterListDismissed(true)}
+      >
+        <DialogTitle id="company-meter-list-title" className="company-meter-list-header">
+          <span>{viewedCompany?.companyName ?? "Company"} — Meter List</span>
+          <Button onClick={() => setIsCompanyMeterListDismissed(true)}>Close</Button>
+        </DialogTitle>
+        <DialogContent className="company-meter-list-content">
+          <MeterListPanel
+            columns={meterColumns}
+            meters={meters.data?.data ?? []}
+            isLoading={meters.isLoading}
+            isError={meters.isError}
+            error={meterError}
+            onAdd={() => { window.focus(); openCreateMeter(); }}
+            onAddMore={() => { window.focus(); openBulkMeterUpload(); }}
+          />
+        </DialogContent>
+      </CompanyMeterWindow>
+      ) : null}
 
       <Dialog open={isContractModalOpen} onClose={() => setIsContractModalOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>{contractFormMode === "edit" ? "Edit Contract" : "Add New Contract"}</DialogTitle>
@@ -2104,6 +2296,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <TextField label="Utility Account Name" value={meterForm.utilityAccountName} onChange={(event) => updateMeterForm("utilityAccountName", event.target.value)} />
               <TextField
                 label="Account Number"
+                inputRef={accountNumberInput}
+                onBlur={() => void checkMeterDuplicate("accountNumber")}
+                required={Boolean(selectedMeterUtility?.accountNumberRequired)}
                 value={accountNumberDisabled ? "NO" : meterForm.accountNumber}
                 onChange={(event) => updateMeterForm("accountNumber", event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
                 disabled={accountNumberDisabled}
@@ -2111,6 +2306,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
               />
               <TextField
                 label="Service Ref/POD"
+                inputRef={serviceRefInput}
+                onBlur={() => void checkMeterDuplicate("serviceRefPod")}
+                required={Boolean(selectedMeterUtility?.serviceRefRequired)}
                 value={serviceRefDisabled ? "NO" : meterForm.serviceRefPod}
                 onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)}
                 disabled={serviceRefDisabled}
@@ -2142,6 +2340,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <Button variant="contained" onClick={() => void saveMeter()} disabled={savingMeter}>
             {savingMeter ? "Saving..." : meterFormMode === "edit" ? "Update Meter" : "Submit"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={meterDuplicates.length > 0} onClose={() => resolveMeterDuplicate(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Duplicate {meterDuplicates[0]?.field === "accountNumber" ? "Account Number" : "Service Ref/POD"}</DialogTitle>
+        <DialogContent>
+          <p>{meterDuplicates[0]?.field === "accountNumber" ? "Account Number" : "Service Ref/POD"} <strong>{meterDuplicates[0]?.value}</strong> already exists in the database. Do you want to continue using this value?</p>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => resolveMeterDuplicate(false)}>Change Value</Button>
+          <Button variant="contained" onClick={() => resolveMeterDuplicate(true)}>Continue</Button>
         </DialogActions>
       </Dialog>
 
@@ -2205,6 +2414,84 @@ export function DashboardPage({ view }: DashboardPageProps) {
       ) : null}
     </section>
   );
+}
+
+function CompanyMeterWindow({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const popupRef = useRef<Window | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  function openWindow() {
+    const popup = window.open("", "", `popup=yes,width=${window.screen.availWidth},height=${window.screen.availHeight},left=0,top=0`);
+    if (!popup) {
+      setBlocked(true);
+      return;
+    }
+    popupRef.current = popup;
+    popup.document.title = title;
+    const root = popup.document.createElement("div");
+    root.className = "company-meter-window";
+    popup.document.body.appendChild(root);
+    setTarget(root);
+    setBlocked(false);
+    popup.focus();
+  }
+
+  useEffect(() => {
+    openWindow();
+    return () => { popupRef.current?.close(); };
+  }, []);
+
+  useEffect(() => {
+    if (!target) return;
+    const popup = target.ownerDocument.defaultView;
+    if (!popup) return;
+    // Mirror both stylesheet links and runtime styles (including MUI styles).
+    const copiedStyles: Node[] = [];
+    const syncStyles = () => {
+      copiedStyles.splice(0).forEach((node) => node.parentNode?.removeChild(node));
+      document.head.querySelectorAll("style, link[rel='stylesheet']").forEach((source) => {
+        const copy = source.cloneNode(true) as HTMLElement;
+        if (source instanceof HTMLStyleElement && source.sheet) {
+          try { copy.textContent = Array.from(source.sheet.cssRules).map((rule) => rule.cssText).join("\n"); } catch { /* Keep the original style text. */ }
+        }
+        popup.document.head.appendChild(copy);
+        copiedStyles.push(copy);
+      });
+    };
+    syncStyles();
+    const observer = new MutationObserver(syncStyles);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true });
+    const timer = window.setInterval(() => {
+      if (popup.closed) closeRef.current();
+    }, 500);
+    const closePopup = () => popup.close();
+    window.addEventListener("pagehide", closePopup);
+    return () => {
+      observer.disconnect();
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", closePopup);
+      copiedStyles.forEach((node) => node.parentNode?.removeChild(node));
+    };
+  }, [target]);
+
+  return <>
+    {target ? createPortal(
+      <div className="company-meter-window-layout" onClickCapture={(event) => {
+        // Meter actions open the existing edit/view dialogs in the company window.
+        if ((event.target as HTMLElement).closest(".grid-action-buttons")) window.focus();
+      }}>{children}</div>, target) : null}
+    <Dialog open={blocked} onClose={onClose}>
+      <DialogTitle>Open Meter List</DialogTitle>
+      <DialogContent>The browser blocked the automatic meter window. Click below to open it.</DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button variant="contained" onClick={openWindow}>Open Meter Window</Button>
+      </DialogActions>
+    </Dialog>
+  </>;
 }
 
 interface ContractListPanelProps {
@@ -2455,14 +2742,18 @@ interface MeterListPanelProps {
   error: string;
   onAdd: () => void;
   onAddMore: () => void;
+  onExpand?: () => void;
 }
 
-function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore }: MeterListPanelProps) {
+function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, onExpand }: MeterListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
         <h2>Meter List</h2>
         <div className="account-data-actions">
+          {onExpand && meters.length > 0 ? (
+            <Button size="small" variant="outlined" onClick={onExpand}>Open Meter List</Button>
+          ) : null}
           {/*  <IconButton size="small" aria-label="Search meters">
             <Search size={17} />
           </IconButton> */}
@@ -2746,6 +3037,11 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
     if (parentCompanyName && !parentCompany && !(Number.isInteger(parentCompanyValue) && parentCompanyValue > 0)) {
       throw new Error(`Row ${index + 2}: Parent company "${parentCompanyName}" was not found. Choose a value from the template dropdown.`);
     }
+    const phoneNumber = formatCompanyPhone(text("phonenumber", "phone"));
+    if (!/^\d{3}-\d{3}-\d{4}$/.test(phoneNumber)) {
+      const rowNumber = typeof source.__rowNum__ === "number" ? source.__rowNum__ + 1 : index + 2;
+      throw new Error(`Row ${rowNumber}: Phone number must contain 10 digits in xxx-xxx-xxxx format.`);
+    }
 
     return {
       organizationId: Number.isInteger(organizationValue) && organizationValue > 0 ? organizationValue : 1,
@@ -2760,7 +3056,7 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
       country: text("country"),
       postalCode: text("postalcode", "zipcode", "zip"),
       email: text("email"),
-      phoneNumber: text("phonenumber", "phone"),
+      phoneNumber,
       taxId: text("taxid"),
       url: text("url", "website"),
       notes: text("notes"),
@@ -2866,7 +3162,7 @@ function companyToForm(company: TblCompanyRow): NewCompanyForm {
     country: company.country ?? "",
     postalCode: company.postalCode ?? "",
     email: company.email ?? "",
-    phoneNumber: company.phoneNumber ?? "",
+    phoneNumber: formatCompanyPhone(company.phoneNumber ?? ""),
     taxId: company.taxId ?? "",
     url: company.url ?? "",
     notes: company.notes ?? "",
@@ -2959,6 +3255,8 @@ function RichTextEditor({ label, value, onChange }: { label: string; value: stri
 }
 
 interface LookupOption {
+  accountNumberRequired?: boolean | null;
+  serviceRefRequired?: boolean | null;
   id: string | number;
   name?: string;
   accountNumberSize?: number | null;
