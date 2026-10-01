@@ -1892,7 +1892,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <dt>Legal Name</dt>
                       <dd>{viewedCompany.legalEntityName ?? "-"}</dd>
                       <dt>Address</dt>
-                      <dd>{viewedCompany.mailingAddress ?? "-"}</dd>
+                      <dd>{[
+                        viewedCompany.mailingAddress?.trim(),
+                        viewedCompany.city?.trim(),
+                        [viewedCompany.state?.trim(), viewedCompany.postalCode?.trim()].filter(Boolean).join(" ")
+                      ].filter(Boolean).join(", ") || "-"}</dd>
                       <dt>Phone</dt>
                       <dd>{viewedCompany.phoneNumber ?? "-"}</dd>
                       <dt>Tax ID</dt>
