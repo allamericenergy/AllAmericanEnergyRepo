@@ -9,8 +9,11 @@ import { useAuthStore } from "../auth/authStore";
 
 interface MembersPageProps {
   companyId?: string | number;
+  companyIds?: Array<string | number>;
+  companyLabels?: Record<string, string>;
   canAdd?: boolean;
   compact?: boolean;
+  onExpand?: () => void;
 }
 
 interface MemberRow {
@@ -81,7 +84,7 @@ export function MembersPage(props: MembersPageProps) {
   );
 }
 
-export function MembersPanel({ companyId, canAdd = false, compact = false }: MembersPageProps) {
+export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = false, compact = false, onExpand }: MembersPageProps) {
   const user = useAuthStore((state) => state.user);
   const canAssignMemberType = user?.role === "superadmin" || user?.role === "admin";
   const canCreateAdmin = user?.role === "superadmin";
@@ -99,12 +102,18 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
   const members = useQuery({
     queryKey: ["members", companyId ?? "all", user?.id],
     queryFn: async () => (
-      await api.get("/reports/members", { params: { companyId: companyId || undefined } })
+      await api.get("/reports/members", { params: { companyId: companyIds?.length === 1 ? companyIds[0] : undefined } })
     ).data as { total: number; data: MemberRow[] },
     retry: false
   });
 
-  const rows = (members.data?.data ?? []).map(memberRow);
+  const visibleRows = companyIds?.length && companyIds.length > 1
+    ? (members.data?.data ?? []).filter((member) => companyIds.includes(String(member.companyId)))
+    : members.data?.data ?? [];
+  const rows = visibleRows.map((member) => ({
+    ...memberRow(member),
+    companyName: companyLabels?.[String(member.companyId)] ?? member.companyName
+  }));
   const columns: GridColumn<MemberRow>[] = [
     ...memberColumns,
     ...(user?.role === "superadmin" ? [{ field: "password", headerName: "Temporary Password", minWidth: 220, renderCell: ({ row }) => row.password || "Not available" } satisfies GridColumn<MemberRow>] : []),
@@ -241,6 +250,9 @@ export function MembersPanel({ companyId, canAdd = false, compact = false }: Mem
         <div className={compact ? "account-data-title" : "panel-title-row"}>
           <h2>Members</h2>
           <div className={compact ? "account-data-actions member-title-actions" : "panel-title-actions member-title-actions"}>
+            {onExpand && rows.length > 0 ? (
+              <Button variant="outlined" size={compact ? "small" : "medium"} onClick={onExpand}>Open Member List</Button>
+            ) : null}
             {canAdd && selectedMembers.length ? (
               <>
                 <Button variant="outlined" color="success" size={compact ? "small" : "medium"} startIcon={<Power size={16} />} onClick={() => void updateSelectedStatus(true)} disabled={isSaving}>Activate</Button>
