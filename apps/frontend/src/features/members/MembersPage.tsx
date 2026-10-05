@@ -110,8 +110,8 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
   const visibleRows = companyIds?.length && companyIds.length > 1
     ? (members.data?.data ?? []).filter((member) => companyIds.includes(String(member.companyId)))
     : members.data?.data ?? [];
-  const rows = visibleRows.map((member) => ({
-    ...memberRow(member),
+  const rows = visibleRows.map((member, index) => ({
+    ...memberRow(member, index),
     companyName: companyLabels?.[String(member.companyId)] ?? member.companyName
   }));
   const columns: GridColumn<MemberRow>[] = [
