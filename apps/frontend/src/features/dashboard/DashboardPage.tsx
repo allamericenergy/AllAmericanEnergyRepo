@@ -1611,7 +1611,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 onChange={(event) => setCompanySearch(event.target.value)}
                 placeholder="Search companies"
                 aria-label="Search companies"
-                inputProps={{ "data-testid": "company-search" }}
+                slotProps={{ htmlInput: { "data-testid": "company-search" } }}
               />
               {selectedCompanies.length ? (
                 <>
