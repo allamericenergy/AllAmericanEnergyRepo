@@ -1,7 +1,7 @@
 import { api } from "./api";
 
 export async function loadAllMeters<T>(
-  filters: { companyId?: string | number; productId?: number } = {},
+  filters: { companyId?: string | number; productId?: number; contractId?: string | number } = {},
   signal?: AbortSignal
 ): Promise<{ total: number; data: T[] }> {
   const data: T[] = [];
