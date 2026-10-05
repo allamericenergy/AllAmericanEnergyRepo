@@ -11,9 +11,9 @@ it("loads beyond 100 and 500 meters with the same company and product filters", 
     .mockResolvedValueOnce({ data: { total: 625, data: rows.slice(0, 500) } })
     .mockResolvedValueOnce({ data: { total: 625, data: rows.slice(500) } });
   const signal = new AbortController().signal;
-  expect(await loadAllMeters({ companyId: 42, productId: 2 }, signal)).toEqual({ total: 625, data: rows });
+  expect(await loadAllMeters({ companyId: 42, productId: 2, contractId: 123 }, signal)).toEqual({ total: 625, data: rows });
   expect(api.get).toHaveBeenNthCalledWith(2, "/reports/meters", {
-    params: { companyId: 42, productId: 2, take: 500, skip: 500 }, signal
+    params: { companyId: 42, productId: 2, contractId: 123, take: 500, skip: 500 }, signal
   });
 });
 
