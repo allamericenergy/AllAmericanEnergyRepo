@@ -7,7 +7,7 @@ import { isAxiosError } from "axios";
 import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
@@ -21,6 +21,8 @@ interface DashboardPageProps {
 
 export function DashboardPage({ view }: DashboardPageProps) {
   const navigate = useNavigate();
+  const [companyViewParams, setCompanyViewParams] = useSearchParams();
+  const requestedCompanyId = companyViewParams.get("companyId");
   const user = useAuthStore((state) => state.user);
   const isCompaniesView = view === "companies";
   const isContractsView = view === "contracts";
@@ -154,6 +156,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
     enabled: hasCompanyDashboard || isCompaniesView || isContractsView || isMetersView,
     retry: false
   });
+  useEffect(() => {
+    if (!isCompaniesView || !requestedCompanyId || !companies.data) return;
+    const company = companies.data.data.find((item) => String(item.id) === requestedCompanyId);
+    if (!company) return;
+    setViewedCompany(company);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("companyId");
+      return next;
+    }, { replace: true });
+  }, [isCompaniesView, requestedCompanyId, companies.data, setCompanyViewParams]);
   const contracts = useQuery({
     queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
@@ -427,7 +440,22 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const contractColumns: GridColumn<ContractRow>[] = [
 
     { field: "contractId", headerName: "Contract ID", width: 140 },
-    { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
+    {
+      field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
+      renderCell: ({ row, value }) => (
+        <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (row.companyId != null) {
+            setViewedContract(null);
+            setViewedMeter(null);
+            navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`);
+          }
+        }} disabled={row.companyId == null}>
+          {String(value ?? "")}
+        </button>
+      )
+    },
     { field: "broker", headerName: "Broker", minWidth: 180 },
     { field: "supplier", headerName: "Supplier", minWidth: 180 },
     { field: "swing", headerName: "Swing", minWidth: 140 },
@@ -481,7 +509,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ];
   const meterColumns: GridColumn<MeterRow>[] = [
 
-    { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
+    {
+      field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
+      renderCell: ({ row, value }) => <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); if (row.companyId != null) { setViewedContract(null); setViewedMeter(null); navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`); } }} disabled={row.companyId == null}>{String(value ?? "")}</button>
+    },
     { field: "utilityAccountName", headerName: "Utility Account Name", minWidth: 220 },
     {
       field: "accountNumber",
@@ -1922,9 +1953,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <>
               <div className="company-account-header">
                 <div>
-                  <h1><Building2 size={34} />{viewedCompany.companyName ?? "Company Account"}</h1>
+                  <h1>
+                    <Building2 size={34} />
+                    <button type="button" className="company-title-button" onClick={() => setViewedCompany(null)}>
+                      {viewedCompany.companyName ?? "Company Account"}
+                    </button>
+                  </h1>
                   <p>
-                    Company &gt; Account
+                    <button type="button" className="company-breadcrumb-button" onClick={() => setViewedCompany(null)}>
+                      Company
+                    </button>
+                    <span> &gt; Account</span>
                     <span className={`status-badge company-header-status ${viewedCompany.isActive ? "active" : "inactive"}`}>
                       {viewedCompany.isActive ? "Active" : "Inactive"}
                     </span>
@@ -2265,7 +2304,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 <div>
                   <h1 id="contract-view-title"><FileText size={34} />Contract {viewedContract.contractId ?? viewedContract.id}</h1>
                   <p>
-                    <span>{viewedContract.companyName ?? viewedCompany?.companyName ?? "Company"} &gt; Contract</span>
+                    <button type="button" className="grid-link-button" onClick={() => {
+                      if (viewedContract.companyId == null) return;
+                      setViewedContract(null);
+                      navigate(`/companies?companyId=${encodeURIComponent(String(viewedContract.companyId))}`);
+                    }} disabled={viewedContract.companyId == null}>
+                      {viewedContract.companyName ?? viewedCompany?.companyName ?? "Company"}
+                    </button>
+                    <span> &gt; Contract</span>
                     <span className={`status-badge company-header-status ${viewedContract.isActive ? "active" : "inactive"}`}>
                       {viewedContract.isActive ? "Active" : "Inactive"}
                     </span>
@@ -2296,7 +2342,16 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     <h2><FileText size={16} />Contract Information</h2>
                     <dl className="account-info-list">
                       <dt>Contract ID</dt><dd>{viewedContract.contractId ?? "-"}</dd>
-                      <dt>Company</dt><dd>{viewedContract.companyName ?? viewedCompany?.companyName ?? "-"}</dd>
+                      <dt>Company</dt>
+                      <dd>
+                        <button type="button" className="grid-link-button" onClick={() => {
+                          if (viewedContract.companyId == null) return;
+                          setViewedContract(null);
+                          navigate(`/companies?companyId=${encodeURIComponent(String(viewedContract.companyId))}`);
+                        }} disabled={viewedContract.companyId == null}>
+                          {viewedContract.companyName ?? viewedCompany?.companyName ?? "-"}
+                        </button>
+                      </dd>
                       <dt>Broker</dt><dd>{viewedContract.broker ?? "-"}</dd>
                       <dt>Supplier</dt><dd>{viewedContract.supplier ?? "-"}</dd>
                     </dl>
@@ -2575,7 +2630,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 <div>
                   <h1 id="meter-view-title"><Activity size={34} />Meter {viewedMeter.meter || viewedMeter.accountNumber || viewedMeter.id}</h1>
                   <p>
-                    <span>{viewedMeter.companyName ?? viewedCompany?.companyName ?? "Company"} &gt; Meter</span>
+                    <button type="button" className="grid-link-button" onClick={() => {
+                      if (viewedMeter.companyId == null) return;
+                      setViewedMeter(null);
+                      navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
+                    }} disabled={viewedMeter.companyId == null}>
+                      {viewedMeter.companyName ?? viewedCompany?.companyName ?? "Company"}
+                    </button>
+                    <span> &gt; Meter</span>
                     <span className={`status-badge company-header-status ${viewedMeter.isActive ? "active" : "inactive"}`}>{viewedMeter.isActive ? "Active" : "Inactive"}</span>
                   </p>
                 </div>
@@ -2597,7 +2659,16 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     <h2><FileText size={16} />Meter Information</h2>
                     <dl className="account-info-list">
                       <dt>Meter</dt><dd>{viewedMeter.meter ?? "-"}</dd>
-                      <dt>Company</dt><dd>{viewedMeter.companyName ?? viewedCompany?.companyName ?? "-"}</dd>
+                      <dt>Company</dt>
+                      <dd>
+                        <button type="button" className="grid-link-button" onClick={() => {
+                          if (viewedMeter.companyId == null) return;
+                          setViewedMeter(null);
+                          navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
+                        }} disabled={viewedMeter.companyId == null}>
+                          {viewedMeter.companyName ?? viewedCompany?.companyName ?? "-"}
+                        </button>
+                      </dd>
                       <dt>Account Name</dt><dd>{viewedMeter.utilityAccountName || "-"}</dd>
                       <dt>Account Number</dt><dd>{viewedMeter.accountNumberSize === 0 ? "NO" : viewedMeter.accountNumber ?? "-"}</dd>
                       <dt>Service Ref/POD</dt><dd>{viewedMeter.serviceRefSize === 0 ? "NO" : viewedMeter.serviceRefPod ?? "-"}</dd>
@@ -2764,6 +2835,10 @@ export function CompanyDocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFileId = searchParams.get("fileId") ?? "";
   const selectedFileName = searchParams.get("fileName") ?? "";
+  const [showDocuments, setShowDocuments] = useState(!selectedFileId && !selectedFileName);
+  useEffect(() => {
+    setShowDocuments(!selectedFileId && !selectedFileName);
+  }, [selectedFileId, selectedFileName]);
   const [pdfUrl, setPdfUrl] = useState("");
   const companyDocuments = useQuery({
     queryKey: ["company-documents", companyId],
@@ -2796,17 +2871,41 @@ export function CompanyDocumentsPage() {
   }, [selectedFile.data]);
 
   function selectFile(node: DocumentNode) {
+    setShowDocuments(false);
     setSearchParams({ fileId: node.id, fileName: node.name });
   }
 
-  const visibleDocumentTree = selectedFileName
-    ? filterDocumentTreeByName(companyDocuments.data?.tree ?? [], selectedFileName)
-    : companyDocuments.data?.tree ?? [];
+  const visibleDocumentTree = companyDocuments.data?.tree ?? [];
 
   return (
     <section className="page document-viewer-page">
-      <div className="document-viewer-shell">
-        <aside className="document-viewer-tree">
+      <header className="document-company-heading">
+        {companyDocuments.data?.company ? (
+          <h1>
+            <Link to={`/companies?companyId=${encodeURIComponent(String(companyDocuments.data.company.id))}`}>
+              <Building2 size={28} aria-hidden="true" />
+              {companyDocuments.data.company.companyName || "Company"}
+            </Link>
+          </h1>
+        ) : null}
+      </header>
+      <div className={`document-viewer-shell${showDocuments ? "" : " documents-hidden"}`}>
+        <div className="company-account-side">
+          <div className="company-account-tray" role="group" aria-label="Company documents">
+            <Tooltip title={`${showDocuments ? "Hide" : "Show"} Documents`}>
+              <IconButton
+                size="small"
+                aria-label={`${showDocuments ? "Hide" : "Show"} Documents`}
+                aria-expanded={showDocuments}
+                aria-controls="document-folder-section"
+                color={showDocuments ? "primary" : "default"}
+                onClick={() => setShowDocuments((current) => !current)}
+              >
+                {showDocuments ? <PanelLeftClose size={20} /> : <Folder size={20} />}
+              </IconButton>
+            </Tooltip>
+          </div>
+        <aside id="document-folder-section" className="document-viewer-tree" hidden={!showDocuments}>
           <div className="document-viewer-title">
             <h2>Documents</h2>
             <Tooltip title={selectedFileName.length > 20 ? selectedFileName : ""} followCursor>
@@ -2820,10 +2919,11 @@ export function CompanyDocumentsPage() {
             <DocumentTree nodes={visibleDocumentTree} onFileClick={selectFile} selectedFileId={selectedFileId} />
           ) : null}
         </aside>
+        </div>
         <main className="document-pdf-panel">
           {selectedFileName ? (
             <div className="focused-document-header">
-              <Button size="small" startIcon={<Folder size={16} />} onClick={() => setSearchParams({})}>Back to Documents</Button>
+              <Button size="small" startIcon={<Folder size={16} />} onClick={() => { setSearchParams({}); setShowDocuments(true); }}>Back to Documents</Button>
               <strong title={selectedFileName}>{selectedFileName}</strong>
             </div>
           ) : null}
@@ -3028,17 +3128,6 @@ function findDocumentByName(nodes: DocumentNode[], fileName: string): DocumentNo
     if (match) return match;
   }
   return null;
-}
-
-function filterDocumentTreeByName(nodes: DocumentNode[], fileName: string): DocumentNode[] {
-  const normalizedName = fileName.trim().toLowerCase();
-  return nodes.flatMap((node) => {
-    if (node.type === "file") {
-      return node.name.trim().toLowerCase() === normalizedName ? [node] : [];
-    }
-    const children = node.children ? filterDocumentTreeByName(node.children, fileName) : [];
-    return children.length ? [{ ...node, children }] : [];
-  });
 }
 
 function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, onExpand, onRowClick }: MeterListPanelProps) {
@@ -3602,6 +3691,7 @@ interface MeterLookups {
 }
 
 interface CompanyDocumentsResponse {
+  company: { id: string | number; companyName?: string | null };
   skipped: boolean;
   tree: DocumentNode[];
 }
