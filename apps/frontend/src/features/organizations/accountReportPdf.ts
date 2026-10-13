@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import autoTable, { type CellHookData } from "jspdf-autotable";
 import { displayDate, displayProcessedDate, money, monthLabel, summarizeAccountReport, type AccountReportRow } from "./accountReport";
 
 export function createAccountReportPdf(rows: AccountReportRow[]) {
@@ -31,7 +31,7 @@ export function createAccountReportPdf(rows: AccountReportRow[]) {
       head: [["Utility type", "Account Total"]],
       body: [...summarizeAccountReport(group).map(item => [item.utilityType, money(item.cents)]), ["Total", money(group.reduce((sum, row) => sum + row.cents, 0))]],
       styles: { fontSize: 9, cellPadding: 5 }, headStyles: { fillColor: [0, 112, 192] }, columnStyles: { 1: { halign: "right" } },
-      didParseCell: data => { if (data.section === "body" && data.row.index === summarizeAccountReport(group).length) { data.cell.styles.fillColor = [255, 255, 0]; data.cell.styles.fontStyle = "bold"; } } });
+      didParseCell: (data: CellHookData) => { if (data.section === "body" && data.row.index === summarizeAccountReport(group).length) { data.cell.styles.fillColor = [255, 255, 0]; data.cell.styles.fontStyle = "bold"; } } });
   });
   for (let page = 1; page <= doc.getNumberOfPages(); page++) {
     doc.setPage(page); doc.setFontSize(8).setTextColor(100).text(`Page ${page} of ${doc.getNumberOfPages()}`, 762, 595, { align: "right" });
