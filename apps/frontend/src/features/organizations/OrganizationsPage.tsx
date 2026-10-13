@@ -1,4 +1,6 @@
 import { MasterAccountNumberPanel } from "./MasterAccountNumberPanel";
+import { AccountReportPage } from "./AccountReportPage";
+import { ExtractPdfDialog } from "./ExtractPdfDialog";
 import {
   Button,
   Checkbox,
@@ -12,7 +14,7 @@ import {
   TextField,
   Tooltip
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Hash, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -107,13 +109,23 @@ const meterValueSections = [
 
 type LocationSection = typeof locationSections[number]["key"];
 type MeterValueSection = typeof meterValueSections[number]["key"];
-type OrganizationSection = "master-account-numbers" | "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
+type OrganizationSection = "account-report" | "master-account-numbers" | "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
+  const queryClient = useQueryClient();
+  const accountReports = useMutation({
+    mutationFn: async () => (await api.post("/reports/organizations/account-reports-folders")).data as {
+      created: number; existing: number; skipped: number;
+      failed: Array<{ id: number; companyName: string; error: string }>;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["company-documents"] })
+  });
+  const [extractPdfOpen, setExtractPdfOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const companyNotesId = searchParams.get("companyId");
   const validSections = [
+    "account-report",
     "master-account-numbers",
     "organizations",
     "notes",
@@ -150,6 +162,8 @@ export function OrganizationsPage() {
     <section className="page organization-page">
       <aside className="organization-side-menu" aria-label="Organization sections">
         <h2>Organization</h2>
+        <button type="button" className={section === "account-report" ? "active" : ""} onClick={() => selectSection("account-report")}><CircleDollarSign size={18} /> Account Report</button>
+        <button type="button" onClick={() => setExtractPdfOpen(true)}><Upload size={18} /> ExtractPDF</button>
         <button type="button" className={section === "organizations" ? "active" : ""} onClick={() => selectSection("organizations")}>
           <Building2 size={18} /> Organizations
         </button>
@@ -185,11 +199,24 @@ export function OrganizationsPage() {
           <section className="panel companies-panel">
             <div className="panel-title-row">
               <h2>Organizations</h2>
+              <Button variant="outlined" disabled={accountReports.isPending} onClick={() => accountReports.mutate()}>
+                {accountReports.isPending ? "Adding Account Reports..." : "Add Account Reports Folders"}
+              </Button>
               <span className="muted">{organizations.isLoading ? "Loading..." : `${organizations.data?.total ?? 0} total`}</span>
             </div>
             {organizations.isError ? <p className="error">Unable to load organization records.</p> : null}
+            <p className="muted">Add an Account Reports folder to all existing companies with a linked SharePoint folder. Existing folders are kept.</p>
+            {accountReports.isError ? <p className="error" role="alert">{apiError(accountReports.error) ?? "Unable to add Account Reports folders. Please try again."}</p> : null}
+            {accountReports.data ? (
+              <div role="status">
+                <p>{accountReports.data.created} created, {accountReports.data.existing} already present, {accountReports.data.skipped} skipped (no SharePoint company folder), {accountReports.data.failed.length} failed.</p>
+                {accountReports.data.failed.length ? <ul>{accountReports.data.failed.map((company) => <li key={company.id}>{company.companyName}: {company.error}</li>)}</ul> : null}
+              </div>
+            ) : null}
             <IntiliGrid checkboxSelection columns={organizationColumns} rows={organizations.data?.data ?? []} onRowClick={setViewedOrganization} />
           </section>
+        ) : section === "account-report" ? (
+          <AccountReportPage />
         ) : section === "master-account-numbers" ? (
           <MasterAccountNumberPanel />
         ) : section === "notes" ? (
@@ -215,6 +242,7 @@ export function OrganizationsPage() {
         ) : null}
       </div>
 
+      <ExtractPdfDialog open={extractPdfOpen} onClose={() => setExtractPdfOpen(false)} />
       <Dialog open={Boolean(viewedOrganization)} onClose={() => setViewedOrganization(null)} fullWidth maxWidth="sm">
         <DialogTitle>Organization Details</DialogTitle>
         <DialogContent>
@@ -469,6 +497,7 @@ function OrganizationNotesPanel({ companyId, onViewAll }: { companyId: string | 
 
 interface LocationRow {
   id: string | number;
+  actions?: never;
   name?: string;
   code?: string;
   capital?: string;
@@ -487,6 +516,8 @@ interface LocationResponse {
 }
 
 function LocationTablePanel({ kind }: { kind: LocationSection }) {
+  const [editing, setEditing] = useState<LocationRow | null>(null);
+  const [deleting, setDeleting] = useState<LocationRow | null>(null);
   const singularName = kind === "states" ? "State" : kind === "cities" ? "City" : "ZIP Code";
   const pluralName = kind === "states" ? "States" : kind === "cities" ? "Cities" : "ZIP Codes";
   const [formOpen, setFormOpen] = useState(false);
@@ -533,7 +564,22 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
         { field: "name", headerName: "City", minWidth: 220, flex: 1 },
         { field: "stateName", headerName: "State", minWidth: 180 },
         { field: "state", headerName: "State Code", width: 130 },
-        { field: "isCapital", headerName: "Capital City", width: 130, valueFormatter: (value) => value ? "Yes" : "No" }
+        { field: "isCapital", headerName: "Capital City", width: 130, valueFormatter: (value) => value ? "Yes" : "No" },
+        {
+          field: "actions", headerName: "Actions", width: 120, sortable: false,
+          renderCell: ({ row }) => (
+            <div onClick={(event) => event.stopPropagation()}>
+              <Tooltip title="Edit city"><IconButton size="small" aria-label={`Edit ${row.name}`} onClick={() => {
+                setEditing(row);
+                setCityForm({ stateId: String(row.stateId), name: row.name ?? "", isCapital: Boolean(row.isCapital) });
+                setError("");
+                setNotice("");
+                setFormOpen(true);
+              }}><Pencil size={17} /></IconButton></Tooltip>
+              <Tooltip title="Delete city"><IconButton size="small" color="error" aria-label={`Delete ${row.name}`} onClick={() => { setError(""); setNotice(""); setDeleting(row); }}><Trash2 size={17} /></IconButton></Tooltip>
+            </div>
+          )
+        }
       ];
     }
     return [
@@ -546,6 +592,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   }, [kind]);
 
   function openCreate() {
+    setEditing(null);
     setError("");
     setNotice("");
     setStateForm({ name: "", code: "", capital: "" });
@@ -563,13 +610,30 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
         : kind === "cities"
           ? { ...cityForm, stateId: Number(cityForm.stateId) }
           : { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive };
-      await api.post(`/reports/location-${kind}`, payload);
+      if (editing && kind === "cities") await api.put(`/reports/location-cities/${editing.id}`, payload);
+      else await api.post(`/reports/location-${kind}`, payload);
       await records.refetch();
       if (kind === "states") await states.refetch();
       setFormOpen(false);
-      setNotice(`${singularName} added successfully.`);
+      setNotice(`${singularName} ${editing ? "updated" : "added"} successfully.`);
     } catch (saveError) {
-      setError(apiError(saveError) ?? `Unable to add the ${singularName.toLowerCase()}.`);
+      setError(apiError(saveError) ?? `Unable to save the ${singularName.toLowerCase()}.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCity() {
+    if (!deleting || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api.delete(`/reports/location-cities/${deleting.id}`);
+      await records.refetch();
+      setDeleting(null);
+      setNotice("City deleted successfully.");
+    } catch (deleteError) {
+      setError(apiError(deleteError) ?? "Unable to delete the city.");
     } finally {
       setSaving(false);
     }
@@ -664,7 +728,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
       </section>
 
       <Dialog open={formOpen} onClose={() => !saving && setFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add New {singularName}</DialogTitle>
+        <DialogTitle>{editing ? "Edit" : "Add New"} {singularName}</DialogTitle>
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
           <div className="company-form-grid">
@@ -702,6 +766,18 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
         <DialogActions>
           <Button onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
           <Button variant="contained" onClick={() => void saveRecord()} disabled={saving || !formValid}>{saving ? "Saving..." : `Save ${singularName}`}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(deleting)} onClose={() => !saving && setDeleting(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Delete City?</DialogTitle>
+        <DialogContent>
+          <p>Delete {deleting?.name} and all its related ZIP codes? This action cannot be undone.</p>
+          {error ? <p className="error" role="alert">{error}</p> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={saving} onClick={() => setDeleting(null)}>Cancel</Button>
+          <Button color="error" variant="contained" disabled={saving} onClick={() => void deleteCity()}>{saving ? "Deleting..." : "Delete"}</Button>
         </DialogActions>
       </Dialog>
 
