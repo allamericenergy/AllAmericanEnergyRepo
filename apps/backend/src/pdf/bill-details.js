@@ -26,6 +26,8 @@ export function extractBillDetails(rows) {
   const candidates = new Map();
   const fields = {}, sources = {}, issues = [];
   const eversource = rows.some(row => /\beversource\b/i.test(row.text));
+  const aquarion = rows.some(row => /aquarionwater\.com/i.test(row.text));
+  const mdc = rows.some(row => /themdc\.org|The Metropolitan District/i.test(row.text));
   const add = (field, value, row, extra = {}, priority = 1) => {
     if (value === null || value === undefined || value === '') return;
     if (!candidates.has(field)) candidates.set(field, []);
@@ -48,6 +50,58 @@ export function extractBillDetails(rows) {
     const row = rows[index];
     const text = row.text.replace(/[\uE000-\uF8FF]/g, '$');
     let match;
+    if (mdc || aquarion) {
+      const provider = text.match(mdc ? /The Metropolitan District/i : /Aquarion Water Company(?: of CT)?/i);
+      if (provider) add('supplier', mdc ? 'The Metropolitan District' : 'Aquarion Water Company', row);
+      match = text.match(new RegExp(`\\bWater\\s+Usage\\s*\\(CCF\\)\\s*:?\\s*(${NUM})(?=\\s|$)`, 'i'))
+        ?? text.match(new RegExp(`\\bWater\\s+Usage\\s+Charge\\s+(${NUM})\\s*CCF\\b`, 'i'));
+      if (match) add('currentUsage', numeric(match[1]), row);
+    }
+    if (mdc) {
+      match = text.match(new RegExp(`\\bInvoice Date:\\s*(${DATE})`, 'i'));
+      if (match) add('statementDate', billDate(match[1]), row);
+      match = text.match(/\bCustomer Name:\s*([^\t]+)/i);
+      if (match) add('serviceProvidedTo', match[1].trim(), row);
+      match = text.match(/\bMeter Number\s*:?\s+(\d+)\b/i);
+      if (match) add('meterNumber', match[1], row);
+      match = text.match(/\bType of Meter Reading\s*:?\s*(Actual|Estimated|Estimate|Remote|Customer)\b/i);
+      if (match) add('readingType', match[1], row);
+      match = text.match(/\bRemaining Balance\s+(.+)/i);
+      if (match) add('balanceForward', money(match[1]), row);
+      if (/^Billing Period\s*$/i.test(text.trim())) {
+        for (const next of rows.slice(index + 1, index + 4)) {
+          if (next.pageNumber !== row.pageNumber || (next.y != null && next.y - row.y > 50)) break;
+          const period = next.text.match(new RegExp(`^(${DATE})\\s*-\\s*(${DATE})\\s*\\((\\d+) Days\\)`, 'i'));
+          if (period) {
+            const from = billDate(period[1]), to = billDate(period[2]);
+            if (from && to && from <= to) {
+              add('servicePeriod', { from, to }, next);
+              add('days', Number(period[3]), next);
+            }
+            break;
+          }
+        }
+      }
+    }
+    if (aquarion) {
+      // Meter registers share an ID; keep it as text and use the labeled bill total for usage.
+      match = text.match(/^(\d+)\s+(?:\(\d+\)\s+)?From\s*\/\s*To\b/i);
+      if (match) add('meterNumber', match[1], row);
+      if (/^Meter\s+Meter\s+Current\s+Reading\s+Next$/i.test(text.trim())) {
+        const nextColumn = row.cells?.at(-1)?.x;
+        for (const next of rows.slice(index + 2, index + 9)) {
+          if (next.pageNumber !== row.pageNumber || /^Service from|^Meter\s+Meter/i.test(next.text)) break;
+          if (next.y != null && next.y - row.y > 80) break;
+          const reading = next.text.match(/^(Actual|Estimated|Estimate)\s*$/i);
+          if (reading) add('readingType', reading[1], next);
+          for (const cell of cellsOf(next)) {
+            if (nextColumn == null || Math.abs(cell.x - nextColumn) > 30) continue;
+            const date = cell.text.match(new RegExp(`^(${DATE})$`, 'i'));
+            if (date) add('nextReadDate', billDate(date[1]), next);
+          }
+        }
+      }
+    }
     for (const [field, pattern] of [
       ['nameKey', /\b(?:Customer\s+)?name key\s*:\s*([^\t]+)/i],
       ['serviceReference', /\b(?:Serv\s+Ref|Service\s+Reference)\s*:\s*([\w-]+)/i],
@@ -100,7 +154,11 @@ export function extractBillDetails(rows) {
       unit: /^kwh$/i.test(match[3]) ? 'kWh' : /^ccf$/i.test(match[3]) ? 'CCF' : 'therms' }, row);
 
     match = /\bBalance Forward\b/i.exec(text);
-    if (match) add('balanceForward', money(text.slice(match.index + match[0].length)) ?? money(text.slice(0, match.index)), row);
+    if (match) {
+      const balance = money(text.slice(match.index + match[0].length)) ?? money(text.slice(0, match.index));
+      if (balance && (aquarion || mdc)) balance.currency = 'USD';
+      add('balanceForward', balance, row);
+    }
 
     // Only follow the total-due heading, never "Amount Due On" in payment history.
     const dueCell = cellsOf(row).find(cell => /^Total Amount Due\b/i.test(cell.text));
@@ -142,6 +200,19 @@ export function extractBillDetails(rows) {
     }
 
     const address = cellsOf(row).find(cell => /^(?:Svc Addr|Service Address)\s*:/i.test(cell.text));
+    if (aquarion) {
+      const serviceFor = cellsOf(row).find(cell => /^Service For:/i.test(cell.text));
+      if (serviceFor) {
+        const cells = cellsOf(row);
+        const start = cells.indexOf(serviceFor);
+        const inline = serviceFor.text.replace(/^Service For:\s*/i, '');
+        const addressCell = inline ? { ...serviceFor, text: inline } : cells[start + 1];
+        if (addressCell && /^\d+\s/.test(addressCell.text)) {
+          const locality = nearby(index, addressCell, 2).find(next => /\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/.test(next.cell.text));
+          add('serviceAddress', [addressCell.text, locality?.cell.text].filter(Boolean).join(', '), row);
+        }
+      }
+    }
     if (address) {
       const parts = [address.text.replace(/^(?:Svc Addr|Service Address)\s*:\s*/i, '')];
       const matchedRows = [evidence(row)];

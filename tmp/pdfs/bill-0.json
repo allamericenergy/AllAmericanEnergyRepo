@@ -1,0 +1,1714 @@
+{
+  "path": "E:/OneDriveRJ/RJ Consulting/RJConsultingDocuments - Documents/Lipper/GB-Lipper International-57706030038-09-02-2026.pdf",
+  "data": [
+    {
+      "pageNumber": 1,
+      "text": "Total Amount Due",
+      "y": 39.35000000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 374.49600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "$2,393.23",
+      "y": 50.605999999999995,
+      "cells": [
+        {
+          "x": 487.704,
+          "endX": 583.704,
+          "text": "$2,393.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "by 09/30/26",
+      "y": 54.32600000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 347.02700000000004,
+          "text": "by 09/30/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Account Number:\t5770 603 0038",
+      "y": 57.011999999999944,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 104.436,
+          "text": "Account Number:"
+        },
+        {
+          "x": 119.88,
+          "endX": 188.99999999999994,
+          "text": "5770 603 0038"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Statement Date:\t09/02/26",
+      "y": 68.976,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 99.54,
+          "text": "Statement Date:"
+        },
+        {
+          "x": 113.832,
+          "endX": 155.064,
+          "text": "09/02/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Amount Due On 09/01/26\t-$107.92",
+      "y": 71.25,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 382.02599999999995,
+          "text": "Amount Due On 09/01/26"
+        },
+        {
+          "x": 546.032,
+          "endX": 580.7520000000001,
+          "text": "-$107.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Service Provided To:\tLast Payment Received\t$0.00",
+      "y": 83.274,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.03600000000002,
+          "text": "Service Provided To:"
+        },
+        {
+          "x": 287.136,
+          "endX": 372.98599999999993,
+          "text": "Last Payment Received"
+        },
+        {
+          "x": 559.152,
+          "endX": 580.7520000000001,
+          "text": "$0.00"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "LIPPER INTRNL INC\tBalance Forward\t-$107.92",
+      "y": 95.226,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 112.69199999999998,
+          "text": "LIPPER INTRNL INC"
+        },
+        {
+          "x": 287.136,
+          "endX": 349.12600000000003,
+          "text": "Balance Forward"
+        },
+        {
+          "x": 546.032,
+          "endX": 580.7520000000001,
+          "text": "-$107.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Total Current Charges\t$2,501.15",
+      "y": 107.25,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 367.0959999999999,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 542.352,
+          "endX": 580.752,
+          "text": "$2,501.15"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Gas Usage History - CCF\tCurrent Charges for Gas",
+      "y": 159.399,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 149.706,
+          "text": "Gas Usage History - CCF"
+        },
+        {
+          "x": 285.624,
+          "endX": 409.51400000000007,
+          "text": "Current Charges for Gas"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "CCF/Day",
+      "y": 177.71399999999994,
+      "cells": [
+        {
+          "x": 34.344,
+          "endX": 53.34,
+          "text": "CCF/Day"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Supply\tDelivery",
+      "y": 179.952,
+      "cells": [
+        {
+          "x": 339.606,
+          "endX": 372.042,
+          "text": "Supply"
+        },
+        {
+          "x": 487.206,
+          "endX": 525.834,
+          "text": "Delivery"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "$169.12\t$2,182.69",
+      "y": 200.96000000000004,
+      "cells": [
+        {
+          "x": 330.864,
+          "endX": 380.784,
+          "text": "$169.12"
+        },
+        {
+          "x": 475.8,
+          "endX": 537.24,
+          "text": "$2,182.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Cost of gas from Eversource\tCost to deliver gas",
+      "y": 215.72000000000003,
+      "cells": [
+        {
+          "x": 312.36,
+          "endX": 395.6880000000002,
+          "text": "Cost of gas from Eversource"
+        },
+        {
+          "x": 476.692,
+          "endX": 531.3080000000002,
+          "text": "Cost to deliver gas"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "from Eversource",
+      "y": 223.20799999999997,
+      "cells": [
+        {
+          "x": 479.8,
+          "endX": 528.2,
+          "text": "from Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Your gas supplier is",
+      "y": 327.402,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 500.56200000000007,
+          "text": "Your gas supplier is"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Eversource",
+      "y": 341.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 463.056,
+          "text": "Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO Box 270",
+      "y": 349.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 464.952,
+          "text": "PO Box 270"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Hartford, CT 06141-0270",
+      "y": 357.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 505.0240000000001,
+          "text": "Hartford, CT 06141-0270"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Gas Usage Summary",
+      "y": 371.63,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 140.198,
+          "text": "Gas Usage Summary"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "This month your\tThis month you used",
+      "y": 390.748,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 88.848,
+          "text": "This month your"
+        },
+        {
+          "x": 112.32,
+          "endX": 178.31199999999998,
+          "text": "This month you used"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "average daily\t100.0% less",
+      "y": 402.772,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 79.848,
+          "text": "average daily"
+        },
+        {
+          "x": 112.32,
+          "endX": 160.01,
+          "text": "100.0% less"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "100.0",
+      "y": 411.748,
+      "cells": [
+        {
+          "x": 200.16,
+          "endX": 230.4,
+          "text": "100.0"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "use was less than\tthan at the",
+      "y": 414.724,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 94.36000000000001,
+          "text": "use was less than"
+        },
+        {
+          "x": 112.32,
+          "endX": 146.664,
+          "text": "than at the"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "USAGE",
+      "y": 424.142,
+      "cells": [
+        {
+          "x": 207.805,
+          "endX": 226.35500000000002,
+          "text": "USAGE"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "same time last year",
+      "y": 426.748,
+      "cells": [
+        {
+          "x": 112.32,
+          "endX": 174.75999999999993,
+          "text": "same time last year"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "0.1 CCF",
+      "y": 430.484,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 67.13799999999999,
+          "text": "0.1 CCF"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "News For You",
+      "y": 472.488,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 103.93199999999999,
+          "text": "News For You"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Natural gas safety: SMELL. LEAVE. CALL 9-1-1. If you smell an odor similar to rotten eggs in your home or business, it may be a natural gas leak. LEAVE",
+      "y": 489.6,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 543.4199999999998,
+          "text": "Natural gas safety: SMELL. LEAVE. CALL 9-1-1. If you smell an odor similar to rotten eggs in your home or business, it may be a natural gas leak. LEAVE"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "IMMEDIATELY. Once you are in a safe location, dial 911 and then call Eversource to report the emergency at 877-944-5325. Remain outside until Eversource can",
+      "y": 498.6,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 572.5709999999996,
+          "text": "IMMEDIATELY. Once you are in a safe location, dial 911 and then call Eversource to report the emergency at 877-944-5325. Remain outside until Eversource can"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "check the odor.",
+      "y": 507.6,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 90.558,
+          "text": "check the odor."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Remit Payment To: Eversource, PO Box 56004, Boston, MA 02205-6004",
+      "y": 535.842,
+      "cells": [
+        {
+          "x": 189.076,
+          "endX": 432.57099999999997,
+          "text": "Remit Payment To: Eversource, PO Box 56004, Boston, MA 02205-6004"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "CG_260902PROD.TXT",
+      "y": 545.517,
+      "cells": [
+        {
+          "x": 527.112,
+          "endX": 578.52,
+          "text": "CG_260902PROD.TXT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Please make your check payable to Eversource and consider adding $1 for Operation Fuel.",
+      "y": 568.862,
+      "cells": [
+        {
+          "x": 310.552,
+          "endX": 553.3750000000001,
+          "text": "Please make your check payable to Eversource and consider adding $1 for Operation Fuel."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "To add more or make a payment today, visit Eversource.com. If mailing, please allow up to 5 business days to post.",
+      "y": 580.094,
+      "cells": [
+        {
+          "x": 277.635,
+          "endX": 586.2929999999996,
+          "text": "To add more or make a payment today, visit Eversource.com. If mailing, please allow up to 5 business days to post."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Total Amount Due",
+      "y": 601.886,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 366.93600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Account Number:\t5770 603 0038",
+      "y": 610.476,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 110.48400000000001,
+          "text": "Account Number:"
+        },
+        {
+          "x": 125.856,
+          "endX": 194.9759999999999,
+          "text": "5770 603 0038"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "by 09/30/26\t$2,393.23",
+      "y": 616.058,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 339.46700000000004,
+          "text": "by 09/30/26"
+        },
+        {
+          "x": 484.752,
+          "endX": 580.752,
+          "text": "$2,393.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Non-residential and residential non-hardship customers may be",
+      "y": 622.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 245.67300000000006,
+          "text": "Non-residential and residential non-hardship customers may be"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "subject to a 1.00% late payment charge if the “Total Amount Due”",
+      "y": 631.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 253.341,
+          "text": "subject to a 1.00% late payment charge if the “Total Amount Due”"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "is not received by 09/30/26.",
+      "y": 640.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 127.30499999999999,
+          "text": "is not received by 09/30/26."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Amount Enclosed",
+      "y": 645.748,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 375.91000000000014,
+          "text": "Amount Enclosed"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Eversource",
+      "y": 701.28,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 408.537,
+          "text": "Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO Box 56004",
+      "y": 711.288,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 421.56,
+          "text": "PO Box 56004"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "LIPPER INTRNL INC",
+      "y": 716.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 158.19299999999998,
+          "text": "LIPPER INTRNL INC"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Boston, MA 02205-6004",
+      "y": 721.296,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 459.5850000000001,
+          "text": "Boston, MA 02205-6004"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "235 WASHINGTON ST",
+      "y": 725.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 166.53600000000003,
+          "text": "235 WASHINGTON ST"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "WALLINGFORD CT 06492-2323",
+      "y": 734.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 204.05699999999996,
+          "text": "WALLINGFORD CT 06492-2323"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "5770603003839 0002393232 0002501154",
+      "y": 777.27,
+      "cells": [
+        {
+          "x": 328.464,
+          "endX": 588.0239999999999,
+          "text": "5770603003839 0002393232 0002501154"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Amount Due",
+      "y": 39.35000000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 374.49600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "by 09/30/26\t$2,393.23",
+      "y": 54.32600000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 347.02700000000004,
+          "text": "by 09/30/26"
+        },
+        {
+          "x": 487.704,
+          "endX": 583.704,
+          "text": "$2,393.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Account Number:\t5770 603 0038",
+      "y": 59.24400000000003,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 104.436,
+          "text": "Account Number:"
+        },
+        {
+          "x": 119.88,
+          "endX": 188.99999999999994,
+          "text": "5770 603 0038"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Customer name key: LIPP",
+      "y": 69.36300000000006,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 112.66199999999998,
+          "text": "Customer name key: LIPP"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Statement Date:\t09/02/26",
+      "y": 82.51199999999994,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 99.54,
+          "text": "Statement Date:"
+        },
+        {
+          "x": 113.832,
+          "endX": 155.064,
+          "text": "09/02/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Gas Account Summary",
+      "y": 92.61900000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 366.894,
+          "text": "Gas Account Summary"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service Provided To:",
+      "y": 95.14800000000002,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.03600000000002,
+          "text": "Service Provided To:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "LIPPER INTRNL INC\tAmount Due On 09/01/26\t-$107.92",
+      "y": 105.36300000000006,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 112.69199999999998,
+          "text": "LIPPER INTRNL INC"
+        },
+        {
+          "x": 285.624,
+          "endX": 371.025,
+          "text": "Amount Due On 09/01/26"
+        },
+        {
+          "x": 549.576,
+          "endX": 580.8240000000001,
+          "text": "-$107.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Last Payment Received\t$0.00",
+      "y": 118.10699999999997,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 362.889,
+          "text": "Last Payment Received"
+        },
+        {
+          "x": 561.384,
+          "endX": 580.8240000000001,
+          "text": "$0.00"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Balance Forward\t-$107.92",
+      "y": 130.851,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 341.41499999999996,
+          "text": "Balance Forward"
+        },
+        {
+          "x": 549.576,
+          "endX": 580.8240000000001,
+          "text": "-$107.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Svc Addr: 235 WASHINGTON ST",
+      "y": 136.846,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 163.151,
+          "text": "Svc Addr: 235 WASHINGTON ST"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Current Charges/Credits",
+      "y": 143.59500000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 365.59799999999996,
+          "text": "Current Charges/Credits"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "WALLINGFORD CT 06492",
+      "y": 148.87,
+      "cells": [
+        {
+          "x": 72.456,
+          "endX": 178.694,
+          "text": "WALLINGFORD CT 06492"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Gas Supply Services\t$169.12",
+      "y": 156.33899999999994,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 366.1920000000001,
+          "text": "Gas Supply Services"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$169.12"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Serv Ref: 086400002\tBill Cycle: 22",
+      "y": 160.822,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.02799999999999,
+          "text": "Serv Ref: 086400002"
+        },
+        {
+          "x": 196.22799999999967,
+          "endX": 252.14099999999954,
+          "text": "Bill Cycle: 22"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Delivery Services\t$2,182.69",
+      "y": 169.08299999999997,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 355.8510000000001,
+          "text": "Delivery Services"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,182.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service from 07/31/26 - 08/31/26\t31 Days",
+      "y": 172.846,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 173.084,
+          "text": "Service from 07/31/26 - 08/31/26"
+        },
+        {
+          "x": 212.68399999999977,
+          "endX": 247.25699999999975,
+          "text": "31 Days"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Other Charges or Credits\t$149.34",
+      "y": 181.827,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 380.5380000000001,
+          "text": "Other Charges or Credits"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$149.34"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Next read date on or about: Sep 30, 2026",
+      "y": 184.87,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 204.42299999999992,
+          "text": "Next read date on or about: Sep 30, 2026"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Current Charges\t$2,501.15",
+      "y": 194.57100000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 357.58799999999997,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,501.15"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Meter\tCurrent\tPrevious\tCurrent\tReading",
+      "y": 199.45799999999997,
+      "cells": [
+        {
+          "x": 40.1265,
+          "endX": 59.4495,
+          "text": "Meter"
+        },
+        {
+          "x": 86.958,
+          "endX": 111.618,
+          "text": "Current"
+        },
+        {
+          "x": 134.671,
+          "endX": 162.976,
+          "text": "Previous"
+        },
+        {
+          "x": 186.678,
+          "endX": 211.338,
+          "text": "Current"
+        },
+        {
+          "x": 234.288,
+          "endX": 261.288,
+          "text": "Reading"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Number\tRead\tRead\tUsage\tType\tTotal Amount Due\t$2,393.23",
+      "y": 208.03499999999997,
+      "cells": [
+        {
+          "x": 36.54,
+          "endX": 63.036,
+          "text": "Number"
+        },
+        {
+          "x": 90.873,
+          "endX": 107.703,
+          "text": "Read"
+        },
+        {
+          "x": 140.4085,
+          "endX": 157.23850000000002,
+          "text": "Read"
+        },
+        {
+          "x": 188.7165,
+          "endX": 209.29950000000002,
+          "text": "Usage"
+        },
+        {
+          "x": 240.04350000000002,
+          "endX": 255.53250000000003,
+          "text": "Type"
+        },
+        {
+          "x": 285.624,
+          "endX": 348.7140000000001,
+          "text": "Total Amount Due"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,393.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "0825694\t94383\t94383\t0\tActual",
+      "y": 228.29399999999998,
+      "cells": [
+        {
+          "x": 32.868,
+          "endX": 63.108000000000004,
+          "text": "0825694"
+        },
+        {
+          "x": 87.288,
+          "endX": 111.288,
+          "text": "94383"
+        },
+        {
+          "x": 136.824,
+          "endX": 160.824,
+          "text": "94383"
+        },
+        {
+          "x": 197.4,
+          "endX": 202.20000000000002,
+          "text": "0"
+        },
+        {
+          "x": 235.108,
+          "endX": 260.468,
+          "text": "Actual"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Read Demand: 0.0 ccf\tTotal Charges for Gas",
+      "y": 239.10799999999995,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 84.94800000000002,
+          "text": "Read Demand: 0.0 ccf"
+        },
+        {
+          "x": 285.624,
+          "endX": 370.3339999999999,
+          "text": "Total Charges for Gas"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Billed Demand: 376.0 ccf",
+      "y": 251.42100000000005,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 92.84400000000002,
+          "text": "Billed Demand: 376.0 ccf"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Supplier",
+      "y": 265.779,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 315.27900000000005,
+          "text": "Supplier"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Monthly CCF Use",
+      "y": 270.946,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 100.85799999999999,
+          "text": "Monthly CCF Use"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Eversource",
+      "y": 278.523,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 322.425,
+          "text": "Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Aug\tSep\tOct\tNov\tDec\tJan\tFeb",
+      "y": 283.707,
+      "cells": [
+        {
+          "x": 34.839,
+          "endX": 47.673,
+          "text": "Aug"
+        },
+        {
+          "x": 70.1325,
+          "endX": 82.7955,
+          "text": "Sep"
+        },
+        {
+          "x": 106.16,
+          "endX": 117.329,
+          "text": "Oct"
+        },
+        {
+          "x": 140.625,
+          "endX": 153.279,
+          "text": "Nov"
+        },
+        {
+          "x": 175.815,
+          "endX": 188.649,
+          "text": "Dec"
+        },
+        {
+          "x": 211.513,
+          "endX": 223.51000000000002,
+          "text": "Jan"
+        },
+        {
+          "x": 246.749,
+          "endX": 258.692,
+          "text": "Feb"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service Reference: 086400002",
+      "y": 291.267,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 388.9439999999999,
+          "text": "Service Reference: 086400002"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "73\t61\t454\t4283\t7186\t6886\t6110",
+      "y": 296.451,
+      "cells": [
+        {
+          "x": 36.936,
+          "endX": 45.576,
+          "text": "73"
+        },
+        {
+          "x": 72.144,
+          "endX": 80.784,
+          "text": "61"
+        },
+        {
+          "x": 105.264,
+          "endX": 118.22399999999999,
+          "text": "454"
+        },
+        {
+          "x": 138.312,
+          "endX": 155.592,
+          "text": "4283"
+        },
+        {
+          "x": 173.592,
+          "endX": 190.872,
+          "text": "7186"
+        },
+        {
+          "x": 208.872,
+          "endX": 226.15200000000002,
+          "text": "6886"
+        },
+        {
+          "x": 244.08,
+          "endX": 261.36,
+          "text": "6110"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Sales Services Demand Chrg\t376.00CCF X $0.44980\t$169.12",
+      "y": 304.011,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 381.89699999999993,
+          "text": "Sales Services Demand Chrg"
+        },
+        {
+          "x": 431.901,
+          "endX": 510.048,
+          "text": "376.00CCF X $0.44980"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$169.12"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Mar\tApr\tMay\tJun\tJul\tAug",
+      "y": 309.915,
+      "cells": [
+        {
+          "x": 34.758,
+          "endX": 47.754000000000005,
+          "text": "Mar"
+        },
+        {
+          "x": 70.7535,
+          "endX": 82.17450000000001,
+          "text": "Apr"
+        },
+        {
+          "x": 104.751,
+          "endX": 118.73700000000001,
+          "text": "May"
+        },
+        {
+          "x": 140.868,
+          "endX": 153.036,
+          "text": "Jun"
+        },
+        {
+          "x": 177.314,
+          "endX": 187.15099999999998,
+          "text": "Jul"
+        },
+        {
+          "x": 211.095,
+          "endX": 223.929,
+          "text": "Aug"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Subtotal Supplier Services\t$169.12",
+      "y": 317.475,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 372.9059999999999,
+          "text": "Subtotal Supplier Services"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$169.12"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "4211\t939\t109\t51\t12\t0",
+      "y": 323.451,
+      "cells": [
+        {
+          "x": 32.616,
+          "endX": 49.896,
+          "text": "4211"
+        },
+        {
+          "x": 69.984,
+          "endX": 82.94399999999999,
+          "text": "939"
+        },
+        {
+          "x": 105.264,
+          "endX": 118.22399999999999,
+          "text": "109"
+        },
+        {
+          "x": 142.632,
+          "endX": 151.272,
+          "text": "51"
+        },
+        {
+          "x": 177.912,
+          "endX": 186.55200000000002,
+          "text": "12"
+        },
+        {
+          "x": 215.352,
+          "endX": 219.672,
+          "text": "0"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Delivery",
+      "y": 340.731,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 314.59499999999997,
+          "text": "Delivery"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Contact Information",
+      "y": 345.56,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 106.726,
+          "text": "Contact Information"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "(Rate R30-LARGE GENL FIRM)",
+      "y": 353.475,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 385.01099999999997,
+          "text": "(Rate R30-LARGE GENL FIRM)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Emergency: 877-944-5325",
+      "y": 356.319,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 120.22200000000001,
+          "text": "Emergency: 877-944-5325"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "www.eversource.com\tService Reference: 086400002",
+      "y": 366.219,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 100.01700000000002,
+          "text": "www.eversource.com"
+        },
+        {
+          "x": 285.624,
+          "endX": 388.9439999999999,
+          "text": "Service Reference: 086400002"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Pay by Phone: 888-783-6618",
+      "y": 376.767,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 125.71200000000002,
+          "text": "Pay by Phone: 888-783-6618"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Customer Service Chrg\t$282.08",
+      "y": 378.963,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 362.24099999999993,
+          "text": "Customer Service Chrg"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$282.08"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Customer Service: 888-688-7267",
+      "y": 386.991,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 139.887,
+          "text": "Customer Service: 888-688-7267"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Daily Demand Mtr Chrg\t$44.26",
+      "y": 391.707,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 363.25800000000004,
+          "text": "Daily Demand Mtr Chrg"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$44.26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Demand Chrg\t376.00CCF X $4.49360\t$1,689.59",
+      "y": 404.451,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 331.28099999999995,
+          "text": "Demand Chrg"
+        },
+        {
+          "x": 431.901,
+          "endX": 510.048,
+          "text": "376.00CCF X $4.49360"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$1,689.59"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "SER Mechanism\t376.00CCF X $0.21050\t$79.15",
+      "y": 417.195,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 339.615,
+          "text": "SER Mechanism"
+        },
+        {
+          "x": 431.901,
+          "endX": 510.048,
+          "text": "376.00CCF X $0.21050"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$79.15"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Important Messages About Your Account\tDistribution Integrity Mgt Pgm\t376.00CCF X $0.23300\t$87.61",
+      "y": 429.44,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 189.416,
+          "text": "Important Messages About Your Account"
+        },
+        {
+          "x": 285.624,
+          "endX": 384.9120000000001,
+          "text": "Distribution Integrity Mgt Pgm"
+        },
+        {
+          "x": 431.901,
+          "endX": 510.048,
+          "text": "376.00CCF X $0.23300"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$87.61"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "The rate for the supply portion of your gas bill changes monthly based on the",
+      "y": 440.652,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 254.71999999999997,
+          "text": "The rate for the supply portion of your gas bill changes monthly based on the"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Subtotal Delivery Services\t$2,182.69",
+      "y": 443.403,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 372.37499999999994,
+          "text": "Subtotal Delivery Services"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,182.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "market price of natural gas. See 'Supply Chrg' under 'Total Charges for Gas'",
+      "y": 452.604,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 251.61599999999993,
+          "text": "market price of natural gas. See 'Supply Chrg' under 'Total Charges for Gas'"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Cost of Gas\t$2,351.81",
+      "y": 456.147,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 345.3570000000001,
+          "text": "Total Cost of Gas"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,351.81"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "for this month's rate per hundred cubic feet (CCF) used. Questions? Visit",
+      "y": 464.556,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 240.39999999999992,
+          "text": "for this month's rate per hundred cubic feet (CCF) used. Questions? Visit"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Eversource.com or call 800-989-0900.",
+      "y": 476.508,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 142.80000000000004,
+          "text": "Eversource.com or call 800-989-0900."
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Other Charges or Credits",
+      "y": 481.635,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 373.3920000000001,
+          "text": "Other Charges or Credits"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Sales Tax\t$149.34",
+      "y": 494.379,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 316.59299999999996,
+          "text": "Sales Tax"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$149.34"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Subtotal Other Charges or Credits\t$149.34",
+      "y": 507.843,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 397.0619999999999,
+          "text": "Subtotal Other Charges or Credits"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$149.34"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Current Charges\t$2,501.15",
+      "y": 532.611,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 363.0510000000001,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,501.15"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "CG_260902PROD.TXT",
+      "y": 541.773,
+      "cells": [
+        {
+          "x": 527.112,
+          "endX": 578.52,
+          "text": "CG_260902PROD.TXT"
+        }
+      ]
+    }
+  ]
+}

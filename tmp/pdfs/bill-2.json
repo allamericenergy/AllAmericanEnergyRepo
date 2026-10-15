@@ -1,0 +1,1836 @@
+{
+  "path": "E:/OneDriveRJ/RJ Consulting/RJConsultingDocuments - Documents/Archive/AQUARION WATER CO/WB-Canaan Parish Redevelopment-200497156-09-17-2026.pdf",
+  "data": [
+    {
+      "pageNumber": 1,
+      "text": "CONTACT US",
+      "y": 27.120000000000005,
+      "cells": [
+        {
+          "x": 156,
+          "endX": 220.25514000000004,
+          "text": "CONTACT US"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Total Amount Due by 10/14/2026\t$1614.92",
+      "y": 36.27287999999999,
+      "cells": [
+        {
+          "x": 319.2,
+          "endX": 503.2628495999999,
+          "text": "Total Amount Due by 10/14/2026"
+        },
+        {
+          "x": 525.6288,
+          "endX": 575.999064,
+          "text": "$1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "1.800.732.9678",
+      "y": 41.27999999999997,
+      "cells": [
+        {
+          "x": 156,
+          "endX": 218.55,
+          "text": "1.800.732.9678"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "CS@aquarionwater.com",
+      "y": 51.84000000000003,
+      "cells": [
+        {
+          "x": 156,
+          "endX": 253.713,
+          "text": "CS@aquarionwater.com"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Previous Balance\t1446.23",
+      "y": 63.097440000000006,
+      "cells": [
+        {
+          "x": 319.2,
+          "endX": 410.7353424,
+          "text": "Previous Balance"
+        },
+        {
+          "x": 536.2491552,
+          "endX": 576.000264,
+          "text": "1446.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Account Number: 200497156",
+      "y": 72,
+      "cells": [
+        {
+          "x": 30.959999999999997,
+          "endX": 171.6432,
+          "text": "Account Number: 200497156"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Payments Received\t-1446.23",
+      "y": 79.89743999999996,
+      "cells": [
+        {
+          "x": 319.2,
+          "endX": 421.9655256,
+          "text": "Payments Received"
+        },
+        {
+          "x": 532.5864,
+          "endX": 576.0002424,
+          "text": "-1446.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Statement Date: 09/17/26",
+      "y": 85.20000000000005,
+      "cells": [
+        {
+          "x": 30.959999999999997,
+          "endX": 159.6336,
+          "text": "Statement Date: 09/17/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Service For:\t186 LAKEVIEW AVE BLDG 1\tBalance Forward\t0.00",
+      "y": 96.69744000000003,
+      "cells": [
+        {
+          "x": 30.959999999999997,
+          "endX": 89.496,
+          "text": "Service For:"
+        },
+        {
+          "x": 117.6,
+          "endX": 259.1124,
+          "text": "186 LAKEVIEW AVE BLDG 1"
+        },
+        {
+          "x": 319.2,
+          "endX": 407.61156959999994,
+          "text": "Balance Forward"
+        },
+        {
+          "x": 554.5944,
+          "endX": 575.9988431999999,
+          "text": "0.00"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "NEW CANAAN CT 06840-5979\tTotal Current Charges\t1614.92",
+      "y": 111.60000000000002,
+      "cells": [
+        {
+          "x": 117.6,
+          "endX": 268.8432,
+          "text": "NEW CANAAN CT 06840-5979"
+        },
+        {
+          "x": 319.2,
+          "endX": 434.3836224,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 536.2491552,
+          "endX": 576.000264,
+          "text": "1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "See reverse side of bill for details",
+      "y": 135.44640000000004,
+      "cells": [
+        {
+          "x": 379.93919999999997,
+          "endX": 532.0608,
+          "text": "See reverse side of bill for details"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "ater Usage History",
+      "y": 155.73144000000002,
+      "cells": [
+        {
+          "x": 43.2152448,
+          "endX": 167.052168,
+          "text": "ater Usage History"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "ater Usage Summary",
+      "y": 317.25120000000004,
+      "cells": [
+        {
+          "x": 43.2152448,
+          "endX": 182.6192784,
+          "text": "ater Usage Summary"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "This month your\tThis month you used",
+      "y": 346.1256,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 106.9175208,
+          "text": "This month your"
+        },
+        {
+          "x": 122.39999999999999,
+          "endX": 222.0517104,
+          "text": "This month you used"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "usage was\t2 CCF more",
+      "y": 358.1256,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 81.26758799999999,
+          "text": "usage was"
+        },
+        {
+          "x": 122.39999999999999,
+          "endX": 182.78063039999998,
+          "text": "2 CCF more"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "increase",
+      "y": 364.4304,
+      "cells": [
+        {
+          "x": 238.59456,
+          "endX": 272.60555999999997,
+          "text": "increase"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "313 CCF *\tcompared to the same",
+      "y": 370.1256,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 80.22394560000001,
+          "text": "313 CCF *"
+        },
+        {
+          "x": 122.39999999999999,
+          "endX": 229.44328079999997,
+          "text": "compared to the same"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "time period as last year",
+      "y": 382.1256,
+      "cells": [
+        {
+          "x": 122.39999999999999,
+          "endX": 233.5640544,
+          "text": "time period as last year"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "* 1 ccf (hundred cubic feet) = 748 gallons",
+      "y": 388.308,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 139.04399999999995,
+          "text": "* 1 ccf (hundred cubic feet) = 748 gallons"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "I\tportant Notes",
+      "y": 431.2512,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 33.8917776,
+          "text": "I"
+        },
+        {
+          "x": 46.3370664,
+          "endX": 137.61185039999998,
+          "text": "portant Notes"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "ICA: Effective April 1, 2026, bills will contain a 6.97% Water Infrastructure and Conservation Adjustment (WICA) charge.",
+      "y": 442.8,
+      "cells": [
+        {
+          "x": 37.9296,
+          "endX": 483.5076000000003,
+          "text": "ICA: Effective April 1, 2026, bills will contain a 6.97% Water Infrastructure and Conservation Adjustment (WICA) charge."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "RA: Effective April 1, 2026, bills will contain a -6.54% Water Revenue Adjustment (WRA) credit.",
+      "y": 453.59999999999997,
+      "cells": [
+        {
+          "x": 37.9296,
+          "endX": 391.9560000000002,
+          "text": "RA: Effective April 1, 2026, bills will contain a -6.54% Water Revenue Adjustment (WRA) credit."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PAYMENTS: All charges are due as of your Statement Date. Any unpaid charges may be subject to a late payment charge as of your Statement",
+      "y": 464.4,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 564.1140000000005,
+          "text": "PAYMENTS: All charges are due as of your Statement Date. Any unpaid charges may be subject to a late payment charge as of your Statement"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Date, at the rate of 1.45% per month, if not paid on or before your statement due date.",
+      "y": 472.79999999999995,
+      "cells": [
+        {
+          "x": 29.999999999999993,
+          "endX": 349.0992000000002,
+          "text": "Date, at the rate of 1.45% per month, if not paid on or before your statement due date."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Please detach and return this stub with your check payable to Aquarion Water Company . Do not send cash. Thank you!",
+      "y": 533.7528,
+      "cells": [
+        {
+          "x": 147.024,
+          "endX": 464.9760000000002,
+          "text": "Please detach and return this stub with your check payable to Aquarion Water Company . Do not send cash. Thank you!"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "ACCOUNT\tTOTAL\tAMOUNT ENCLOSED",
+      "y": 550.4735999999999,
+      "cells": [
+        {
+          "x": 329.9472,
+          "endX": 375.17328,
+          "text": "ACCOUNT"
+        },
+        {
+          "x": 434.136,
+          "endX": 462.98256000000003,
+          "text": "TOTAL"
+        },
+        {
+          "x": 499.14720000000005,
+          "endX": 592.37184,
+          "text": "AMOUNT ENCLOSED"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "NUMBER\tAMOUNT\t(IF DIFFERENT)",
+      "y": 561.2736,
+      "cells": [
+        {
+          "x": 332.5512,
+          "endX": 372.56976,
+          "text": "NUMBER"
+        },
+        {
+          "x": 428.5512,
+          "endX": 468.56976,
+          "text": "AMOUNT"
+        },
+        {
+          "x": 511.8144,
+          "endX": 579.70368,
+          "text": "(IF DIFFERENT)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "200497156\t$1614.92",
+      "y": 583.5479999999999,
+      "cells": [
+        {
+          "x": 325.0392,
+          "endX": 380.0791968,
+          "text": "200497156"
+        },
+        {
+          "x": 425.6256,
+          "endX": 471.49226400000003,
+          "text": "$1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Please remit by 10/14/2026 for your payment to be applied prior to next billing cycle.",
+      "y": 607.1999999999999,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 600.0594000000001,
+          "text": "Please remit by 10/14/2026 for your payment to be applied prior to next billing cycle."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Aquarion Water Company of CT",
+      "y": 612.9431999999999,
+      "cells": [
+        {
+          "x": 61.199999999999996,
+          "endX": 174.68465039999995,
+          "text": "Aquarion Water Company of CT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Include your account number on your check to ensure prompt credit.",
+      "y": 615.6,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 541.2948000000001,
+          "text": "Include your account number on your check to ensure prompt credit."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO BOX 3664",
+      "y": 622.5432,
+      "cells": [
+        {
+          "x": 61.199999999999996,
+          "endX": 111.41097839999999,
+          "text": "PO BOX 3664"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PORTLAND ME 04104-3664",
+      "y": 632.1432,
+      "cells": [
+        {
+          "x": 61.199999999999996,
+          "endX": 163.6537536,
+          "text": "PORTLAND ME 04104-3664"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Mail Checks Payable to:",
+      "y": 669.6,
+      "cells": [
+        {
+          "x": 400.0008,
+          "endX": 490.2557736,
+          "text": "Mail Checks Payable to:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "21002004971560000001614927",
+      "y": 672.0816,
+      "cells": [
+        {
+          "x": 79.99992,
+          "endX": 267.21489599999995,
+          "text": "21002004971560000001614927"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Aquarion Water Company of CT",
+      "y": 705,
+      "cells": [
+        {
+          "x": 400.0008,
+          "endX": 519.7648224,
+          "text": "Aquarion Water Company of CT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO Box 9265",
+      "y": 715.0008,
+      "cells": [
+        {
+          "x": 400.0008,
+          "endX": 448.6679328,
+          "text": "PO Box 9265"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "CANAAN PARISH REDEVELOPMENT LP",
+      "y": 717.2927999999999,
+      "cells": [
+        {
+          "x": 90,
+          "endX": 270.2208,
+          "text": "CANAAN PARISH REDEVELOPMENT LP"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "186 LAKEVIEW AVE, OFC 1\tCHELSEA MA 02150-9265",
+      "y": 724.9992,
+      "cells": [
+        {
+          "x": 90,
+          "endX": 212.5824,
+          "text": "186 LAKEVIEW AVE, OFC 1"
+        },
+        {
+          "x": 400.0008,
+          "endX": 500.0227968,
+          "text": "CHELSEA MA 02150-9265"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "NEW CANAAN CT 06840-5979\tADTAFTDDDTAFFTFAFDATADFADAAFAFAADADDFTDTTATTFFDDAFTTTDDDAAADFDFFF",
+      "y": 734.88,
+      "cells": [
+        {
+          "x": 90,
+          "endX": 227.10720000000003,
+          "text": "NEW CANAAN CT 06840-5979"
+        },
+        {
+          "x": 400.0008,
+          "endX": 590.1258,
+          "text": "ADTAFTDDDTAFFTFAFDATADFADAAFAFAADADDFTDTTATTFFDDAFTTTDDDAAADFDFFF"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Enroll in E-Billing: www.aquarionwater.com. Visit www.aquarionwater.com for a complete list of our payment options.",
+      "y": 768,
+      "cells": [
+        {
+          "x": 58.559999999999995,
+          "endX": 550.87152,
+          "text": "Enroll in E-Billing: www.aquarionwater.com. Visit www.aquarionwater.com for a complete list of our payment options."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "oc\t100040436783\tX\t$1614.920\t000001NNNNNY",
+      "y": 784.8,
+      "cells": [
+        {
+          "x": 23.901912000000003,
+          "endX": 34.46275680000001,
+          "text": "oc"
+        },
+        {
+          "x": 100.0008,
+          "endX": 166.72613760000002,
+          "text": "100040436783"
+        },
+        {
+          "x": 199.9992,
+          "endX": 206.6697336,
+          "text": "X"
+        },
+        {
+          "x": 480,
+          "endX": 504.6672,
+          "text": "$1614.920"
+        },
+        {
+          "x": 560.64,
+          "endX": 569.7755999999999,
+          "text": "000001NNNNNY"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Account Number: 200497156",
+      "y": 27.51819999999998,
+      "cells": [
+        {
+          "x": 150,
+          "endX": 289.0392,
+          "text": "Account Number: 200497156"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Amount Due by 10/14/2026\t$1614.92",
+      "y": 36.673400000000015,
+      "cells": [
+        {
+          "x": 319,
+          "endX": 503.07504,
+          "text": "Total Amount Due by 10/14/2026"
+        },
+        {
+          "x": 525.626,
+          "endX": 575.9996,
+          "text": "$1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Statement Date: 09/17/26",
+      "y": 39.877200000000016,
+      "cells": [
+        {
+          "x": 150,
+          "endX": 282.0336,
+          "text": "Statement Date: 09/17/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Account Detail",
+      "y": 60.46199999999999,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 369.009,
+          "text": "Account Detail"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Previous Balance\t1446.23",
+      "y": 71.46199999999999,
+      "cells": [
+        {
+          "x": 318,
+          "endX": 387.759,
+          "text": "Previous Balance"
+        },
+        {
+          "x": 543.474,
+          "endX": 576,
+          "text": "1446.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Meter Usage Details\tPayment Received (09/09/2026), Thank You\t- 1446.23",
+      "y": 80.05200000000002,
+      "cells": [
+        {
+          "x": 30,
+          "endX": 163.042,
+          "text": "Meter Usage Details"
+        },
+        {
+          "x": 318,
+          "endX": 493.47300000000007,
+          "text": "Payment Received (09/09/2026), Thank You"
+        },
+        {
+          "x": 537.975,
+          "endX": 576,
+          "text": "- 1446.23"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Meter\tMeter\tCurrent\tReading\tNext\tOutstanding Balance\t0.00",
+      "y": 94.46199999999999,
+      "cells": [
+        {
+          "x": 31.4315,
+          "endX": 60.7685,
+          "text": "Meter"
+        },
+        {
+          "x": 85.6315,
+          "endX": 114.9685,
+          "text": "Meter"
+        },
+        {
+          "x": 134.64,
+          "endX": 174.361,
+          "text": "Current"
+        },
+        {
+          "x": 187.003,
+          "endX": 230.39799999999997,
+          "text": "Reading"
+        },
+        {
+          "x": 251.064,
+          "endX": 274.73599999999993,
+          "text": "Next"
+        },
+        {
+          "x": 306,
+          "endX": 396.01800000000003,
+          "text": "Outstanding Balance"
+        },
+        {
+          "x": 558.486,
+          "endX": 576,
+          "text": "0.00"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Number Reading\tUsage\tType\tReading",
+      "y": 104.85199999999998,
+      "cells": [
+        {
+          "x": 25.320999999999998,
+          "endX": 121.9975,
+          "text": "Number Reading"
+        },
+        {
+          "x": 137.99499999999998,
+          "endX": 171.00599999999997,
+          "text": "Usage"
+        },
+        {
+          "x": 196.19349999999997,
+          "endX": 221.20749999999998,
+          "text": "Type"
+        },
+        {
+          "x": 241.2025,
+          "endX": 284.59749999999997,
+          "text": "Reading"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Charges",
+      "y": 115.18000000000006,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 371.83000000000004,
+          "text": "Total Charges"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "70400270 (1) From / To\t21 CCF\tOn or about",
+      "y": 117.22900000000004,
+      "cells": [
+        {
+          "x": 19.334,
+          "endX": 119.06049999999999,
+          "text": "70400270 (1) From / To"
+        },
+        {
+          "x": 138.998,
+          "endX": 170.003,
+          "text": "21 CCF"
+        },
+        {
+          "x": 237.885,
+          "endX": 285.414,
+          "text": "On or about"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Actual",
+      "y": 121.279,
+      "cells": [
+        {
+          "x": 196.195,
+          "endX": 221.206,
+          "text": "Actual"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "432 / 453 (16 thou. g)\t10/17/26\tWater Service Charge\t190.72",
+      "y": 125.32899999999995,
+      "cells": [
+        {
+          "x": 80.284,
+          "endX": 177.5135,
+          "text": "432 / 453 (16 thou. g)"
+        },
+        {
+          "x": 245.38649999999998,
+          "endX": 280.4145,
+          "text": "10/17/26"
+        },
+        {
+          "x": 318,
+          "endX": 406.434,
+          "text": "Water Service Charge"
+        },
+        {
+          "x": 548.478,
+          "endX": 576,
+          "text": "190.72"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Water Usage Charge 313 ccf @ $4.149000\t1298.64",
+      "y": 134.462,
+      "cells": [
+        {
+          "x": 318,
+          "endX": 490.35900000000004,
+          "text": "Water Usage Charge 313 ccf @ $4.149000"
+        },
+        {
+          "x": 543.474,
+          "endX": 576,
+          "text": "1298.64"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service from 08/19/26 to 09/17/26 (30 days)",
+      "y": 139.192,
+      "cells": [
+        {
+          "x": 19,
+          "endX": 214.10000000000005,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Private Fire Service 6\" (1)\t118.64",
+      "y": 143.462,
+      "cells": [
+        {
+          "x": 318,
+          "endX": 420.897,
+          "text": "Private Fire Service 6\" (1)"
+        },
+        {
+          "x": 548.478,
+          "endX": 576,
+          "text": "118.64"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "WICA\t112.08",
+      "y": 152.462,
+      "cells": [
+        {
+          "x": 318,
+          "endX": 341.499,
+          "text": "WICA"
+        },
+        {
+          "x": 548.478,
+          "endX": 576,
+          "text": "112.08"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Meter\tMeter\tCurrent\tReading\tNext",
+      "y": 155.16200000000003,
+      "cells": [
+        {
+          "x": 31.4315,
+          "endX": 60.7685,
+          "text": "Meter"
+        },
+        {
+          "x": 85.6315,
+          "endX": 114.9685,
+          "text": "Meter"
+        },
+        {
+          "x": 134.64,
+          "endX": 174.361,
+          "text": "Current"
+        },
+        {
+          "x": 187.003,
+          "endX": 230.39799999999997,
+          "text": "Reading"
+        },
+        {
+          "x": 251.064,
+          "endX": 274.73599999999993,
+          "text": "Next"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Water Revenue Adjustment (WRA)\t- 105.16",
+      "y": 161.462,
+      "cells": [
+        {
+          "x": 318,
+          "endX": 456.591,
+          "text": "Water Revenue Adjustment (WRA)"
+        },
+        {
+          "x": 542.979,
+          "endX": 576.0000000000001,
+          "text": "- 105.16"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Number Reading\tUsage\tType\tReading",
+      "y": 165.062,
+      "cells": [
+        {
+          "x": 25.320999999999998,
+          "endX": 121.9975,
+          "text": "Number Reading"
+        },
+        {
+          "x": 137.99499999999998,
+          "endX": 171.00599999999997,
+          "text": "Usage"
+        },
+        {
+          "x": 196.19349999999997,
+          "endX": 221.20749999999998,
+          "text": "Type"
+        },
+        {
+          "x": 241.2025,
+          "endX": 284.59749999999997,
+          "text": "Reading"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "70400270 (2) From / To\t292 CCF\tOn or about\tTotal Current Charges\t1614.92",
+      "y": 175.462,
+      "cells": [
+        {
+          "x": 19.334,
+          "endX": 119.06049999999999,
+          "text": "70400270 (2) From / To"
+        },
+        {
+          "x": 136.496,
+          "endX": 172.505,
+          "text": "292 CCF"
+        },
+        {
+          "x": 237.885,
+          "endX": 285.414,
+          "text": "On or about"
+        },
+        {
+          "x": 306,
+          "endX": 400.248,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 543.474,
+          "endX": 576,
+          "text": "1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Actual",
+      "y": 181.48900000000003,
+      "cells": [
+        {
+          "x": 196.195,
+          "endX": 221.206,
+          "text": "Actual"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "2965 / 3257 (218 thou. g)\t10/17/26",
+      "y": 185.539,
+      "cells": [
+        {
+          "x": 75.28,
+          "endX": 180.0155,
+          "text": "2965 / 3257 (218 thou. g)"
+        },
+        {
+          "x": 245.38649999999998,
+          "endX": 280.4145,
+          "text": "10/17/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Balance Due By 10/14/2026\t$1614.92",
+      "y": 196.61599999999999,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 491.12399999999997,
+          "text": "Total Balance Due By 10/14/2026"
+        },
+        {
+          "x": 525.96,
+          "endX": 576,
+          "text": "$1614.92"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service from 08/19/26 to 09/17/26 (30 days)",
+      "y": 199.40200000000004,
+      "cells": [
+        {
+          "x": 19,
+          "endX": 214.10000000000005,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Contact Us:\tOur Mission:",
+      "y": 343,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 74.11,
+          "text": "Contact Us:"
+        },
+        {
+          "x": 306,
+          "endX": 367.11999999999995,
+          "text": "Our Mission:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "For billing questions, concerns, appointments, and general information,\tTo be the service provider, employer, and investment of choice through a",
+      "y": 351,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 268.7040000000001,
+          "text": "For billing questions, concerns, appointments, and general information,"
+        },
+        {
+          "x": 306,
+          "endX": 562.3839999999992,
+          "text": "To be the service provider, employer, and investment of choice through a"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "please call us during business hours (8:00 a.m. to 5:30 p.m., Monday\trelentless commitment to excellence.",
+      "y": 359,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 261.9999999999999,
+          "text": "please call us during business hours (8:00 a.m. to 5:30 p.m., Monday"
+        },
+        {
+          "x": 306,
+          "endX": 436.79199999999963,
+          "text": "relentless commitment to excellence."
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "through Friday) at (800) 732-9678 or local Bridgeport calling area at (203)",
+      "y": 367,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 278.0720000000002,
+          "text": "through Friday) at (800) 732-9678 or local Bridgeport calling area at (203)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "445-7310.\tPayments:",
+      "y": 375,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 54.024,
+          "text": "445-7310."
+        },
+        {
+          "x": 306,
+          "endX": 356.57,
+          "text": "Payments:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Enroll in E-Billing, Fast & Free!",
+      "y": 385,
+      "cells": [
+        {
+          "x": 306,
+          "endX": 414.15999999999985,
+          "text": "Enroll in E-Billing, Fast & Free!"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Email: CS@aquarionwater.com\twww.aquarionwater.com",
+      "y": 391,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 129.30400000000003,
+          "text": "Email: CS@aquarionwater.com"
+        },
+        {
+          "x": 306,
+          "endX": 392.69599999999986,
+          "text": "www.aquarionwater.com"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Mail inquiries (Not for Payments):\tMail Payment to:",
+      "y": 407,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 135.56800000000007,
+          "text": "Mail inquiries (Not for Payments):"
+        },
+        {
+          "x": 306,
+          "endX": 365.0159999999999,
+          "text": "Mail Payment to:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Aquarion Water Company of CT\tAquarion Water Company of CT",
+      "y": 415,
+      "cells": [
+        {
+          "x": 29.12,
+          "endX": 142.61599999999999,
+          "text": "Aquarion Water Company of CT"
+        },
+        {
+          "x": 306,
+          "endX": 419.4959999999997,
+          "text": "Aquarion Water Company of CT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "200 Monroe Tpke\tP.O. Box 9265",
+      "y": 423,
+      "cells": [
+        {
+          "x": 29.12,
+          "endX": 91.65600000000003,
+          "text": "200 Monroe Tpke"
+        },
+        {
+          "x": 306,
+          "endX": 356.0319999999999,
+          "text": "P.O. Box 9265"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Monroe, CT 06468\tChelsea MA, 02150-9265",
+      "y": 431,
+      "cells": [
+        {
+          "x": 29.12,
+          "endX": 95.69600000000003,
+          "text": "Monroe, CT 06468"
+        },
+        {
+          "x": 306,
+          "endX": 396.71199999999993,
+          "text": "Chelsea MA, 02150-9265"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "For After Hour Emergencies:\tSee our website for more options:",
+      "y": 449,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 154.32,
+          "text": "For After Hour Emergencies:"
+        },
+        {
+          "x": 306,
+          "endX": 425.2879999999997,
+          "text": "See our website for more options:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "(800) 732-9678 or local Bridgeport calling area at (203) 445-7310.\thttp://www.aquarionwater.com",
+      "y": 457,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 251.44,
+          "text": "(800) 732-9678 or local Bridgeport calling area at (203) 445-7310."
+        },
+        {
+          "x": 306,
+          "endX": 412.71199999999976,
+          "text": "http://www.aquarionwater.com"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "If you are dissatisfied with a response from our Customer Service Center,\tFor All Current Rates:",
+      "y": 473,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 277.328,
+          "text": "If you are dissatisfied with a response from our Customer Service Center,"
+        },
+        {
+          "x": 306,
+          "endX": 409.53,
+          "text": "For All Current Rates:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Aquarion’s Customer Advocate is available to take a fresh look at your\twww.aquarionwater.com",
+      "y": 481,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 265.232,
+          "text": "Aquarion’s Customer Advocate is available to take a fresh look at your"
+        },
+        {
+          "x": 306,
+          "endX": 392.69599999999986,
+          "text": "www.aquarionwater.com"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "concern. Please call our Customer Service Center at the number above and",
+      "y": 489,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 286.5999999999999,
+          "text": "concern. Please call our Customer Service Center at the number above and"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "ask for the Aquarion Customer Advocate.",
+      "y": 497,
+      "cells": [
+        {
+          "x": 18,
+          "endX": 163.84800000000007,
+          "text": "ask for the Aquarion Customer Advocate."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Customer Rights Notice",
+      "y": 124.58029999999997,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 201.61934799999992,
+          "text": "Customer Rights Notice"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Any customer who has a question or complaint or who disputes all or part of this bill should contact a",
+      "y": 138.50030000000004,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 544.134076,
+          "text": "Any customer who has a question or complaint or who disputes all or part of this bill should contact a"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "customer service representative at our Customer Service Center. If the customer remains unsatisfied,",
+      "y": 152.17538000000002,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 542.66896,
+          "text": "customer service representative at our Customer Service Center. If the customer remains unsatisfied,"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "he or she may ask to speak with the Supervisor of Customer Service or Aquarion's Customer",
+      "y": 165.73094000000003,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 500.92958799999974,
+          "text": "he or she may ask to speak with the Supervisor of Customer Service or Aquarion's Customer"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Advocate. If the company has mailed a termination notice to a customer and the customer has made",
+      "y": 179.40602,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 540.2666079999995,
+          "text": "Advocate. If the company has mailed a termination notice to a customer and the customer has made"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "a complaint to the company prior to the issuance of a termination notice, the customer may within 7",
+      "y": 192.96058400000004,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 538.3961200000005,
+          "text": "a complaint to the company prior to the issuance of a termination notice, the customer may within 7"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "days after receipt of such notice request that the complaint be referred to the Customer Advocate,",
+      "y": 206.63566400000002,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 529.3355079999998,
+          "text": "days after receipt of such notice request that the complaint be referred to the Customer Advocate,"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Aquarion's formal Review Officer. The Customer Advocate will review the complaint and respond to",
+      "y": 220.19122400000003,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 533.4639280000009,
+          "text": "Aquarion's formal Review Officer. The Customer Advocate will review the complaint and respond to"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "the customer in writing within 10 business days. If the dispute remains unresolved after receipt of the",
+      "y": 233.866304,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 544.2247120000006,
+          "text": "the customer in writing within 10 business days. If the dispute remains unresolved after receipt of the"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "written decision of the Customer Advocate, the customer may request a further investigation by the",
+      "y": 247.42186400000003,
+      "cells": [
+        {
+          "x": 72.02409999999998,
+          "endX": 535.6461639999995,
+          "text": "written decision of the Customer Advocate, the customer may request a further investigation by the"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Office of Consumer Affairs (OCA) for the Aquarion Water Authority.",
+      "y": 261.13678400000003,
+      "cells": [
+        {
+          "x": 72.02409999999998,
+          "endX": 382.9274920000003,
+          "text": "Office of Consumer Affairs (OCA) for the Aquarion Water Authority."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Right to Residential Utility Service During Serious Illness",
+      "y": 290.8106,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 379.97717200000034,
+          "text": "Right to Residential Utility Service During Serious Illness"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "If you or anyone presently and normally living in your home is seriously ill, we will not shut off your",
+      "y": 304.7306,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 531.1034080000009,
+          "text": "If you or anyone presently and normally living in your home is seriously ill, we will not shut off your"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "water service during such illness. Please complete the Physician's Certification of Illness form from",
+      "y": 318.28616,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 528.4241679999988,
+          "text": "water service during such illness. Please complete the Physician's Certification of Illness form from"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "our website at www.aquarionwater.com or contact us for a copy. You will be required to make an",
+      "y": 331.96124,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 523.4212599999996,
+          "text": "our website at www.aquarionwater.com or contact us for a copy. You will be required to make an"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "equitable arrangement to pay your past due bills and to pay on a current basis all future bills while",
+      "y": 345.5307,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 529.976931999999,
+          "text": "equitable arrangement to pay your past due bills and to pay on a current basis all future bills while"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "the illness continues. The Authority has the right to contest before the Office of Consumer Affairs",
+      "y": 359.20578,
+      "cells": [
+        {
+          "x": 72.02410000000003,
+          "endX": 523.2499480000012,
+          "text": "the illness continues. The Authority has the right to contest before the Office of Consumer Affairs"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "(OCA) the validity of any serious illness certificate it receives.",
+      "y": 372.76134,
+      "cells": [
+        {
+          "x": 72.02410000000003,
+          "endX": 351.48676000000086,
+          "text": "(OCA) the validity of any serious illness certificate it receives."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Los Derechos del cliente",
+      "y": 401.0908,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 204.68626000000003,
+          "text": "Los Derechos del cliente"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Cualquier cliente que tenga una pregunta o queja o que impugne la totalidad o parte de esta factura",
+      "y": 415.0108,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 539.0156319999999,
+          "text": "Cualquier cliente que tenga una pregunta o queja o que impugne la totalidad o parte de esta factura"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "debe comunicarse con un representante de servicio al cliente en nuestro Centro de Servicio al",
+      "y": 428.7108,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 508.6446040000012,
+          "text": "debe comunicarse con un representante de servicio al cliente en nuestro Centro de Servicio al"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Cliente. Si el cliente sigue insatisfecho, puede solicitar hablar con el Supervisor de Servicio al Cliente",
+      "y": 442.2709,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 534.211923999999,
+          "text": "Cliente. Si el cliente sigue insatisfecho, puede solicitar hablar con el Supervisor de Servicio al Cliente"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "o el Defensor del Cliente de Aquarion. Si la compañía ha enviado un aviso de terminación a un",
+      "y": 455.8309,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 509.82984399999975,
+          "text": "o el Defensor del Cliente de Aquarion. Si la compañía ha enviado un aviso de terminación a un"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "cliente y el cliente ha presentado una queja a la compañía antes de la emisión de un aviso de",
+      "y": 469.5109,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 504.04009599999927,
+          "text": "cliente y el cliente ha presentado una queja a la compañía antes de la emisión de un aviso de"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "terminación, el cliente puede dentro de los 7 días posteriores a la recepción de dicho aviso solicitar",
+      "y": 483.071,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 532.3245039999994,
+          "text": "terminación, el cliente puede dentro de los 7 días posteriores a la recepción de dicho aviso solicitar"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "que la queja se remita al Defensor del Cliente, el Oficial de Revisión formal de Aquarion. El Defensor",
+      "y": 496.751,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 536.4349959999987,
+          "text": "que la queja se remita al Defensor del Cliente, el Oficial de Revisión formal de Aquarion. El Defensor"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "del Cliente revisará la queja y responderá al cliente por escrito dentro de los 10 días hábiles. Si la",
+      "y": 510.311,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 521.2569520000001,
+          "text": "del Cliente revisará la queja y responderá al cliente por escrito dentro de los 10 días hábiles. Si la"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "disputa sigue sin resolverse después de recibir la decisión por escrito del Defensor del Cliente, el",
+      "y": 523.991,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 521.4262719999998,
+          "text": "disputa sigue sin resolverse después de recibir la decisión por escrito del Defensor del Cliente, el"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "cliente puede solicitar una investigación adicional por parte de la Oficina de Asuntos del",
+      "y": 537.5511,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 480.0026320000003,
+          "text": "cliente puede solicitar una investigación adicional por parte de la Oficina de Asuntos del"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Consumidor (OCA) de la Autoridad de Agua de Aquarion.",
+      "y": 551.231,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 335.82764800000007,
+          "text": "Consumidor (OCA) de la Autoridad de Agua de Aquarion."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Derecho al Suministro a Los Hogares Por Las Empresas de Servicio Público Durante",
+      "y": 580.8121,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 524.7325479999996,
+          "text": "Derecho al Suministro a Los Hogares Por Las Empresas de Servicio Público Durante"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Enfermedades Serias",
+      "y": 595.871764,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 186.88757199999992,
+          "text": "Enfermedades Serias"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Si usted o alguien que vive actualmente y normalmente en su hogar está gravemente enfermo, no",
+      "y": 609.9342,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 528.1761640000003,
+          "text": "Si usted o alguien que vive actualmente y normalmente en su hogar está gravemente enfermo, no"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "cortaremos su servicio de agua durante dicha enfermedad. Complete el formulario de Certificación",
+      "y": 623.520636,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 532.3533879999998,
+          "text": "cortaremos su servicio de agua durante dicha enfermedad. Complete el formulario de Certificación"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "de enfermedad del médico de nuestro sitio web en www.aquarionwater.com\u0003o contáctenos para",
+      "y": 637.107072,
+      "cells": [
+        {
+          "x": 72.0241,
+          "endX": 521.5228840000001,
+          "text": "de enfermedad del médico de nuestro sitio web en www.aquarionwater.com\u0003o contáctenos para"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "obtener una copia. Se le pedirá que haga un arreglo equitativo para pagar sus facturas vencidas y",
+      "y": 650.694504,
+      "cells": [
+        {
+          "x": 72.02310399999993,
+          "endX": 525.4381599999984,
+          "text": "obtener una copia. Se le pedirá que haga un arreglo equitativo para pagar sus facturas vencidas y"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "pagar sobre una base actual todas las facturas futuras mientras la enfermedad continúa. La",
+      "y": 664.281936,
+      "cells": [
+        {
+          "x": 72.02409999999993,
+          "endX": 498.72942400000005,
+          "text": "pagar sobre una base actual todas las facturas futuras mientras la enfermedad continúa. La"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Autoridad tiene el derecho de impugnar ante la Oficina de Asuntos del Consumidor (OCA)\u0003la validez",
+      "y": 677.869368,
+      "cells": [
+        {
+          "x": 72.02310399999993,
+          "endX": 533.9161120000002,
+          "text": "Autoridad tiene el derecho de impugnar ante la Oficina de Asuntos del Consumidor (OCA)\u0003la validez"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "de cualquier certificado de enfermedad grave que reciba.",
+      "y": 691.4568,
+      "cells": [
+        {
+          "x": 72.02310399999999,
+          "endX": 338.57262399999996,
+          "text": "de cualquier certificado de enfermedad grave que reciba."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "www.aquarionwater.com | 1-800-732-9678 | cs@aquarionwater.com",
+      "y": 779.5216,
+      "cells": [
+        {
+          "x": 123.3802,
+          "endX": 488.48624800000005,
+          "text": "www.aquarionwater.com | 1-800-732-9678 | cs@aquarionwater.com"
+        }
+      ]
+    }
+  ]
+}

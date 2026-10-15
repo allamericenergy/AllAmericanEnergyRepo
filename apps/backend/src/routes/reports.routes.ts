@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { masterAccountNumberRoutes } from "./masterAccountNumber.routes.js";
 import { meterDuplicatesRoutes } from "./meterDuplicates.routes.js";
 import { deleteUtility } from "../services/deleteUtility.js";
@@ -8,18 +7,12 @@ import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
-=======
-import { Router } from "express";
-import { z } from "zod";
-import bcrypt from "bcryptjs";
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 import { authenticate } from "../middleware/authenticate.js";
 import { authorize } from "../middleware/authorize.js";
 import { scopedOrgId } from "../middleware/tenant.js";
 import { prisma } from "../db/prisma.js";
 import { env } from "../config/env.js";
 import { demoAuditLogs, demoDeals } from "../demo/demoData.js";
-<<<<<<< HEAD
 import { addAccountReportsFolders, createCompanySharePointFolders, ensureContractsFolder, getSharePointFileContent, listCompanySharePointDocuments, uploadSharePointFile } from "../services/sharepointFolders.js";
 import { emailService } from "../services/emailService.js";
 import { contractUploadFileName } from "../services/contractFileName.js";
@@ -36,16 +29,6 @@ reportsRoutes.use("/master-account-numbers", masterAccountNumberRoutes);
 reportsRoutes.get("/pipeline", authorize("report:read"), async (req, res, next) => {
   try {
     if (req.user?.role === "member") return res.json({ data: [] });
-=======
-import { createCompanySharePointFolders, ensureContractsFolder, getSharePointFileContent, listCompanySharePointDocuments, uploadSharePointFile } from "../services/sharepointFolders.js";
-
-export const reportsRoutes = Router();
-
-reportsRoutes.use(authenticate);
-
-reportsRoutes.get("/pipeline", authorize("report:read"), async (req, res, next) => {
-  try {
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     if (env.DEMO_MODE) {
       const stages = new Map<string, { stage: string; _count: { id: number }; _sum: { amount: number } }>();
       for (const deal of demoDeals) {
@@ -129,7 +112,6 @@ reportsRoutes.get("/organizations", authorize("org:administer"), async (_req, re
   }
 });
 
-<<<<<<< HEAD
 reportsRoutes.post("/organizations/account-reports-folders", authorize("org:administer"), async (_req, res, next) => {
   try {
     const companies = await prisma.$queryRaw<Array<{ id: number; companyName: string; companyFolderId: string | null }>>`
@@ -742,41 +724,6 @@ reportsRoutes.get("/tbl-companies", authorize("report:read"), async (req, res, n
     return res.json({
       total: Number(countRows[0]?.total ?? 0),
       data: rows.map((row) => ({ ...row, notes: notesByCompany.get(String(row.id)) ?? "" }))
-=======
-reportsRoutes.get("/tbl-companies", authorize("report:read"), async (req, res, next) => {
-  try {
-    const take = Math.min(Number(req.query.take ?? 100), 500);
-    const countRows = await rawUnsafeRows<{ total: bigint | number }>("SELECT COUNT(*) AS total FROM dbo.tblCompany");
-    const rows = await rawUnsafeRows<Record<string, unknown>>(`
-      SELECT TOP (${take})
-        [id] AS id,
-        [organizationId] AS organizationId,
-        [Customer ID] AS customerId,
-        [Company Name] AS companyName,
-        [Legal Entity Name] AS legalEntityName,
-        [Mailing Address] AS mailingAddress,
-        [city] AS city,
-        [state] AS state,
-        [country] AS country,
-        [postalCode] AS postalCode,
-        [email] AS email,
-        [Phone Number] AS phoneNumber,
-        [Tax ID] AS taxId,
-        [URL] AS url,
-        [CompanyFolderID] AS companyFolderId,
-        [ContractFolderID] AS contractFolderId,
-        [UtilityBillsFolderID] AS utilityBillsFolderId,
-        [isActive] AS isActive,
-        [createdAt] AS createdAt,
-        [updatedAt] AS updatedAt
-      FROM dbo.tblCompany
-      ORDER BY [updatedAt] DESC
-    `);
-
-    return res.json({
-      total: Number(countRows[0]?.total ?? 0),
-      data: rows
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     });
   } catch (error) {
     return next(error);
@@ -786,11 +733,8 @@ reportsRoutes.get("/tbl-companies", authorize("report:read"), async (req, res, n
 reportsRoutes.get("/tbl-companies/:id/documents", authorize("report:read"), async (req, res, next) => {
   try {
     const id = z.coerce.number().int().positive().parse(req.params.id);
-<<<<<<< HEAD
     const scope = await memberCompanyScope(req.user);
     if (scope !== null && !scope.includes(id)) return res.status(404).json({ error: "Company not found" });
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const company = await findTblCompanyById(id);
     if (!company) return res.status(404).json({ error: "Company not found" });
 
@@ -800,11 +744,7 @@ reportsRoutes.get("/tbl-companies/:id/documents", authorize("report:read"), asyn
       utilityBillsFolderId: typeof company.utilityBillsFolderId === "string" ? company.utilityBillsFolderId : null
     });
 
-<<<<<<< HEAD
     return res.json({ ...documents, company: { id: company.id, companyName: company.companyName } });
-=======
-    return res.json(documents);
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
@@ -828,7 +768,6 @@ const emptyStringToUndefined = (value: unknown) => {
   return value;
 };
 
-<<<<<<< HEAD
 const emptyStringToNull = (value: unknown) => {
   if (typeof value === "string" && value.trim() === "") return null;
   return value;
@@ -840,10 +779,6 @@ const emptyParentCompanyToUndefined = (value: unknown) => {
 };
 
 const optionalText = z.preprocess(emptyStringToUndefined, z.string().trim().optional());
-=======
-const optionalText = z.preprocess(emptyStringToUndefined, z.string().trim().optional());
-const optionalNumber = z.preprocess(emptyStringToUndefined, z.coerce.number().optional());
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 const optionalPositiveInt = z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().optional());
 const optionalDate = z.preprocess(emptyStringToUndefined, z.coerce.date().optional());
 
@@ -866,7 +801,6 @@ const memberCreateSchema = z.object({
   company: optionalText,
   department: optionalText,
   designation: optionalText,
-<<<<<<< HEAD
   memberType: z.enum(["admin", "member", "user"]).optional(),
   notes: z.string().max(10000).default(""),
   password: z.string().min(12)
@@ -1127,12 +1061,6 @@ async function uniqueMemberLoginEmail(firstName: string, lastName: string) {
 }
 
 async function findTblContractById(id: number): Promise<Record<string, unknown> | undefined> {
-=======
-  password: z.string().min(12)
-});
-
-async function findTblContractById(id: number) {
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
     SELECT TOP (1)
       c.[id] AS id,
@@ -1143,12 +1071,9 @@ async function findTblContractById(id: number) {
       b.[Broker] AS broker,
       c.[Supplier] AS supplierId,
       s.[supplier] AS supplier,
-<<<<<<< HEAD
       c.[Swing] AS swingId,
       c.[PassThrough] AS passThroughId,
       c.[BillType] AS billTypeId,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       c.[Rate-kWh/therms] AS rate,
       c.[Fee-kWh/Dth] AS fee,
       c.[Start Date] AS startDate,
@@ -1171,7 +1096,6 @@ async function findTblContractById(id: number) {
     WHERE c.[id] = ${id}
   `;
 
-<<<<<<< HEAD
   const contract = rows[0];
   if (!contract) return undefined;
   const [note, swings, passThroughs, billTypes] = await Promise.all([
@@ -1192,16 +1116,12 @@ async function findTblContractById(id: number) {
     billType: lookupName(billTypes, contract.billTypeId),
     notes: note ? sanitizeCompanyNoteContent(note.content) : ""
   };
-=======
-  return rows[0];
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }
 
 reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) => {
   try {
     const take = Math.min(Number(req.query.take ?? 100), 500);
     const companyId = req.query.companyId ? z.coerce.number().int().positive().parse(req.query.companyId) : null;
-<<<<<<< HEAD
     const scope = await memberCompanyScope(req.user);
     if (companyId && scope !== null && !scope.includes(companyId)) {
       return res.json({ total: 0, data: [] });
@@ -1212,12 +1132,6 @@ reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) =
       status: { not: "deleted" },
       ...(companyFilter !== null ? { company: { in: companyFilter } } : {}),
       ...(scope !== null && !companyId ? { AND: [{ company: { in: scope.map(String) } }] } : {})
-=======
-    const companyFilter = companyId ? String(companyId) : undefined;
-    const where = {
-      role: { in: ["user", "member"] },
-      ...(companyFilter ? { company: companyFilter } : {})
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     };
     const [total, rows] = await Promise.all([
       prisma.user.count({ where }),
@@ -1230,12 +1144,9 @@ reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) =
           firstName: true,
           lastName: true,
           email: true,
-<<<<<<< HEAD
           username: true,
           temporaryPasswordEncrypted: req.user?.role === "superadmin",
           mustChangePassword: true,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
           phone: true,
           company: true,
           department: true,
@@ -1248,7 +1159,6 @@ reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) =
       })
     ]);
 
-<<<<<<< HEAD
     const companyIds = [...new Set(rows
       .map((row) => row.company?.trim() ?? "")
       .filter((value) => /^\d+$/.test(value))
@@ -1284,15 +1194,6 @@ reportsRoutes.get("/members", authorize("report:read"), async (req, res, next) =
         roleName: row.role === "admin" ? "Admin" : row.role === "member" ? "Member" : "User",
         isActive: row.status === "active",
         notes: notesByMember.get(String(row.id)) ?? ""
-=======
-    return res.json({
-      total,
-      data: rows.map((row: { company: string | null; role: string; status: string; [key: string]: unknown }) => ({
-        ...row,
-        companyId: row.company,
-        roleName: row.role === "member" ? "Member" : "User",
-        isActive: row.status === "active"
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       }))
     });
   } catch (error) {
@@ -1304,7 +1205,6 @@ reportsRoutes.post("/members", authorize("company:create"), async (req, res, nex
   try {
     requireMemberManager(req.user?.role);
     const input = memberCreateSchema.parse(req.body);
-<<<<<<< HEAD
     if (input.memberType === "admin" && req.user?.role !== "superadmin") {
       return res.status(403).json({ error: "Only Superadmin can create an Admin account." });
     }
@@ -1321,19 +1221,11 @@ reportsRoutes.post("/members", authorize("company:create"), async (req, res, nex
         lastName: input.lastName,
         email: deliveryEmail,
         username: loginEmail,
-=======
-    await prisma.user.create({
-      data: {
-        firstName: input.firstName,
-        lastName: input.lastName,
-        email: input.email.toLowerCase(),
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         phone: input.phone ?? null,
         company: input.companyId ? String(input.companyId) : input.company ?? null,
         department: input.department ?? null,
         designation: input.designation ?? null,
         passwordHash: await bcrypt.hash(input.password, 12),
-<<<<<<< HEAD
         temporaryPasswordEncrypted: encryptMemberPassword(input.password),
         role: input.memberType ?? "member",
         status: "active",
@@ -1411,23 +1303,11 @@ reportsRoutes.patch("/members/:id", authorize("company:update"), async (req, res
     });
     await saveMemberNote(id, input.notes, req.user);
     return res.json({ ok: true });
-=======
-        role: "member",
-        status: "active",
-        emailVerified: true,
-        orgId: req.user?.orgId ?? null,
-        createdBy: req.user?.id
-      }
-    });
-
-    return res.status(201).json({ ok: true });
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
 });
 
-<<<<<<< HEAD
 reportsRoutes.delete("/members/:id", authorize("company:delete"), async (req, res, next) => {
   try {
     requireMemberManager(req.user?.role);
@@ -1487,36 +1367,6 @@ async function findTblCompanyById(id: number): Promise<Record<string, unknown> |
   `;
   const note = notes[0];
   return { ...(company as Record<string, unknown>), notes: note ? sanitizeCompanyNoteContent(note.content) : "" };
-=======
-async function findTblCompanyById(id: number) {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT TOP (1)
-      [id] AS id,
-      [organizationId] AS organizationId,
-      [Customer ID] AS customerId,
-      [Company Name] AS companyName,
-      [Legal Entity Name] AS legalEntityName,
-      [Mailing Address] AS mailingAddress,
-      [city] AS city,
-      [state] AS state,
-      [country] AS country,
-      [postalCode] AS postalCode,
-      [email] AS email,
-      [Phone Number] AS phoneNumber,
-      [Tax ID] AS taxId,
-      [URL] AS url,
-      [CompanyFolderID] AS companyFolderId,
-      [ContractFolderID] AS contractFolderId,
-      [UtilityBillsFolderID] AS utilityBillsFolderId,
-      [isActive] AS isActive,
-      [createdAt] AS createdAt,
-      [updatedAt] AS updatedAt
-    FROM dbo.tblCompany
-    WHERE [id] = ${id}
-  `;
-
-  return rows[0];
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }
 
 async function resolveContractFolderId(company: Record<string, unknown> | null | undefined) {
@@ -1580,18 +1430,11 @@ async function upsertCompanyContractRelation(companyId: number | undefined, cont
   `;
 }
 
-<<<<<<< HEAD
 async function findTblMeterById(id: number): Promise<Record<string, unknown> | undefined> {
   const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
     SELECT TOP (1)
       m.[id] AS id,
       m.[Utility Account Name] AS utilityAccountName,
-=======
-async function findTblMeterById(id: number) {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT TOP (1)
-      m.[id] AS id,
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       m.[Account Number] AS accountNumber,
       m.[Service Ref/POD] AS serviceRefPod,
       m.[Name Key] AS nameKey,
@@ -1619,11 +1462,8 @@ async function findTblMeterById(id: number) {
       p.[Product] AS product,
       m.[UtilityId] AS utilityId,
       u.[Utility] AS utility,
-<<<<<<< HEAD
       u.[AccountNumberSize] AS accountNumberSize,
       u.[ServiceRefSize] AS serviceRefSize,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       m.[IsActive] AS isActive,
       m.[CreatedAt] AS createdAt,
       m.[UpdatedAt] AS updatedAt
@@ -1636,7 +1476,6 @@ async function findTblMeterById(id: number) {
     WHERE m.[id] = ${id}
   `;
 
-<<<<<<< HEAD
   const meter = rows[0];
   if (!meter) return undefined;
   const note = await prisma.note.findFirst({
@@ -1691,14 +1530,10 @@ async function legacyRateLookupRows() {
     FROM ${table}
     ORDER BY ${sqlIdentifier(utilityColumn.name)}, ${sqlIdentifier(nameColumn.name)}
   `);
-=======
-  return rows[0];
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }
 
 reportsRoutes.get("/contract-lookups", authorize("report:read"), async (_req, res, next) => {
   try {
-<<<<<<< HEAD
     const [brokers, suppliers, swings, passThroughs, billTypes, products] = await Promise.all([
       legacyLookupRows("tbl_Broker", ["Broker", "Name"]),
       legacyLookupRows("tbl_Supplier", ["Supplier", "Name"]),
@@ -1709,22 +1544,6 @@ reportsRoutes.get("/contract-lookups", authorize("report:read"), async (_req, re
     ]);
 
     return res.json({ brokers, suppliers, swings, passThroughs, billTypes, products });
-=======
-    const [brokers, suppliers] = await Promise.all([
-      prisma.$queryRaw<Array<Record<string, unknown>>>`
-        SELECT [id] AS id, [Broker] AS name
-        FROM dbo.tbl_Broker
-        ORDER BY [Broker]
-      `,
-      prisma.$queryRaw<Array<Record<string, unknown>>>`
-        SELECT [id] AS id, [supplier] AS name
-        FROM dbo.tbl_Supplier
-        ORDER BY [supplier]
-      `
-    ]);
-
-    return res.json({ brokers, suppliers });
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
@@ -1732,29 +1551,20 @@ reportsRoutes.get("/contract-lookups", authorize("report:read"), async (_req, re
 
 reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const take = z.coerce.number().int().min(1).max(500).default(100).parse(req.query.take);
     const skip = z.coerce.number().int().min(0).default(0).parse(req.query.skip);
     const meterId = req.query.meterId ? z.coerce.number().int().positive().parse(req.query.meterId) : null;
     const companyId = req.query.companyId ? z.coerce.number().int().positive().parse(req.query.companyId) : null;
     const scope = await memberCompanyScope(req.user);
     const whereClause = `WHERE ${memberCompanyFilter("cmc.[companyId]", scope)}${companyId ? ` AND cmc.[companyId] = ${companyId}` : ""}${meterId ? " AND cmc.[companyId] IS NOT NULL" : ""}`;
-=======
-    const take = Math.min(Number(req.query.take ?? 100), 500);
-    const companyId = req.query.companyId ? z.coerce.number().int().positive().parse(req.query.companyId) : null;
-    const whereClause = companyId ? `WHERE cmc.[companyId] = ${companyId}` : "";
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const contractCompanyApply = `
       OUTER APPLY (
         SELECT TOP (1) link.[CompanyID] AS companyId
         FROM dbo.tbl_CompanyMeterContract link
         WHERE link.[ContractID] = c.[id]
-<<<<<<< HEAD
           AND ${memberCompanyFilter("link.[CompanyID]", scope)}
           ${companyId ? `AND link.[CompanyID] = ${companyId}` : ""}
           ${meterId ? `AND link.[MeterID] = ${meterId}` : ""}
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       ) cmc
     `;
     const countRows = await rawUnsafeRows<{ total: bigint | number }>(`
@@ -1764,11 +1574,7 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
       ${whereClause}
     `);
     const rows = await rawUnsafeRows<Record<string, unknown>>(`
-<<<<<<< HEAD
       SELECT
-=======
-      SELECT TOP (${take})
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         c.[id] AS id,
         c.[ContractID] AS contractId,
         cmc.[companyId] AS companyId,
@@ -1777,12 +1583,9 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
         b.[Broker] AS broker,
         c.[Supplier] AS supplierId,
         s.[supplier] AS supplier,
-<<<<<<< HEAD
         c.[Swing] AS swingId,
         c.[PassThrough] AS passThroughId,
         c.[BillType] AS billTypeId,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         c.[Rate-kWh/therms] AS rate,
         c.[Fee-kWh/Dth] AS fee,
         c.[Start Date] AS startDate,
@@ -1799,7 +1602,6 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
       LEFT JOIN dbo.tbl_Broker b ON c.[Broker] = b.[id]
       LEFT JOIN dbo.tbl_Supplier s ON c.[Supplier] = s.[id]
       ${whereClause}
-<<<<<<< HEAD
       ORDER BY c.[updatedAt] DESC, c.[id] DESC
       OFFSET ${skip} ROWS FETCH NEXT ${take} ROWS ONLY
     `);
@@ -1833,14 +1635,6 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
         billType: billTypeNames.get(String(row.billTypeId)) ?? null,
         notes: notesByContract.get(String(row.id)) ?? ""
       }))
-=======
-      ORDER BY c.[updatedAt] DESC
-    `);
-
-    return res.json({
-      total: Number(countRows[0]?.total ?? 0),
-      data: rows
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     });
   } catch (error) {
     return next(error);
@@ -1849,46 +1643,30 @@ reportsRoutes.get("/contracts", authorize("report:read"), async (req, res, next)
 
 reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const scope = await memberCompanyScope(req.user);
     const take = z.coerce.number().int().min(1).max(500).default(100).parse(req.query.take);
     const skip = z.coerce.number().int().min(0).default(0).parse(req.query.skip);
     const contractId = req.query.contractId ? z.coerce.number().int().positive().parse(req.query.contractId) : null;
-=======
-    const take = Math.min(Number(req.query.take ?? 100), 500);
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const companyId = req.query.companyId ? z.coerce.number().int().positive().parse(req.query.companyId) : null;
     const state = req.query.state ? z.string().trim().min(1).parse(req.query.state) : null;
     const utilityId = req.query.utilityId ? z.coerce.number().int().positive().parse(req.query.utilityId) : null;
     const productId = req.query.productId ? z.coerce.number().int().positive().parse(req.query.productId) : null;
     const filters = [
-<<<<<<< HEAD
       memberCompanyFilter("m.[CompanyID]", scope),
       companyId ? `m.[CompanyID] = ${companyId}` : null,
       state ? `m.[State] = '${state.replace(/'/g, "''")}'` : null,
       utilityId ? `m.[UtilityId] = ${utilityId}` : null,
       productId ? `m.[ProductId] = ${productId}` : null,
       contractId ? `EXISTS (SELECT 1 FROM dbo.tbl_CompanyMeterContract link WHERE link.[MeterID] = m.[id] AND link.[CompanyID] = m.[CompanyID] AND link.[ContractID] = ${contractId})` : null
-=======
-      companyId ? `m.[CompanyID] = ${companyId}` : null,
-      state ? `m.[State] = '${state.replace(/'/g, "''")}'` : null,
-      utilityId ? `m.[UtilityId] = ${utilityId}` : null,
-      productId ? `m.[ProductId] = ${productId}` : null
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     ].filter(Boolean);
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
     const countRows = await rawUnsafeRows<{ total: bigint | number }>(
       `SELECT COUNT(*) AS total FROM dbo.tbl_MeterList m ${whereClause}`
     );
     const rows = await rawUnsafeRows<Record<string, unknown>>(`
-<<<<<<< HEAD
       SELECT
         m.[id] AS id,
         m.[Utility Account Name] AS utilityAccountName,
-=======
-      SELECT TOP (${take})
-        m.[id] AS id,
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         m.[Account Number] AS accountNumber,
         m.[Service Ref/POD] AS serviceRefPod,
         m.[Name Key] AS nameKey,
@@ -1916,14 +1694,11 @@ reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) =>
         p.[Product] AS product,
         m.[UtilityId] AS utilityId,
         u.[Utility] AS utility,
-<<<<<<< HEAD
         man.[AccountNumber] AS masterAccountNumber,
         man.[MasterAccountNumber] AS masterAccountNumberType,
         man.[ServiceRefPodId] AS masterServiceRefPodId,
         u.[AccountNumberSize] AS accountNumberSize,
         u.[ServiceRefSize] AS serviceRefSize,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         m.[IsActive] AS isActive,
         m.[CreatedAt] AS createdAt,
         m.[UpdatedAt] AS updatedAt
@@ -1932,7 +1707,6 @@ reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) =>
       LEFT JOIN dbo.tbl_Type t ON m.[TypeId] = t.[id]
       LEFT JOIN dbo.tbl_Product p ON m.[ProductId] = p.[id]
       LEFT JOIN dbo.tbl_Utility u ON m.[UtilityId] = u.[id]
-<<<<<<< HEAD
       LEFT JOIN dbo.tblMasterAccountNumber man ON m.[UtilityId] = man.[UtilityId]
       LEFT JOIN dbo.tbl_Status st ON m.[StatusId] = st.[id]
       ${whereClause}
@@ -1954,16 +1728,6 @@ reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) =>
     return res.json({
       total: Number(countRows[0]?.total ?? 0),
       data: rows.map((row) => ({ ...row, notes: notesByMeter.get(String(row.id)) ?? "" }))
-=======
-      LEFT JOIN dbo.tbl_Status st ON m.[StatusId] = st.[id]
-      ${whereClause}
-      ORDER BY m.[UpdatedAt] DESC
-    `);
-
-    return res.json({
-      total: Number(countRows[0]?.total ?? 0),
-      data: rows
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     });
   } catch (error) {
     return next(error);
@@ -1972,17 +1736,12 @@ reportsRoutes.get("/meters", authorize("report:read"), async (req, res, next) =>
 
 reportsRoutes.get("/meter-lookups", authorize("report:read"), async (_req, res, next) => {
   try {
-<<<<<<< HEAD
     const [iEnergyBills, energyDashboards, onSiteGenerations, types, products, utilities, statuses, taxExempts, rates] = await Promise.all([
-=======
-    const [iEnergyBills, energyDashboards, onSiteGenerations, types, products, utilities, statuses] = await Promise.all([
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Type] AS name FROM dbo.tbl_iEnergyBill ORDER BY [Type]`,
       prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Type] AS name FROM dbo.tbl_EnergyDashboard ORDER BY [Type]`,
       prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Type] AS name FROM dbo.tbl_OnSiteGeneration ORDER BY [Type]`,
       prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Type] AS name FROM dbo.tbl_Type ORDER BY [Type]`,
       prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Product] AS name FROM dbo.tbl_Product ORDER BY [Product]`,
-<<<<<<< HEAD
       prisma.$queryRaw<Array<Record<string, unknown>>>`
         SELECT
           u.[id] AS id,
@@ -2001,13 +1760,6 @@ reportsRoutes.get("/meter-lookups", authorize("report:read"), async (_req, res, 
     ]);
 
     return res.json({ iEnergyBills, energyDashboards, onSiteGenerations, types, products, utilities, statuses, taxExempts, rates });
-=======
-      prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Utility] AS name FROM dbo.tbl_Utility ORDER BY [Utility]`,
-      prisma.$queryRaw<Array<Record<string, unknown>>>`SELECT [id] AS id, [Status] AS name FROM dbo.tbl_Status ORDER BY [Status]`
-    ]);
-
-    return res.json({ iEnergyBills, energyDashboards, onSiteGenerations, types, products, utilities, statuses });
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
@@ -2121,7 +1873,6 @@ reportsRoutes.get("/us-cities", authorize("report:read"), async (req, res, next)
   }
 });
 
-<<<<<<< HEAD
 reportsRoutes.get("/zip-code-details", authorize("report:read"), async (req, res, next) => {
   try {
     const zip = z.string().trim().min(1).max(20).parse(req.query.zip);
@@ -2146,8 +1897,6 @@ reportsRoutes.get("/zip-code-details", authorize("report:read"), async (req, res
   }
 });
 
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 reportsRoutes.get("/zip-codes", authorize("report:read"), async (req, res, next) => {
   try {
     const state = z.string().trim().min(1).parse(req.query.state);
@@ -2174,7 +1923,6 @@ reportsRoutes.get("/zip-codes", authorize("report:read"), async (req, res, next)
   }
 });
 
-<<<<<<< HEAD
 const locationStateSchema = z.object({
   name: z.string().trim().min(1, "State name is required").max(100),
   code: z.string().trim().length(2, "State code must be 2 characters").transform((value) => value.toUpperCase()),
@@ -2493,16 +2241,11 @@ const optionalMeterLookupId = z.preprocess(
 const tblMeterCreateSchema = z.object({
   companyId: z.coerce.number().int().positive(),
   utilityAccountName: z.string().trim().optional(),
-=======
-const tblMeterCreateSchema = z.object({
-  companyId: z.coerce.number().int().positive(),
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   accountNumber: optionalText,
   serviceRefPod: optionalText,
   nameKey: optionalText,
   meter: optionalText,
   serviceAddress: optionalText,
-<<<<<<< HEAD
   city: z.preprocess(emptyStringToUndefined, z.string().trim().max(150).optional()),
   state: z.preprocess(emptyStringToUndefined, z.string().trim().max(100).optional()),
   zip: z.preprocess(emptyStringToUndefined, z.string().trim().max(10).optional()),
@@ -2520,30 +2263,11 @@ const tblMeterCreateSchema = z.object({
   utilityId: optionalMeterLookupId,
   statusId: optionalMeterLookupId,
   notes: z.string().max(10000).optional(),
-=======
-  city: optionalText,
-  state: optionalText,
-  zip: optionalText,
-  taxExempt: optionalText,
-  cycleReadDay: optionalText,
-  rate: optionalText,
-  demand: optionalText,
-  annualUsage: optionalText,
-  loadProfile: optionalText,
-  iEnergyBillId: optionalPositiveInt,
-  energyDashboardId: optionalPositiveInt,
-  onSiteGenerationId: optionalPositiveInt,
-  typeId: optionalPositiveInt,
-  productId: optionalPositiveInt,
-  utilityId: optionalPositiveInt,
-  statusId: optionalPositiveInt,
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   isActive: z.boolean().default(true)
 });
 
 const tblMeterUpdateSchema = tblMeterCreateSchema.partial();
 
-<<<<<<< HEAD
 async function validateUtilityMeterValueSizes(input: {
   utilityId?: number | null;
   accountNumber?: string | null;
@@ -2769,14 +2493,6 @@ async function createTblMeter(input: z.infer<typeof tblMeterCreateSchema>, user:
   const rows = await prisma.$queryRaw<Array<{ id: number }>>`
       INSERT INTO dbo.tbl_MeterList (
         [Utility Account Name],
-=======
-reportsRoutes.post("/meters", authorize("company:create"), async (req, res, next) => {
-  try {
-    const input = tblMeterCreateSchema.parse(req.body);
-    const now = new Date();
-    await prisma.$executeRaw`
-      INSERT INTO dbo.tbl_MeterList (
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Account Number],
         [Service Ref/POD],
         [Name Key],
@@ -2803,7 +2519,6 @@ reportsRoutes.post("/meters", authorize("company:create"), async (req, res, next
         [CreatedAt],
         [UpdatedAt]
       )
-<<<<<<< HEAD
       OUTPUT INSERTED.[id] AS id
       VALUES (
         ${input.utilityAccountName || null},
@@ -2815,17 +2530,6 @@ reportsRoutes.post("/meters", authorize("company:create"), async (req, res, next
         ${location?.city ?? input.city ?? null},
         ${location?.state ?? input.state ?? null},
         ${location?.zip ?? input.zip ?? null},
-=======
-      VALUES (
-        ${input.accountNumber ?? null},
-        ${input.serviceRefPod ?? null},
-        ${input.nameKey ?? null},
-        ${input.meter ?? null},
-        ${input.serviceAddress ?? null},
-        ${input.city ?? null},
-        ${input.state ?? null},
-        ${input.zip ?? null},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         ${input.taxExempt ?? null},
         ${input.cycleReadDay ?? null},
         ${input.rate ?? null},
@@ -2846,7 +2550,6 @@ reportsRoutes.post("/meters", authorize("company:create"), async (req, res, next
       )
     `;
 
-<<<<<<< HEAD
   const meterId = Number(rows[0]?.id);
   if (!meterId) throw new Error("Meter was inserted but its ID was not returned");
   await saveMeterNote(meterId, input.notes, user);
@@ -2930,9 +2633,6 @@ reportsRoutes.patch("/meters/bulk-status", authorize("company:update"), async (r
     `);
 
     return res.json({ updated, isActive: input.isActive });
-=======
-    return res.status(201).json({ ok: true });
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
@@ -2945,7 +2645,6 @@ reportsRoutes.patch("/meters/:id", authorize("company:update"), async (req, res,
     if (!current) return res.status(404).json({ error: "Meter not found" });
 
     const input = tblMeterUpdateSchema.parse(req.body);
-<<<<<<< HEAD
     const utilityRules = await validateUtilityMeterValueSizes({
       utilityId: input.utilityId ?? Number(current.utilityId || 0),
       accountNumber: input.accountNumber === undefined ? String(current.accountNumber ?? "") : input.accountNumber,
@@ -2971,19 +2670,6 @@ reportsRoutes.patch("/meters/:id", authorize("company:update"), async (req, res,
         [City] = ${location?.city ?? input.city ?? current.city ?? null},
         [State] = ${location?.state ?? input.state ?? current.state ?? null},
         [Zip] = ${location?.zip ?? input.zip ?? current.zip ?? null},
-=======
-    await prisma.$executeRaw`
-      UPDATE dbo.tbl_MeterList
-      SET
-        [Account Number] = ${input.accountNumber ?? current.accountNumber ?? null},
-        [Service Ref/POD] = ${input.serviceRefPod ?? current.serviceRefPod ?? null},
-        [Name Key] = ${input.nameKey ?? current.nameKey ?? null},
-        [Meter] = ${input.meter ?? current.meter ?? null},
-        [Service Address] = ${input.serviceAddress ?? current.serviceAddress ?? null},
-        [City] = ${input.city ?? current.city ?? null},
-        [State] = ${input.state ?? current.state ?? null},
-        [Zip] = ${input.zip ?? current.zip ?? null},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Tax Exempt] = ${input.taxExempt ?? current.taxExempt ?? null},
         [Cycle/Read Day] = ${input.cycleReadDay ?? current.cycleReadDay ?? null},
         [Rate] = ${input.rate ?? current.rate ?? null},
@@ -3003,17 +2689,13 @@ reportsRoutes.patch("/meters/:id", authorize("company:update"), async (req, res,
       WHERE [id] = ${id}
     `;
 
-<<<<<<< HEAD
     await saveMeterNote(id, input.notes, req.user);
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     return res.json({ data: await findTblMeterById(id) });
   } catch (error) {
     return next(error);
   }
 });
 
-<<<<<<< HEAD
 const decimalCurrencyInput = z.preprocess(
   (value) => value === null || value === undefined ? value : String(value).trim(),
   z.string().regex(/^\d+(?:\.\d+)?$/, "Must be a valid decimal value").refine((value) => Number.isFinite(Number(value)), "Must be a valid decimal value")
@@ -3032,37 +2714,20 @@ const tblContractBaseSchema = z.object({
   fee: decimalCurrencyInput,
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-=======
-const tblContractCreateSchema = z.object({
-  companyId: optionalPositiveInt,
-  brokerId: optionalPositiveInt,
-  supplierId: optionalPositiveInt,
-  meterIds: z.array(z.coerce.number().int().positive()).default([]),
-  rate: optionalNumber,
-  fee: optionalNumber,
-  startDate: optionalDate,
-  endDate: optionalDate,
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   cFile: optionalText,
   contractFile: z.object({
     name: z.string().trim().min(1),
     contentType: z.string().trim().optional(),
-<<<<<<< HEAD
     contentBase64: z.string().trim().min(1).refine(
       (value) => Buffer.from(value, "base64").length <= 15 * 1024 * 1024,
       "Contract file must be 15 MB or smaller."
     )
   }).optional(),
   notes: z.string().max(10000).refine((value) => value.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim().length > 0, "Notes are required"),
-=======
-    contentBase64: z.string().trim().min(1)
-  }).optional(),
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   isActive: z.boolean().default(true),
   onDate: optionalDate
 });
 
-<<<<<<< HEAD
 const tblContractCreateSchema = tblContractBaseSchema.superRefine((input, context) => {
   if (input.endDate < input.startDate) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["endDate"], message: "End date cannot be before start date" });
@@ -3096,9 +2761,6 @@ async function saveContractNote(contractId: number, content: string | undefined,
     data: { orgId: user.orgId, userId: user.id, relatedType: "contract", relatedId: String(contractId), content: sanitizedContent }
   });
 }
-=======
-const tblContractUpdateSchema = tblContractCreateSchema.partial();
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 
 reportsRoutes.post("/contracts", authorize("company:create"), async (req, res, next) => {
   try {
@@ -3109,7 +2771,6 @@ reportsRoutes.post("/contracts", authorize("company:create"), async (req, res, n
       return res.status(400).json({ error: "Company ContractFolderID or CompanyFolderID is required to upload contract files." });
     }
 
-<<<<<<< HEAD
     const productName = await findTblProductNameById(input.productId);
     const companyName = typeof company?.companyName === "string" ? company.companyName : "";
     const renamedContractFile = input.contractFile && productName && companyName
@@ -3126,22 +2787,15 @@ reportsRoutes.post("/contracts", authorize("company:create"), async (req, res, n
       : input.contractFile;
     const uploadedFile = renamedContractFile && contractFolderId
       ? await uploadSharePointFile(contractFolderId, renamedContractFile)
-=======
-    const uploadedFile = input.contractFile && contractFolderId
-      ? await uploadSharePointFile(contractFolderId, input.contractFile)
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       : null;
     const now = new Date();
     const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
       INSERT INTO dbo.tbl_Contract (
         [Broker],
         [Supplier],
-<<<<<<< HEAD
         [Swing],
         [PassThrough],
         [BillType],
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Rate-kWh/therms],
         [Fee-kWh/Dth],
         [Start Date],
@@ -3156,16 +2810,11 @@ reportsRoutes.post("/contracts", authorize("company:create"), async (req, res, n
       VALUES (
         ${input.brokerId ?? null},
         ${input.supplierId ?? null},
-<<<<<<< HEAD
         ${input.swingId ?? null},
         ${input.passThroughId ?? null},
         ${input.billTypeId ?? null},
         CAST(${input.rate ?? null} AS DECIMAL(19,8)),
         CAST(${input.fee ?? null} AS DECIMAL(19,8)),
-=======
-        ${input.rate ?? null},
-        ${input.fee ?? null},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         ${input.startDate ?? null},
         ${input.endDate ?? null},
         ${uploadedFile?.name ?? input.cFile ?? null},
@@ -3178,17 +2827,13 @@ reportsRoutes.post("/contracts", authorize("company:create"), async (req, res, n
 
     const contractId = Number(rows[0]?.id);
     await upsertCompanyContractRelation(input.companyId, contractId, input.meterIds);
-<<<<<<< HEAD
     await saveContractNote(contractId, input.notes, req.user);
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     return res.status(201).json({ data: await findTblContractById(contractId) });
   } catch (error) {
     return next(error);
   }
 });
 
-<<<<<<< HEAD
 reportsRoutes.patch("/contracts/bulk-status", authorize("company:update"), async (req, res, next) => {
   try {
     const input = z.object({
@@ -3209,8 +2854,6 @@ reportsRoutes.patch("/contracts/bulk-status", authorize("company:update"), async
   }
 });
 
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 reportsRoutes.patch("/contracts/:id", authorize("company:update"), async (req, res, next) => {
   try {
     const id = z.coerce.number().int().positive().parse(req.params.id);
@@ -3234,16 +2877,11 @@ reportsRoutes.patch("/contracts/:id", authorize("company:update"), async (req, r
       SET
         [Broker] = ${input.brokerId ?? current.brokerId ?? null},
         [Supplier] = ${input.supplierId ?? current.supplierId ?? null},
-<<<<<<< HEAD
         [Swing] = ${input.swingId ?? current.swingId ?? null},
         [PassThrough] = ${input.passThroughId ?? current.passThroughId ?? null},
         [BillType] = ${input.billTypeId ?? current.billTypeId ?? null},
         [Rate-kWh/therms] = CAST(${input.rate ?? current.rate ?? null} AS DECIMAL(19,8)),
         [Fee-kWh/Dth] = CAST(${input.fee ?? current.fee ?? null} AS DECIMAL(19,8)),
-=======
-        [Rate-kWh/therms] = ${input.rate ?? current.rate ?? null},
-        [Fee-kWh/Dth] = ${input.fee ?? current.fee ?? null},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Start Date] = ${input.startDate ?? current.startDate ?? null},
         [End Date] = ${input.endDate ?? current.endDate ?? null},
         [cFile] = ${uploadedFile?.name ?? input.cFile ?? current.cFile ?? null},
@@ -3254,10 +2892,7 @@ reportsRoutes.patch("/contracts/:id", authorize("company:update"), async (req, r
     `;
 
     await upsertCompanyContractRelation(input.companyId, id, input.meterIds);
-<<<<<<< HEAD
     await saveContractNote(id, input.notes, req.user);
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     return res.json({ data: await findTblContractById(id) });
   } catch (error) {
     return next(error);
@@ -3266,7 +2901,6 @@ reportsRoutes.patch("/contracts/:id", authorize("company:update"), async (req, r
 
 const tblCompanyCreateSchema = z.object({
   organizationId: z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().default(1)),
-<<<<<<< HEAD
   parentCompanyId: z.preprocess(emptyParentCompanyToUndefined, z.coerce.number().int().positive().optional()),
   companyName: z.string().trim().min(1, "Company name is required"),
   legalEntityName: z.string().trim().min(1, "Legal name is required"),
@@ -3280,24 +2914,10 @@ const tblCompanyCreateSchema = z.object({
   taxId: optionalText,
   url: optionalText,
   notes: z.string().max(1000).default(""),
-=======
-  companyName: z.string().trim().min(1, "Company name is required"),
-  legalEntityName: optionalText,
-  mailingAddress: optionalText,
-  city: optionalText,
-  state: optionalText,
-  country: optionalText,
-  postalCode: optionalText,
-  email: z.preprocess(emptyStringToUndefined, z.string().trim().email("Enter a valid email address").optional()),
-  phoneNumber: optionalText,
-  taxId: optionalText,
-  url: optionalText,
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   isActive: z.boolean().default(true)
 });
 
 const tblCompanyUpdateSchema = z.object({
-<<<<<<< HEAD
   parentCompanyId: z.preprocess(emptyStringToNull, z.coerce.number().int().positive().nullable().optional()),
   companyName: z.string().trim().min(1, "Company name is required"),
   legalEntityName: z.string().trim().min(1, "Legal name is required"),
@@ -3478,98 +3098,6 @@ reportsRoutes.patch("/tbl-companies/bulk-status", authorize("company:update"), a
     `);
 
     return res.json({ updated, isActive: input.isActive });
-=======
-  organizationId: z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().optional()),
-  companyName: z.string().trim().min(1, "Company name is required").optional(),
-  legalEntityName: z.string().trim().optional(),
-  mailingAddress: z.string().trim().optional(),
-  city: z.string().trim().optional(),
-  state: z.string().trim().optional(),
-  country: z.string().trim().optional(),
-  postalCode: z.string().trim().optional(),
-  email: z.preprocess(emptyStringToUndefined, z.string().trim().email("Enter a valid email address").optional()),
-  phoneNumber: z.string().trim().optional(),
-  taxId: z.string().trim().optional(),
-  url: z.string().trim().optional(),
-  isActive: z.boolean().optional()
-});
-
-reportsRoutes.post("/tbl-companies", authorize("company:create"), async (req, res, next) => {
-  try {
-    const input = tblCompanyCreateSchema.parse(req.body);
-    const sharePointFolder = await createCompanySharePointFolders(input.companyName);
-
-    await prisma.$executeRaw`
-      INSERT INTO dbo.tblCompany (
-        [organizationId],
-        [Company Name],
-        [Legal Entity Name],
-        [Mailing Address],
-        [city],
-        [state],
-        [country],
-        [postalCode],
-        [email],
-        [Phone Number],
-        [Tax ID],
-        [URL],
-        [CompanyFolderID],
-        [ContractFolderID],
-        [UtilityBillsFolderID],
-        [isActive],
-        [createdAt],
-        [updatedAt]
-      )
-      VALUES (
-        ${input.organizationId},
-        ${input.companyName},
-        ${input.legalEntityName ?? null},
-        ${input.mailingAddress ?? null},
-        ${input.city ?? null},
-        ${input.state ?? null},
-        ${input.country ?? null},
-        ${input.postalCode ?? null},
-        ${input.email || null},
-        ${input.phoneNumber ?? null},
-        ${input.taxId ?? null},
-        ${input.url || null},
-        ${sharePointFolder.companyFolderId ?? null},
-        ${sharePointFolder.contractFolderId ?? null},
-        ${sharePointFolder.utilityBillsFolderId ?? null},
-        ${input.isActive},
-        ${new Date()},
-        ${new Date()}
-      )
-    `;
-
-    const rows = await rawUnsafeRows<Record<string, unknown>>(`
-      SELECT TOP (1)
-        [id] AS id,
-        [organizationId] AS organizationId,
-        [Customer ID] AS customerId,
-        [Company Name] AS companyName,
-        [Legal Entity Name] AS legalEntityName,
-        [Mailing Address] AS mailingAddress,
-        [city] AS city,
-        [state] AS state,
-        [country] AS country,
-        [postalCode] AS postalCode,
-        [email] AS email,
-        [Phone Number] AS phoneNumber,
-        [Tax ID] AS taxId,
-        [URL] AS url,
-        [CompanyFolderID] AS companyFolderId,
-        [ContractFolderID] AS contractFolderId,
-        [UtilityBillsFolderID] AS utilityBillsFolderId,
-        [isActive] AS isActive,
-        [createdAt] AS createdAt,
-        [updatedAt] AS updatedAt
-      FROM dbo.tblCompany
-      ORDER BY [id] DESC
-    `);
-
-    return res.status(201).json({ data: rows[0], sharePointFolder });
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   } catch (error) {
     return next(error);
   }
@@ -3581,7 +3109,6 @@ reportsRoutes.patch("/tbl-companies/:id", authorize("company:update"), async (re
     const current = await findTblCompanyById(id);
     if (!current) return res.status(404).json({ error: "Company not found" });
 
-<<<<<<< HEAD
     const statusOnly = z.object({ isActive: z.boolean() }).strict().safeParse(req.body);
     if (statusOnly.success) {
       await prisma.$executeRaw`
@@ -3620,13 +3147,6 @@ reportsRoutes.patch("/tbl-companies/:id", authorize("company:update"), async (re
       SET
         [organizationId] = ${1},
         [ParentCompanyID] = ${input.parentCompanyId === undefined ? current.parentCompanyId ?? null : input.parentCompanyId},
-=======
-    const input = tblCompanyUpdateSchema.parse(req.body);
-    await prisma.$executeRaw`
-      UPDATE dbo.tblCompany
-      SET
-        [organizationId] = ${input.organizationId ?? current.organizationId},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Company Name] = ${input.companyName ?? current.companyName},
         [Legal Entity Name] = ${input.legalEntityName ?? current.legalEntityName ?? null},
         [Mailing Address] = ${input.mailingAddress ?? current.mailingAddress ?? null},
@@ -3634,11 +3154,7 @@ reportsRoutes.patch("/tbl-companies/:id", authorize("company:update"), async (re
         [state] = ${input.state ?? current.state ?? null},
         [country] = ${input.country ?? current.country ?? null},
         [postalCode] = ${input.postalCode ?? current.postalCode ?? null},
-<<<<<<< HEAD
         [email] = ${input.email === undefined ? current.email ?? null : input.email},
-=======
-        [email] = ${input.email || current.email || null},
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
         [Phone Number] = ${input.phoneNumber ?? current.phoneNumber ?? null},
         [Tax ID] = ${input.taxId ?? current.taxId ?? null},
         [URL] = ${input.url ?? current.url ?? null},
@@ -3646,10 +3162,7 @@ reportsRoutes.patch("/tbl-companies/:id", authorize("company:update"), async (re
         [updatedAt] = ${new Date()}
       WHERE [id] = ${id}
     `;
-<<<<<<< HEAD
     await saveCompanyNote(id, input.notes, req.user);
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 
     return res.json({ data: await findTblCompanyById(id) });
   } catch (error) {

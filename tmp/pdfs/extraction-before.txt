@@ -1,0 +1,1278 @@
+{
+  "i": 0,
+  "path": "Lipper/GB-Lipper International-57706030038-09-02-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "57706030038",
+      "usage": {
+        "value": 0.1,
+        "unit": "CCF"
+      },
+      "currentCharges": {
+        "value": 2501.15,
+        "currency": "USD"
+      },
+      "latestMonthlyUsage": {
+        "month": "Aug",
+        "value": 0,
+        "unit": "CCF"
+      },
+      "totalDemandUse": null,
+      "serviceAddress": "235 WASHINGTON ST, WALLINGFORD CT 06492",
+      "nameKey": "LIPP",
+      "statementDate": "2026-09-02",
+      "serviceReference": "086400002",
+      "servicePeriod": {
+        "from": "2026-07-31",
+        "to": "2026-08-31"
+      },
+      "billCycle": "22",
+      "nextReadDate": "2026-09-30",
+      "balanceForward": {
+        "value": -107.92,
+        "currency": "USD"
+      },
+      "supplier": "Eversource",
+      "rate": "R30-LARGE GENL FIRM",
+      "totalAmountDueDate": "2026-09-30",
+      "totalAmountDue": {
+        "value": 2393.23,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": "LIPPER INTRNL INC",
+      "meterNumber": "0825694",
+      "readingType": "Actual",
+      "days": 31,
+      "supplyPrice": null,
+      "currentUsage": 0,
+      "billedDemand": {
+        "value": 376,
+        "unit": "CCF"
+      },
+      "readDemand": {
+        "value": 0,
+        "unit": "CCF"
+      }
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "latestMonthlyUsage": {
+          "pageNumber": 2,
+          "text": "Monthly CCF Use",
+          "monthRow": "Mar\tApr\tMay\tJun\tJul\tAug",
+          "valueRow": "4211\t939\t109\t51\t12\t0",
+          "column": 6
+        },
+        "accountNumber": {
+          "pageNumber": 2,
+          "text": "Account Number:\t5770 603 0038",
+          "y": 59.24400000000003,
+          "cells": [
+            {
+              "x": 27.576,
+              "endX": 104.436,
+              "text": "Account Number:"
+            },
+            {
+              "x": 119.88,
+              "endX": 188.99999999999994,
+              "text": "5770 603 0038"
+            }
+          ]
+        },
+        "usage": {
+          "pageNumber": 1,
+          "text": "0.1 CCF",
+          "y": 430.484,
+          "cells": [
+            {
+              "x": 37.368,
+              "endX": 67.13799999999999,
+              "text": "0.1 CCF"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 2,
+          "text": "Total Current Charges\t$2,501.15",
+          "y": 532.611,
+          "cells": [
+            {
+              "x": 285.624,
+              "endX": 363.0510000000001,
+              "text": "Total Current Charges"
+            },
+            {
+              "x": 546.264,
+              "endX": 580.8240000000001,
+              "text": "$2,501.15"
+            }
+          ]
+        },
+        "serviceAddress": {
+          "pageNumber": 2,
+          "text": "Svc Addr: 235 WASHINGTON ST",
+          "rows": [
+            {
+              "pageNumber": 2,
+              "text": "Svc Addr: 235 WASHINGTON ST"
+            },
+            {
+              "pageNumber": 2,
+              "text": "WALLINGFORD CT 06492"
+            }
+          ]
+        },
+        "nameKey": {
+          "pageNumber": 2,
+          "text": "Customer name key: LIPP"
+        },
+        "statementDate": {
+          "pageNumber": 2,
+          "text": "Statement Date:\t09/02/26"
+        },
+        "serviceReference": {
+          "pageNumber": 2,
+          "text": "www.eversource.com\tService Reference: 086400002"
+        },
+        "servicePeriod": {
+          "pageNumber": 2,
+          "text": "Service from 07/31/26 - 08/31/26\t31 Days"
+        },
+        "billCycle": {
+          "pageNumber": 2,
+          "text": "Serv Ref: 086400002\tBill Cycle: 22"
+        },
+        "nextReadDate": {
+          "pageNumber": 2,
+          "text": "Next read date on or about: Sep 30, 2026"
+        },
+        "balanceForward": {
+          "pageNumber": 2,
+          "text": "Balance Forward\t-$107.92"
+        },
+        "supplier": {
+          "pageNumber": 1,
+          "text": "Eversource",
+          "label": "Your gas supplier is"
+        },
+        "rate": {
+          "pageNumber": 2,
+          "text": "(Rate R30-LARGE GENL FIRM)"
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 2,
+          "text": "by 09/30/26\t$2,393.23"
+        },
+        "totalAmountDue": {
+          "pageNumber": 2,
+          "text": "Number\tRead\tRead\tUsage\tType\tTotal Amount Due\t$2,393.23"
+        },
+        "serviceProvidedTo": {
+          "pageNumber": 2,
+          "text": "LIPPER INTRNL INC\tAmount Due On 09/01/26\t-$107.92",
+          "label": "Service Provided To:"
+        },
+        "meterNumber": {
+          "pageNumber": 2,
+          "text": "0825694\t94383\t94383\t0\tActual",
+          "header": "Meter\tCurrent\tPrevious\tCurrent\tReading / Number\tRead\tRead\tUsage\tType\tTotal Amount Due\t$2,393.23"
+        },
+        "readingType": {
+          "pageNumber": 2,
+          "text": "0825694\t94383\t94383\t0\tActual"
+        },
+        "days": {
+          "pageNumber": 2,
+          "text": "Service from 07/31/26 - 08/31/26\t31 Days"
+        },
+        "currentUsage": {
+          "pageNumber": 2,
+          "text": "0825694\t94383\t94383\t0\tActual"
+        },
+        "billedDemand": {
+          "pageNumber": 2,
+          "text": "Billed Demand: 376.0 ccf"
+        },
+        "readDemand": {
+          "pageNumber": 2,
+          "text": "Read Demand: 0.0 ccf\tTotal Charges for Gas"
+        }
+      },
+      "issues": [
+        {
+          "field": "latestMonthlyUsage",
+          "code": "MISMATCH",
+          "message": "Latest monthly usage differs from labeled billed usage; review the bill."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 1,
+  "path": "E&J/EB-E & J Parts Cleaning-51547293084-01-08-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "51547293084",
+      "usage": {
+        "value": 8560,
+        "unit": "kWh"
+      },
+      "currentCharges": {
+        "value": 2031.3,
+        "currency": "USD"
+      },
+      "latestMonthlyUsage": {
+        "month": "Jan",
+        "value": 8560,
+        "unit": "kWh"
+      },
+      "totalDemandUse": {
+        "value": 30.7,
+        "unit": "kW"
+      },
+      "serviceAddress": "1669 THOMASTON AVE, STR CTR/RR, WATERBURY CT 06704",
+      "nameKey": "E. &",
+      "statementDate": "2026-01-08",
+      "serviceReference": "788162005",
+      "servicePeriod": {
+        "from": "2025-12-08",
+        "to": "2026-01-08"
+      },
+      "billCycle": "05",
+      "nextReadDate": "2026-02-06",
+      "balanceForward": {
+        "value": 1424.39,
+        "currency": "USD"
+      },
+      "supplier": "NEXTERA ENERGY SERVICES CONN",
+      "rate": "030",
+      "totalAmountDueDate": "2026-02-05",
+      "totalAmountDue": {
+        "value": 3455.69,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": "E. & J. PARTS CLEANING, INC.",
+      "meterNumber": "886100562",
+      "readingType": "Actual",
+      "days": 31,
+      "supplyPrice": {
+        "value": 0.10522,
+        "currency": "USD",
+        "unit": "kWh"
+      },
+      "currentUsage": 107,
+      "billedDemand": {
+        "value": 28.7,
+        "unit": "kW"
+      },
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "complete",
+      "method": "label-and-position-rules",
+      "sources": {
+        "latestMonthlyUsage": {
+          "pageNumber": 2,
+          "text": "Monthly kWh Use",
+          "monthRow": "Aug\tSep\tOct\tNov\tDec\tJan",
+          "valueRow": "9840\t9120\t8720\t14240\t4160\t8560",
+          "column": 6
+        },
+        "accountNumber": {
+          "pageNumber": 3,
+          "text": "Account Number:\t5154 729 3084",
+          "y": 59.24400000000003,
+          "cells": [
+            {
+              "x": 27.576,
+              "endX": 104.436,
+              "text": "Account Number:"
+            },
+            {
+              "x": 119.88,
+              "endX": 188.99999999999994,
+              "text": "5154 729 3084"
+            }
+          ]
+        },
+        "usage": {
+          "pageNumber": 2,
+          "text": "107 X Meter Constant of 80 = 8,560 Billed Usage",
+          "y": 263.44499999999994,
+          "cells": [
+            {
+              "x": 27.576,
+              "endX": 155.21400000000006,
+              "text": "107 X Meter Constant of 80 = 8,560 Billed Usage"
+            }
+          ],
+          "unitSource": {
+            "pageNumber": 2,
+            "text": "Supply\t8560.00kWh X $0.10522\t$900.68",
+            "y": 304.011,
+            "cells": [
+              {
+                "x": 285.624,
+                "endX": 308.115,
+                "text": "Supply"
+              },
+              {
+                "x": 426.258,
+                "endX": 510.048,
+                "text": "8560.00kWh X $0.10522"
+              },
+              {
+                "x": 552.744,
+                "endX": 580.8240000000001,
+                "text": "$900.68"
+              }
+            ]
+          }
+        },
+        "currentCharges": {
+          "pageNumber": 3,
+          "text": "Total Current Charges\t$2,031.30",
+          "y": 153.31500000000005,
+          "cells": [
+            {
+              "x": 285.624,
+              "endX": 363.0510000000001,
+              "text": "Total Current Charges"
+            },
+            {
+              "x": 546.264,
+              "endX": 580.8240000000001,
+              "text": "$2,031.30"
+            }
+          ]
+        },
+        "totalDemandUse": {
+          "pageNumber": 2,
+          "text": "Total Demand Use = 30.70 kW"
+        },
+        "serviceAddress": {
+          "pageNumber": 2,
+          "text": "Svc Addr: 1669 THOMASTON AVE",
+          "rows": [
+            {
+              "pageNumber": 2,
+              "text": "Svc Addr: 1669 THOMASTON AVE"
+            },
+            {
+              "pageNumber": 2,
+              "text": "STR CTR/RR"
+            },
+            {
+              "pageNumber": 2,
+              "text": "WATERBURY CT 06704"
+            }
+          ]
+        },
+        "nameKey": {
+          "pageNumber": 3,
+          "text": "Customer name key: E. &"
+        },
+        "statementDate": {
+          "pageNumber": 3,
+          "text": "Statement Date:\t01/08/26"
+        },
+        "serviceReference": {
+          "pageNumber": 2,
+          "text": "Service Reference: 788162005"
+        },
+        "servicePeriod": {
+          "pageNumber": 2,
+          "text": "Service from 12/08/25 - 01/08/26\t31 Days"
+        },
+        "billCycle": {
+          "pageNumber": 2,
+          "text": "Serv Ref: 788162005\tBill Cycle: 05"
+        },
+        "nextReadDate": {
+          "pageNumber": 2,
+          "text": "Next read date on or about: Feb 06, 2026"
+        },
+        "balanceForward": {
+          "pageNumber": 2,
+          "text": "Balance Forward\t$1,424.39"
+        },
+        "supplier": {
+          "pageNumber": 1,
+          "text": "NEXTERA ENERGY SERVICES CONN",
+          "label": "Your electric supplier is"
+        },
+        "rate": {
+          "pageNumber": 2,
+          "text": "(DISTRIBUTION RATE: 030)"
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 3,
+          "text": "by 02/05/26\t$3,455.69"
+        },
+        "totalAmountDue": {
+          "pageNumber": 3,
+          "text": "by 02/05/26\t$3,455.69"
+        },
+        "serviceProvidedTo": {
+          "pageNumber": 3,
+          "text": "E. & J. PARTS CLEANING, INC.",
+          "label": "Service Provided To:"
+        },
+        "meterNumber": {
+          "pageNumber": 2,
+          "text": "886100562\t49584\t49477\t107\tActual",
+          "header": "Meter\tCurrent\tPrevious\tCurrent\tReading / Number\tRead\tRead\tUsage\tType"
+        },
+        "readingType": {
+          "pageNumber": 2,
+          "text": "886100562\t49584\t49477\t107\tActual"
+        },
+        "days": {
+          "pageNumber": 2,
+          "text": "Service from 12/08/25 - 01/08/26\t31 Days"
+        },
+        "supplyPrice": {
+          "pageNumber": 2,
+          "text": "Supply\t8560.00kWh X $0.10522\t$900.68"
+        },
+        "currentUsage": {
+          "pageNumber": 2,
+          "text": "886100562\t49584\t49477\t107\tActual"
+        },
+        "billedDemand": {
+          "pageNumber": 2,
+          "text": "CTA Demand Chrg\t28.70KW X $-0.09000\t-$2.58",
+          "derived": true,
+          "explanation": "Demand quantity used in a demand-charge calculation."
+        }
+      },
+      "issues": []
+    }
+  }
+}
+{
+  "i": 2,
+  "path": "Archive/AQUARION WATER CO/WB-Canaan Parish Redevelopment-200497156-09-17-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "200497156",
+      "usage": {
+        "value": 313,
+        "unit": "CCF"
+      },
+      "currentCharges": {
+        "value": 1614.92,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": null,
+      "nameKey": null,
+      "statementDate": "2026-09-17",
+      "serviceReference": null,
+      "servicePeriod": {
+        "from": "2026-08-19",
+        "to": "2026-09-17"
+      },
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": {
+        "value": 0,
+        "currency": null
+      },
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-10-14",
+      "totalAmountDue": {
+        "value": 1614.92,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": 30,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 2,
+          "text": "Account Number: 200497156",
+          "y": 27.51819999999998,
+          "cells": [
+            {
+              "x": 150,
+              "endX": 289.0392,
+              "text": "Account Number: 200497156"
+            }
+          ]
+        },
+        "usage": {
+          "pageNumber": 1,
+          "text": "313 CCF *\tcompared to the same",
+          "y": 370.1256,
+          "cells": [
+            {
+              "x": 30,
+              "endX": 80.22394560000001,
+              "text": "313 CCF *"
+            },
+            {
+              "x": 122.39999999999999,
+              "endX": 229.44328079999997,
+              "text": "compared to the same"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 2,
+          "text": "70400270 (2) From / To\t292 CCF\tOn or about\tTotal Current Charges\t1614.92",
+          "y": 175.462,
+          "cells": [
+            {
+              "x": 19.334,
+              "endX": 119.06049999999999,
+              "text": "70400270 (2) From / To"
+            },
+            {
+              "x": 136.496,
+              "endX": 172.505,
+              "text": "292 CCF"
+            },
+            {
+              "x": 237.885,
+              "endX": 285.414,
+              "text": "On or about"
+            },
+            {
+              "x": 306,
+              "endX": 400.248,
+              "text": "Total Current Charges"
+            },
+            {
+              "x": 543.474,
+              "endX": 576,
+              "text": "1614.92"
+            }
+          ]
+        },
+        "statementDate": {
+          "pageNumber": 2,
+          "text": "Statement Date: 09/17/26"
+        },
+        "servicePeriod": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        },
+        "balanceForward": {
+          "pageNumber": 1,
+          "text": "Service For:\t186 LAKEVIEW AVE BLDG 1\tBalance Forward\t0.00"
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$1614.92"
+        },
+        "totalAmountDue": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$1614.92"
+        },
+        "days": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        }
+      },
+      "issues": [
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "balanceForward.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 3,
+  "path": "Archive/AQUARION WATER CO/WB-Canaan Parish-200497165-09-17-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "200497165",
+      "usage": {
+        "value": 429,
+        "unit": "CCF"
+      },
+      "currentCharges": {
+        "value": 2008.88,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": null,
+      "nameKey": null,
+      "statementDate": "2026-09-17",
+      "serviceReference": null,
+      "servicePeriod": {
+        "from": "2026-08-19",
+        "to": "2026-09-17"
+      },
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": {
+        "value": 0,
+        "currency": null
+      },
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-10-14",
+      "totalAmountDue": {
+        "value": 2008.88,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": 30,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 2,
+          "text": "Account Number: 200497165",
+          "y": 27.51819999999998,
+          "cells": [
+            {
+              "x": 150,
+              "endX": 289.0392,
+              "text": "Account Number: 200497165"
+            }
+          ]
+        },
+        "usage": {
+          "pageNumber": 1,
+          "text": "429 CCF *\tcompared to the same",
+          "y": 370.1256,
+          "cells": [
+            {
+              "x": 30,
+              "endX": 80.22394560000001,
+              "text": "429 CCF *"
+            },
+            {
+              "x": 122.39999999999999,
+              "endX": 229.44328079999997,
+              "text": "compared to the same"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 2,
+          "text": "Total Current Charges\t2008.88",
+          "y": 175.462,
+          "cells": [
+            {
+              "x": 306,
+              "endX": 400.248,
+              "text": "Total Current Charges"
+            },
+            {
+              "x": 543.474,
+              "endX": 576,
+              "text": "2008.88"
+            }
+          ]
+        },
+        "statementDate": {
+          "pageNumber": 2,
+          "text": "Statement Date: 09/17/26"
+        },
+        "servicePeriod": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        },
+        "balanceForward": {
+          "pageNumber": 1,
+          "text": "Service For:\t186 LAKEVIEW AVE BLDG 2\tBalance Forward\t0.00"
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$2008.88"
+        },
+        "totalAmountDue": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$2008.88"
+        },
+        "days": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        }
+      },
+      "issues": [
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "balanceForward.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 4,
+  "path": "Archive/AQUARION WATER CO/WB-Millport Phase II-200420115-09-17-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "200420115",
+      "usage": {
+        "value": 0,
+        "unit": "CCF"
+      },
+      "currentCharges": {
+        "value": 119.15,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": null,
+      "nameKey": null,
+      "statementDate": "2026-09-17",
+      "serviceReference": null,
+      "servicePeriod": {
+        "from": "2026-08-19",
+        "to": "2026-09-17"
+      },
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": {
+        "value": 0,
+        "currency": null
+      },
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-10-14",
+      "totalAmountDue": {
+        "value": 119.15,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": 30,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 2,
+          "text": "Account Number: 200420115",
+          "y": 27.51819999999998,
+          "cells": [
+            {
+              "x": 150,
+              "endX": 289.0392,
+              "text": "Account Number: 200420115"
+            }
+          ]
+        },
+        "usage": {
+          "pageNumber": 2,
+          "text": "0 CCF\tOn or about",
+          "y": 121.279,
+          "cells": [
+            {
+              "x": 141.5,
+              "endX": 167.501,
+              "text": "0 CCF"
+            },
+            {
+              "x": 237.885,
+              "endX": 285.414,
+              "text": "On or about"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 2,
+          "text": "Total Current Charges\t119.15",
+          "y": 157.462,
+          "cells": [
+            {
+              "x": 306,
+              "endX": 400.248,
+              "text": "Total Current Charges"
+            },
+            {
+              "x": 548.478,
+              "endX": 576,
+              "text": "119.15"
+            }
+          ]
+        },
+        "statementDate": {
+          "pageNumber": 2,
+          "text": "Statement Date: 09/17/26"
+        },
+        "servicePeriod": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        },
+        "balanceForward": {
+          "pageNumber": 1,
+          "text": "Service For:\t59 MILLPORT AVE 6\" F/S\tBalance Forward\t0.00"
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$119.15"
+        },
+        "totalAmountDue": {
+          "pageNumber": 2,
+          "text": "Total Amount Due by 10/14/2026\t$119.15"
+        },
+        "days": {
+          "pageNumber": 2,
+          "text": "Service from 08/19/26 to 09/17/26 (30 days)"
+        }
+      },
+      "issues": [
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "balanceForward.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 5,
+  "path": "Archive/MDC/WB-Bloomfield-21051034-09-29-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "21051034",
+      "usage": null,
+      "currentCharges": {
+        "value": 5317.7,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": "250 BLOOMFIELD AVE, WINDSOR CT 06095",
+      "nameKey": null,
+      "statementDate": null,
+      "serviceReference": null,
+      "servicePeriod": null,
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": null,
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-10-24",
+      "totalAmountDue": {
+        "value": 5317.7,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": null,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 3,
+          "text": "The Metropolitan District\tAccount No.:\t21051034\tPage:\t3 of 3",
+          "y": 37.266000000000076,
+          "cells": [
+            {
+              "x": 72.72,
+              "endX": 225.446,
+              "text": "The Metropolitan District"
+            },
+            {
+              "x": 297.7220000000001,
+              "endX": 354.32200000000006,
+              "text": "Account No.:"
+            },
+            {
+              "x": 375.6720000000001,
+              "endX": 416.7120000000001,
+              "text": "21051034"
+            },
+            {
+              "x": 459.9920000000001,
+              "endX": 484.81200000000007,
+              "text": "Page:"
+            },
+            {
+              "x": 523.772,
+              "endX": 546.682,
+              "text": "3 of 3"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 3,
+          "text": "TOTAL CURRENT CHARGES\t$5,317.70",
+          "y": 409.772,
+          "cells": [
+            {
+              "x": 20.835,
+              "endX": 151.823,
+              "text": "TOTAL CURRENT CHARGES"
+            },
+            {
+              "x": 245.70800000000003,
+              "endX": 294.163,
+              "text": "$5,317.70"
+            }
+          ]
+        },
+        "serviceAddress": {
+          "pageNumber": 3,
+          "text": "Service Address: 250 BLOOMFIELD AVE",
+          "rows": [
+            {
+              "pageNumber": 3,
+              "text": "Service Address: 250 BLOOMFIELD AVE"
+            },
+            {
+              "pageNumber": 3,
+              "text": "WINDSOR CT 06095"
+            }
+          ]
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 3,
+          "text": "Energy and Environmental Protection (DEEP) mandated Clean Water Project\tDue Date: 10/24/2026"
+        },
+        "totalAmountDue": {
+          "pageNumber": 1,
+          "text": "TOTAL AMOUNT DUE\t$5,317.70"
+        }
+      },
+      "issues": [
+        {
+          "field": "usage",
+          "code": "NOT_FOUND",
+          "message": "No supported label/value match found."
+        },
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "days",
+          "code": "AMBIGUOUS",
+          "message": "Different values found; review the bill."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 6,
+  "path": "Archive/MDC/WB-Bradford-21117629-09-10-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "21117629",
+      "usage": null,
+      "currentCharges": {
+        "value": 1059.68,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": "1570 1574 WILLARD AVE, NEWINGTON CT 06111",
+      "nameKey": null,
+      "statementDate": null,
+      "serviceReference": null,
+      "servicePeriod": null,
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": null,
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-10-05",
+      "totalAmountDue": {
+        "value": 1803.31,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": null,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 3,
+          "text": "The Metropolitan District\tAccount No.:\t21117629\tPage:\t3 of 3",
+          "y": 37.266000000000076,
+          "cells": [
+            {
+              "x": 72.72,
+              "endX": 225.446,
+              "text": "The Metropolitan District"
+            },
+            {
+              "x": 297.7220000000001,
+              "endX": 354.32200000000006,
+              "text": "Account No.:"
+            },
+            {
+              "x": 375.6720000000001,
+              "endX": 416.7120000000001,
+              "text": "21117629"
+            },
+            {
+              "x": 459.9920000000001,
+              "endX": 484.81200000000007,
+              "text": "Page:"
+            },
+            {
+              "x": 523.772,
+              "endX": 546.682,
+              "text": "3 of 3"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 3,
+          "text": "TOTAL CURRENT CHARGES\t$1,059.68",
+          "y": 425.606,
+          "cells": [
+            {
+              "x": 20.835,
+              "endX": 151.823,
+              "text": "TOTAL CURRENT CHARGES"
+            },
+            {
+              "x": 245.70800000000003,
+              "endX": 294.163,
+              "text": "$1,059.68"
+            }
+          ]
+        },
+        "serviceAddress": {
+          "pageNumber": 3,
+          "text": "Service Address: 1570 1574 WILLARD AVE",
+          "rows": [
+            {
+              "pageNumber": 3,
+              "text": "Service Address: 1570 1574 WILLARD AVE"
+            },
+            {
+              "pageNumber": 3,
+              "text": "NEWINGTON CT 06111"
+            }
+          ]
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 3,
+          "text": "Energy and Environmental Protection (DEEP) mandated Clean Water Project\tDue Date: 10/05/2026"
+        },
+        "totalAmountDue": {
+          "pageNumber": 1,
+          "text": "TOTAL AMOUNT DUE\t$1,803.31"
+        }
+      },
+      "issues": [
+        {
+          "field": "usage",
+          "code": "NOT_FOUND",
+          "message": "No supported label/value match found."
+        },
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "days",
+          "code": "AMBIGUOUS",
+          "message": "Different values found; review the bill."
+        }
+      ]
+    }
+  }
+}
+{
+  "i": 7,
+  "path": "Archive/MDC/WB-Folly Brook-21125960-10-08-2026.pdf",
+  "result": {
+    "bill": {
+      "accountNumber": "21125960",
+      "usage": null,
+      "currentCharges": {
+        "value": 1522.71,
+        "currency": null
+      },
+      "latestMonthlyUsage": null,
+      "totalDemandUse": null,
+      "serviceAddress": "22 FOLLY BROOK BLVD, WETHERSFIELD CT 06109",
+      "nameKey": null,
+      "statementDate": null,
+      "serviceReference": null,
+      "servicePeriod": null,
+      "billCycle": null,
+      "nextReadDate": null,
+      "balanceForward": null,
+      "supplier": null,
+      "rate": null,
+      "totalAmountDueDate": "2026-11-02",
+      "totalAmountDue": {
+        "value": 2914.18,
+        "currency": "USD"
+      },
+      "serviceProvidedTo": null,
+      "meterNumber": null,
+      "readingType": null,
+      "days": null,
+      "supplyPrice": null,
+      "currentUsage": null,
+      "billedDemand": null,
+      "readDemand": null
+    },
+    "extraction": {
+      "status": "needs_review",
+      "method": "label-and-position-rules",
+      "sources": {
+        "accountNumber": {
+          "pageNumber": 3,
+          "text": "The Metropolitan District\tAccount No.:\t21125960\tPage:\t3 of 3",
+          "y": 37.266000000000076,
+          "cells": [
+            {
+              "x": 72.72,
+              "endX": 225.446,
+              "text": "The Metropolitan District"
+            },
+            {
+              "x": 297.7220000000001,
+              "endX": 354.32200000000006,
+              "text": "Account No.:"
+            },
+            {
+              "x": 375.6720000000001,
+              "endX": 416.7120000000001,
+              "text": "21125960"
+            },
+            {
+              "x": 459.9920000000001,
+              "endX": 484.81200000000007,
+              "text": "Page:"
+            },
+            {
+              "x": 523.772,
+              "endX": 546.682,
+              "text": "3 of 3"
+            }
+          ]
+        },
+        "currentCharges": {
+          "pageNumber": 3,
+          "text": "TOTAL CURRENT CHARGES\t$1,522.71",
+          "y": 425.606,
+          "cells": [
+            {
+              "x": 20.835,
+              "endX": 151.823,
+              "text": "TOTAL CURRENT CHARGES"
+            },
+            {
+              "x": 245.70800000000003,
+              "endX": 294.163,
+              "text": "$1,522.71"
+            }
+          ]
+        },
+        "serviceAddress": {
+          "pageNumber": 3,
+          "text": "Service Address: 22 FOLLY BROOK BLVD",
+          "rows": [
+            {
+              "pageNumber": 3,
+              "text": "Service Address: 22 FOLLY BROOK BLVD"
+            },
+            {
+              "pageNumber": 3,
+              "text": "WETHERSFIELD CT 06109"
+            }
+          ]
+        },
+        "totalAmountDueDate": {
+          "pageNumber": 3,
+          "text": "Energy and Environmental Protection (DEEP) mandated Clean Water Project\tDue Date: 11/02/2026"
+        },
+        "totalAmountDue": {
+          "pageNumber": 1,
+          "text": "TOTAL AMOUNT DUE\t$2,914.18"
+        }
+      },
+      "issues": [
+        {
+          "field": "usage",
+          "code": "NOT_FOUND",
+          "message": "No supported label/value match found."
+        },
+        {
+          "field": "currentCharges.currency",
+          "code": "NOT_FOUND",
+          "message": "Currency could not be established; a dollar symbol alone is ambiguous."
+        },
+        {
+          "field": "days",
+          "code": "AMBIGUOUS",
+          "message": "Different values found; review the bill."
+        }
+      ]
+    }
+  }
+}

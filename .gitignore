@@ -1,6 +1,4 @@
 node_modules
-<<<<<<< HEAD
-=======
 dist
 build
 .env
@@ -11,4 +9,3 @@ coverage
 *.log
 uploads
 *.tsbuildinfo
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d

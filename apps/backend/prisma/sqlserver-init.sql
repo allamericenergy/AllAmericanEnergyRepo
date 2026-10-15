@@ -22,10 +22,7 @@ CREATE TABLE [dbo].[aae_users] (
     [lastName] NVARCHAR(1000) NOT NULL,
     [role] NVARCHAR(1000) NOT NULL,
     [status] NVARCHAR(1000) NOT NULL CONSTRAINT [aae_users_status_df] DEFAULT 'invited',
-<<<<<<< HEAD
     [mustChangePassword] BIT NOT NULL CONSTRAINT [aae_users_mustChangePassword_df] DEFAULT 0,
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     [orgId] NVARCHAR(1000),
     [lastLogin] DATETIME2,
     [twoFactorEnabled] BIT NOT NULL CONSTRAINT [aae_users_twoFactorEnabled_df] DEFAULT 0,

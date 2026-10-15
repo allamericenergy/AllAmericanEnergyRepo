@@ -4,10 +4,7 @@ BEGIN TRAN;
 IF COL_LENGTH('dbo.aae_users', 'username') IS NULL ALTER TABLE [dbo].[aae_users] ADD [username] NVARCHAR(1000) NULL;
 IF COL_LENGTH('dbo.aae_users', 'phone') IS NULL ALTER TABLE [dbo].[aae_users] ADD [phone] NVARCHAR(1000) NULL;
 IF COL_LENGTH('dbo.aae_users', 'emailVerified') IS NULL ALTER TABLE [dbo].[aae_users] ADD [emailVerified] BIT NOT NULL CONSTRAINT [aae_users_emailVerified_df] DEFAULT 0;
-<<<<<<< HEAD
 IF COL_LENGTH('dbo.aae_users', 'mustChangePassword') IS NULL ALTER TABLE [dbo].[aae_users] ADD [mustChangePassword] BIT NOT NULL CONSTRAINT [aae_users_mustChangePassword_df] DEFAULT 0;
-=======
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 IF COL_LENGTH('dbo.aae_users', 'failedLoginAttempts') IS NULL ALTER TABLE [dbo].[aae_users] ADD [failedLoginAttempts] INT NOT NULL CONSTRAINT [aae_users_failedLoginAttempts_df] DEFAULT 0;
 IF COL_LENGTH('dbo.aae_users', 'lockoutEnd') IS NULL ALTER TABLE [dbo].[aae_users] ADD [lockoutEnd] DATETIME2 NULL;
 IF COL_LENGTH('dbo.aae_users', 'createdBy') IS NULL ALTER TABLE [dbo].[aae_users] ADD [createdBy] NVARCHAR(1000) NULL;

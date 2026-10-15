@@ -1,0 +1,2011 @@
+{
+  "path": "E:/OneDriveRJ/RJ Consulting/RJConsultingDocuments - Documents/E&J/EB-E & J Parts Cleaning-51547293084-01-08-2026.pdf",
+  "data": [
+    {
+      "pageNumber": 1,
+      "text": "Total Amount Due",
+      "y": 39.35000000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 374.49600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "$3,455.69",
+      "y": 50.605999999999995,
+      "cells": [
+        {
+          "x": 487.704,
+          "endX": 583.704,
+          "text": "$3,455.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "by 02/05/26",
+      "y": 54.32600000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 347.02700000000004,
+          "text": "by 02/05/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Account Number:\t5154 729 3084",
+      "y": 57.011999999999944,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 104.436,
+          "text": "Account Number:"
+        },
+        {
+          "x": 119.88,
+          "endX": 188.99999999999994,
+          "text": "5154 729 3084"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Statement Date:\t01/08/26",
+      "y": 68.976,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 99.54,
+          "text": "Statement Date:"
+        },
+        {
+          "x": 113.832,
+          "endX": 155.064,
+          "text": "01/08/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Amount Due On 01/06/26\t$4,486.30",
+      "y": 71.25,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 382.02599999999995,
+          "text": "Amount Due On 01/06/26"
+        },
+        {
+          "x": 542.352,
+          "endX": 580.752,
+          "text": "$4,486.30"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Service Provided To:\tLast Payment Received On 12/18/25\t-$3,061.91",
+      "y": 83.274,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.03600000000002,
+          "text": "Service Provided To:"
+        },
+        {
+          "x": 287.136,
+          "endX": 422.3359999999999,
+          "text": "Last Payment Received On 12/18/25"
+        },
+        {
+          "x": 538.832,
+          "endX": 580.752,
+          "text": "-$3,061.91"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "E. & J. PARTS CLEANING, INC.\tBalance Forward\t$1,424.39",
+      "y": 95.226,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 159.09599999999998,
+          "text": "E. & J. PARTS CLEANING, INC."
+        },
+        {
+          "x": 287.136,
+          "endX": 349.12600000000003,
+          "text": "Balance Forward"
+        },
+        {
+          "x": 542.352,
+          "endX": 580.752,
+          "text": "$1,424.39"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Total Current Charges\t$2,031.30",
+      "y": 107.25,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 367.0959999999999,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 542.352,
+          "endX": 580.752,
+          "text": "$2,031.30"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Electric Usage History - Kilowatt Hours (kWh)\tCurrent Charges for Electricity",
+      "y": 159.399,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 226.08,
+          "text": "Electric Usage History - Kilowatt Hours (kWh)"
+        },
+        {
+          "x": 285.624,
+          "endX": 441.72800000000007,
+          "text": "Current Charges for Electricity"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "kWh/Day",
+      "y": 177.71399999999994,
+      "cells": [
+        {
+          "x": 34.344,
+          "endX": 54.222,
+          "text": "kWh/Day"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Supply\tDelivery",
+      "y": 179.952,
+      "cells": [
+        {
+          "x": 339.606,
+          "endX": 372.042,
+          "text": "Supply"
+        },
+        {
+          "x": 487.206,
+          "endX": 525.834,
+          "text": "Delivery"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "$900.68\t$1,116.37",
+      "y": 200.96000000000004,
+      "cells": [
+        {
+          "x": 330.864,
+          "endX": 380.784,
+          "text": "$900.68"
+        },
+        {
+          "x": 475.8,
+          "endX": 537.24,
+          "text": "$1,116.37"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Cost of electricity from NEXTERA\tCost to deliver electricity",
+      "y": 215.72000000000003,
+      "cells": [
+        {
+          "x": 305.904,
+          "endX": 402.14400000000023,
+          "text": "Cost of electricity from NEXTERA"
+        },
+        {
+          "x": 467.66,
+          "endX": 540.3400000000001,
+          "text": "Cost to deliver electricity"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "ENERGY SERVICES CONN\tfrom Eversource",
+      "y": 223.20799999999997,
+      "cells": [
+        {
+          "x": 316.836,
+          "endX": 391.21200000000005,
+          "text": "ENERGY SERVICES CONN"
+        },
+        {
+          "x": 479.8,
+          "endX": 528.2,
+          "text": "from Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Your electric supplier is",
+      "y": 327.402,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 514.386,
+          "text": "Your electric supplier is"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "NEXTERA ENERGY SERVICES CONN",
+      "y": 341.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 534.2,
+          "text": "NEXTERA ENERGY SERVICES CONN"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "20455 STATE HIGHWAY 249",
+      "y": 349.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 512.4639999999999,
+          "text": "20455 STATE HIGHWAY 249"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "HOUSTON TX 77070-2757",
+      "y": 357.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 508.312,
+          "text": "HOUSTON TX 77070-2757"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "800-882-1276",
+      "y": 365.576,
+      "cells": [
+        {
+          "x": 430.344,
+          "endX": 474.376,
+          "text": "800-882-1276"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Electric Usage Summary",
+      "y": 371.63,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 159.67200000000005,
+          "text": "Electric Usage Summary"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "This month your\tThis month you used",
+      "y": 390.748,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 88.848,
+          "text": "This month your"
+        },
+        {
+          "x": 112.32,
+          "endX": 178.31199999999998,
+          "text": "This month you used"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "average daily\t16.0% more",
+      "y": 402.772,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 79.848,
+          "text": "average daily"
+        },
+        {
+          "x": 112.32,
+          "endX": 159.64000000000001,
+          "text": "16.0% more"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "16.0",
+      "y": 411.748,
+      "cells": [
+        {
+          "x": 203.52,
+          "endX": 227.04000000000002,
+          "text": "16.0"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "electric use was\tthan at the",
+      "y": 414.724,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 89.18400000000001,
+          "text": "electric use was"
+        },
+        {
+          "x": 112.32,
+          "endX": 146.664,
+          "text": "than at the"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "USAGE",
+      "y": 424.142,
+      "cells": [
+        {
+          "x": 207.805,
+          "endX": 226.35500000000002,
+          "text": "USAGE"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "same time last year",
+      "y": 426.748,
+      "cells": [
+        {
+          "x": 112.32,
+          "endX": 174.75999999999993,
+          "text": "same time last year"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "276.0 kWh",
+      "y": 430.484,
+      "cells": [
+        {
+          "x": 37.368,
+          "endX": 78.96799999999999,
+          "text": "276.0 kWh"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "News For You",
+      "y": 472.488,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 103.93199999999999,
+          "text": "News For You"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "As temperatures go down, energy bills may go up. We offer programs to help you manage your energy costs, use less energy and connect you with assistance if",
+      "y": 489.6,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 571.9769999999995,
+          "text": "As temperatures go down, energy bills may go up. We offer programs to help you manage your energy costs, use less energy and connect you with assistance if"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "you need it. This winter and beyond, we’re here to help. Visit eversource.com/billhelp.",
+      "y": 498.6,
+      "cells": [
+        {
+          "x": 39.6,
+          "endX": 323.19000000000005,
+          "text": "you need it. This winter and beyond, we’re here to help. Visit eversource.com/billhelp."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Remit Payment To: Eversource, PO Box 56002, Boston, MA 02205-6002",
+      "y": 535.842,
+      "cells": [
+        {
+          "x": 189.076,
+          "endX": 432.57099999999997,
+          "text": "Remit Payment To: Eversource, PO Box 56002, Boston, MA 02205-6002"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "CE_260108PROD.TXT",
+      "y": 545.517,
+      "cells": [
+        {
+          "x": 527.658,
+          "endX": 578.52,
+          "text": "CE_260108PROD.TXT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Please make your check payable to Eversource and consider adding $1 for Operation Fuel.",
+      "y": 557.63,
+      "cells": [
+        {
+          "x": 310.552,
+          "endX": 553.3750000000001,
+          "text": "Please make your check payable to Eversource and consider adding $1 for Operation Fuel."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "You can also add $2 or $3 when paying your bill online. 100% of your tax-deductible donation",
+      "y": 568.862,
+      "cells": [
+        {
+          "x": 306.601,
+          "endX": 557.327,
+          "text": "You can also add $2 or $3 when paying your bill online. 100% of your tax-deductible donation"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "provides energy assistance grants. If mailing, please allow up to 5 business days to post.",
+      "y": 580.094,
+      "cells": [
+        {
+          "x": 312.519,
+          "endX": 551.408,
+          "text": "provides energy assistance grants. If mailing, please allow up to 5 business days to post."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Total Amount Due",
+      "y": 601.886,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 366.93600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Account Number:\t5154 729 3084",
+      "y": 610.476,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 110.48400000000001,
+          "text": "Account Number:"
+        },
+        {
+          "x": 125.856,
+          "endX": 194.9759999999999,
+          "text": "5154 729 3084"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "by 02/05/26\t$3,455.69",
+      "y": 616.058,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 339.46700000000004,
+          "text": "by 02/05/26"
+        },
+        {
+          "x": 484.752,
+          "endX": 580.752,
+          "text": "$3,455.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Non-residential and residential non-hardship customers may be",
+      "y": 622.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 245.67300000000006,
+          "text": "Non-residential and residential non-hardship customers may be"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "subject to a 1.00% late payment charge if the “Total Amount Due”",
+      "y": 631.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 253.341,
+          "text": "subject to a 1.00% late payment charge if the “Total Amount Due”"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "is not received by 02/05/26.",
+      "y": 640.089,
+      "cells": [
+        {
+          "x": 33.624,
+          "endX": 127.30499999999999,
+          "text": "is not received by 02/05/26."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Amount Enclosed",
+      "y": 645.748,
+      "cells": [
+        {
+          "x": 279.576,
+          "endX": 375.91000000000014,
+          "text": "Amount Enclosed"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Eversource",
+      "y": 701.28,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 408.537,
+          "text": "Eversource"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO Box 56002",
+      "y": 711.288,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 421.56,
+          "text": "PO Box 56002"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "E. & J. PARTS CLEANING, INC.",
+      "y": 716.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 203.22000000000003,
+          "text": "E. & J. PARTS CLEANING, INC."
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "Boston, MA 02205-6002",
+      "y": 721.296,
+      "cells": [
+        {
+          "x": 363.024,
+          "endX": 459.5850000000001,
+          "text": "Boston, MA 02205-6002"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "PO BOX 4250",
+      "y": 725.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 130.545,
+          "text": "PO BOX 4250"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "WATERBURY CT 06704-0250",
+      "y": 734.976,
+      "cells": [
+        {
+          "x": 73.512,
+          "endX": 194.56199999999998,
+          "text": "WATERBURY CT 06704-0250"
+        }
+      ]
+    },
+    {
+      "pageNumber": 1,
+      "text": "5154729308448 0003455692 0002031309",
+      "y": 777.27,
+      "cells": [
+        {
+          "x": 328.464,
+          "endX": 588.0239999999999,
+          "text": "5154729308448 0003455692 0002031309"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Amount Due",
+      "y": 39.35000000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 374.49600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "by 02/05/26\t$3,455.69",
+      "y": 54.32600000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 347.02700000000004,
+          "text": "by 02/05/26"
+        },
+        {
+          "x": 487.704,
+          "endX": 583.704,
+          "text": "$3,455.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Account Number:\t5154 729 3084",
+      "y": 59.24400000000003,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 104.436,
+          "text": "Account Number:"
+        },
+        {
+          "x": 119.88,
+          "endX": 188.99999999999994,
+          "text": "5154 729 3084"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Customer name key: E. &",
+      "y": 69.36300000000006,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 111.32999999999998,
+          "text": "Customer name key: E. &"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Statement Date:\t01/08/26",
+      "y": 82.51199999999994,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 99.54,
+          "text": "Statement Date:"
+        },
+        {
+          "x": 113.832,
+          "endX": 155.064,
+          "text": "01/08/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Electric Account Summary",
+      "y": 92.61900000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 380.376,
+          "text": "Electric Account Summary"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service Provided To:",
+      "y": 95.14800000000002,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.03600000000002,
+          "text": "Service Provided To:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "E. & J. PARTS CLEANING, INC.\tAmount Due On 01/06/26\t$4,486.30",
+      "y": 105.36300000000006,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 159.09599999999998,
+          "text": "E. & J. PARTS CLEANING, INC."
+        },
+        {
+          "x": 285.624,
+          "endX": 371.025,
+          "text": "Amount Due On 01/06/26"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$4,486.30"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Last Payment Received On 12/18/25\t-$3,061.91",
+      "y": 118.10699999999997,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 407.304,
+          "text": "Last Payment Received On 12/18/25"
+        },
+        {
+          "x": 543.096,
+          "endX": 580.824,
+          "text": "-$3,061.91"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Balance Forward\t$1,424.39",
+      "y": 130.851,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 341.41499999999996,
+          "text": "Balance Forward"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$1,424.39"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Svc Addr: 1669 THOMASTON AVE",
+      "y": 136.846,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 170.55399999999997,
+          "text": "Svc Addr: 1669 THOMASTON AVE"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Current Charges/Credits",
+      "y": 143.59500000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 365.59799999999996,
+          "text": "Current Charges/Credits"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "STR CTR/RR",
+      "y": 148.87,
+      "cells": [
+        {
+          "x": 72.456,
+          "endX": 125.388,
+          "text": "STR CTR/RR"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Electric Supply Services\t$900.68",
+      "y": 156.33899999999994,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 378.1980000000001,
+          "text": "Electric Supply Services"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$900.68"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "WATERBURY CT 06704",
+      "y": 160.822,
+      "cells": [
+        {
+          "x": 72.456,
+          "endX": 169.355,
+          "text": "WATERBURY CT 06704"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Delivery Services\t$1,116.37",
+      "y": 169.08299999999997,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 355.8510000000001,
+          "text": "Delivery Services"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$1,116.37"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Serv Ref: 788162005\tBill Cycle: 05",
+      "y": 172.846,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.02799999999999,
+          "text": "Serv Ref: 788162005"
+        },
+        {
+          "x": 196.22799999999967,
+          "endX": 252.14099999999954,
+          "text": "Bill Cycle: 05"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Other Charges or Credits\t$14.25",
+      "y": 181.827,
+      "cells": [
+        {
+          "x": 298.5840000000002,
+          "endX": 380.5380000000001,
+          "text": "Other Charges or Credits"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$14.25"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service from 12/08/25 - 01/08/26\t31 Days",
+      "y": 184.87,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 173.084,
+          "text": "Service from 12/08/25 - 01/08/26"
+        },
+        {
+          "x": 212.68399999999977,
+          "endX": 247.25699999999975,
+          "text": "31 Days"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Current Charges\t$2,031.30",
+      "y": 194.57100000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 357.58799999999997,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,031.30"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Next read date on or about: Feb 06, 2026",
+      "y": 196.822,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 203.5869999999999,
+          "text": "Next read date on or about: Feb 06, 2026"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Amount Due\t$3,455.69",
+      "y": 208.03499999999997,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 348.7140000000001,
+          "text": "Total Amount Due"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$3,455.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Meter\tCurrent\tPrevious\tCurrent\tReading",
+      "y": 211.48199999999997,
+      "cells": [
+        {
+          "x": 40.1265,
+          "endX": 59.4495,
+          "text": "Meter"
+        },
+        {
+          "x": 86.958,
+          "endX": 111.618,
+          "text": "Current"
+        },
+        {
+          "x": 134.671,
+          "endX": 162.976,
+          "text": "Previous"
+        },
+        {
+          "x": 186.678,
+          "endX": 211.338,
+          "text": "Current"
+        },
+        {
+          "x": 234.288,
+          "endX": 261.288,
+          "text": "Reading"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Number\tRead\tRead\tUsage\tType",
+      "y": 220.48199999999997,
+      "cells": [
+        {
+          "x": 36.54,
+          "endX": 63.036,
+          "text": "Number"
+        },
+        {
+          "x": 90.873,
+          "endX": 107.703,
+          "text": "Read"
+        },
+        {
+          "x": 140.4085,
+          "endX": 157.23850000000002,
+          "text": "Read"
+        },
+        {
+          "x": 188.7165,
+          "endX": 209.29950000000002,
+          "text": "Usage"
+        },
+        {
+          "x": 240.04350000000002,
+          "endX": 255.53250000000003,
+          "text": "Type"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "886100562\t49584\t49477\t107\tActual\tTotal Charges for Electricity",
+      "y": 239.10799999999995,
+      "cells": [
+        {
+          "x": 28.548,
+          "endX": 67.428,
+          "text": "886100562"
+        },
+        {
+          "x": 87.288,
+          "endX": 111.288,
+          "text": "49584"
+        },
+        {
+          "x": 136.824,
+          "endX": 160.824,
+          "text": "49477"
+        },
+        {
+          "x": 192.6,
+          "endX": 207,
+          "text": "107"
+        },
+        {
+          "x": 235.108,
+          "endX": 260.468,
+          "text": "Actual"
+        },
+        {
+          "x": 285.624,
+          "endX": 395.11399999999986,
+          "text": "Total Charges for Electricity"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Demand Use = 30.70 kW",
+      "y": 253.005,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 106.87200000000003,
+          "text": "Total Demand Use = 30.70 kW"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "107 X Meter Constant of 80 = 8,560 Billed Usage",
+      "y": 263.44499999999994,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 155.21400000000006,
+          "text": "107 X Meter Constant of 80 = 8,560 Billed Usage"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Supplier",
+      "y": 265.779,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 315.27900000000005,
+          "text": "Supplier"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "NEXTERA ENERGY",
+      "y": 278.523,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 345.789,
+          "text": "NEXTERA ENERGY"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Monthly kWh Use",
+      "y": 282.97,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 103.31099999999999,
+          "text": "Monthly kWh Use"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service Reference: 788162005",
+      "y": 291.267,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 388.9439999999999,
+          "text": "Service Reference: 788162005"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Jan\tFeb\tMar\tApr\tMay\tJun\tJul",
+      "y": 295.731,
+      "cells": [
+        {
+          "x": 35.2575,
+          "endX": 47.2545,
+          "text": "Jan"
+        },
+        {
+          "x": 70.4925,
+          "endX": 82.4355,
+          "text": "Feb"
+        },
+        {
+          "x": 105.246,
+          "endX": 118.24199999999999,
+          "text": "Mar"
+        },
+        {
+          "x": 141.242,
+          "endX": 152.66299999999998,
+          "text": "Apr"
+        },
+        {
+          "x": 175.239,
+          "endX": 189.225,
+          "text": "May"
+        },
+        {
+          "x": 211.428,
+          "endX": 223.596,
+          "text": "Jun"
+        },
+        {
+          "x": 247.802,
+          "endX": 257.639,
+          "text": "Jul"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Supply\t8560.00kWh X $0.10522\t$900.68",
+      "y": 304.011,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 308.115,
+          "text": "Supply"
+        },
+        {
+          "x": 426.258,
+          "endX": 510.048,
+          "text": "8560.00kWh X $0.10522"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$900.68"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "7840\t9920\t9360\t8480\t10240\t8560\t9760",
+      "y": 308.475,
+      "cells": [
+        {
+          "x": 32.616,
+          "endX": 49.896,
+          "text": "7840"
+        },
+        {
+          "x": 67.824,
+          "endX": 85.104,
+          "text": "9920"
+        },
+        {
+          "x": 103.104,
+          "endX": 120.384,
+          "text": "9360"
+        },
+        {
+          "x": 138.312,
+          "endX": 155.592,
+          "text": "8480"
+        },
+        {
+          "x": 171.432,
+          "endX": 193.03199999999998,
+          "text": "10240"
+        },
+        {
+          "x": 208.872,
+          "endX": 226.15200000000002,
+          "text": "8560"
+        },
+        {
+          "x": 244.08,
+          "endX": 261.36,
+          "text": "9760"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Subtotal Supplier Services\t$900.68",
+      "y": 317.475,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 372.9059999999999,
+          "text": "Subtotal Supplier Services"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$900.68"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Aug\tSep\tOct\tNov\tDec\tJan",
+      "y": 321.939,
+      "cells": [
+        {
+          "x": 34.839,
+          "endX": 47.673,
+          "text": "Aug"
+        },
+        {
+          "x": 70.1325,
+          "endX": 82.7955,
+          "text": "Sep"
+        },
+        {
+          "x": 106.16,
+          "endX": 117.329,
+          "text": "Oct"
+        },
+        {
+          "x": 140.625,
+          "endX": 153.279,
+          "text": "Nov"
+        },
+        {
+          "x": 175.815,
+          "endX": 188.649,
+          "text": "Dec"
+        },
+        {
+          "x": 211.513,
+          "endX": 223.51000000000002,
+          "text": "Jan"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "9840\t9120\t8720\t14240\t4160\t8560",
+      "y": 335.475,
+      "cells": [
+        {
+          "x": 32.616,
+          "endX": 49.896,
+          "text": "9840"
+        },
+        {
+          "x": 67.824,
+          "endX": 85.104,
+          "text": "9120"
+        },
+        {
+          "x": 103.104,
+          "endX": 120.384,
+          "text": "8720"
+        },
+        {
+          "x": 136.152,
+          "endX": 157.75199999999998,
+          "text": "14240"
+        },
+        {
+          "x": 173.592,
+          "endX": 190.872,
+          "text": "4160"
+        },
+        {
+          "x": 208.872,
+          "endX": 226.15200000000002,
+          "text": "8560"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Delivery",
+      "y": 340.731,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 314.59499999999997,
+          "text": "Delivery"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "(DISTRIBUTION RATE: 030)",
+      "y": 353.475,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 373.446,
+          "text": "(DISTRIBUTION RATE: 030)"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Contact Information",
+      "y": 357.584,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 106.726,
+          "text": "Contact Information"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Service Reference: 788162005",
+      "y": 366.219,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 388.9439999999999,
+          "text": "Service Reference: 788162005"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Emergency: 800-286-2000",
+      "y": 368.343,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 118.06200000000001,
+          "text": "Emergency: 800-286-2000"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "www.eversource.com\tTransmission Demand Chrg\t28.70KW X $11.27000\t$323.45",
+      "y": 378.567,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 100.01700000000002,
+          "text": "www.eversource.com"
+        },
+        {
+          "x": 285.624,
+          "endX": 377.0909999999999,
+          "text": "Transmission Demand Chrg"
+        },
+        {
+          "x": 434.241,
+          "endX": 510.04800000000006,
+          "text": "28.70KW X $11.27000"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$323.45"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Pay by Phone: 888-783-6618",
+      "y": 388.791,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 125.71200000000002,
+          "text": "Pay by Phone: 888-783-6618"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Fixed Monthly Charge\t$44.00",
+      "y": 391.707,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 357.579,
+          "text": "Fixed Monthly Charge"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$44.00"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Customer Service: 888-783-6617",
+      "y": 399.015,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 139.887,
+          "text": "Customer Service: 888-783-6617"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Local Delivery Demand Chrg\t28.70KW X $14.22000\t$408.11",
+      "y": 404.451,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 380.0609999999999,
+          "text": "Local Delivery Demand Chrg"
+        },
+        {
+          "x": 434.241,
+          "endX": 510.04800000000006,
+          "text": "28.70KW X $14.22000"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$408.11"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Local Delivery Improvements\t28.70KW X $3.56000\t$102.17",
+      "y": 417.195,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 381.87,
+          "text": "Local Delivery Improvements"
+        },
+        {
+          "x": 438.561,
+          "endX": 510.048,
+          "text": "28.70KW X $3.56000"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$102.17"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Revenue Decoupling\t8560.00kWh X $0.00101\t$8.65",
+      "y": 429.939,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 353.60099999999994,
+          "text": "Revenue Decoupling"
+        },
+        {
+          "x": 426.258,
+          "endX": 510.048,
+          "text": "8560.00kWh X $0.00101"
+        },
+        {
+          "x": 561.384,
+          "endX": 580.8240000000001,
+          "text": "$8.65"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "CTA Demand Chrg\t28.70KW X $-0.09000\t-$2.58",
+      "y": 442.683,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 346.28399999999993,
+          "text": "CTA Demand Chrg"
+        },
+        {
+          "x": 435.393,
+          "endX": 510.048,
+          "text": "28.70KW X $-0.09000"
+        },
+        {
+          "x": 558.216,
+          "endX": 580.824,
+          "text": "-$2.58"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "FMCC Charge\t8560.00kWh X $0.01649\t$141.15",
+      "y": 455.427,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 331.119,
+          "text": "FMCC Charge"
+        },
+        {
+          "x": 426.258,
+          "endX": 510.048,
+          "text": "8560.00kWh X $0.01649"
+        },
+        {
+          "x": 552.744,
+          "endX": 580.8240000000001,
+          "text": "$141.15"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Comb Public Benefit Chrg\t8560.00kWh X $0.01068\t$91.42",
+      "y": 468.171,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 370.602,
+          "text": "Comb Public Benefit Chrg"
+        },
+        {
+          "x": 426.258,
+          "endX": 510.048,
+          "text": "8560.00kWh X $0.01068"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$91.42"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Subtotal Delivery Services\t$1,116.37",
+      "y": 481.635,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 372.37499999999994,
+          "text": "Subtotal Delivery Services"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$1,116.37"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Total Cost of Electricity\t$2,017.05",
+      "y": 494.379,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 367.6590000000001,
+          "text": "Total Cost of Electricity"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,017.05"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "Other Charges or Credits",
+      "y": 519.867,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 373.3920000000001,
+          "text": "Other Charges or Credits"
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "text": "CE_260108PROD.TXT",
+      "y": 541.773,
+      "cells": [
+        {
+          "x": 527.658,
+          "endX": 578.52,
+          "text": "CE_260108PROD.TXT"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Total Amount Due",
+      "y": 39.35000000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 374.49600000000004,
+          "text": "Total Amount Due"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "by 02/05/26\t$3,455.69",
+      "y": 54.32600000000002,
+      "cells": [
+        {
+          "x": 287.136,
+          "endX": 347.02700000000004,
+          "text": "by 02/05/26"
+        },
+        {
+          "x": 487.704,
+          "endX": 583.704,
+          "text": "$3,455.69"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Account Number:\t5154 729 3084",
+      "y": 59.24400000000003,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 104.436,
+          "text": "Account Number:"
+        },
+        {
+          "x": 119.88,
+          "endX": 188.99999999999994,
+          "text": "5154 729 3084"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Customer name key: E. &",
+      "y": 69.36300000000006,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 111.32999999999998,
+          "text": "Customer name key: E. &"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Statement Date:\t01/08/26",
+      "y": 82.51199999999994,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 99.54,
+          "text": "Statement Date:"
+        },
+        {
+          "x": 113.832,
+          "endX": 155.064,
+          "text": "01/08/26"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Continued from previous page...",
+      "y": 85.46799999999996,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 386.9920000000001,
+          "text": "Continued from previous page..."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Service Provided To:",
+      "y": 95.14800000000002,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 117.03600000000002,
+          "text": "Service Provided To:"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "E. & J. PARTS CLEANING, INC.",
+      "y": 105.37199999999996,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 159.09599999999998,
+          "text": "E. & J. PARTS CLEANING, INC."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Late Payment Charge Jan 08\t$14.25",
+      "y": 115.08299999999997,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 381.77999999999986,
+          "text": "Late Payment Charge Jan 08"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$14.25"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Subtotal Other Charges or Credits\t$14.25",
+      "y": 128.54700000000003,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 397.0619999999999,
+          "text": "Subtotal Other Charges or Credits"
+        },
+        {
+          "x": 557.064,
+          "endX": 580.824,
+          "text": "$14.25"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Continued from previous page...",
+      "y": 139.46799999999996,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 128.94400000000002,
+          "text": "Continued from previous page..."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Total Current Charges\t$2,031.30",
+      "y": 153.31500000000005,
+      "cells": [
+        {
+          "x": 285.624,
+          "endX": 363.0510000000001,
+          "text": "Total Current Charges"
+        },
+        {
+          "x": 546.264,
+          "endX": 580.8240000000001,
+          "text": "$2,031.30"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Supply Rate",
+      "y": 161.96799999999996,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 65.488,
+          "text": "Supply Rate"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Dollars / kWh",
+      "y": 175.06500000000005,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 62.169999999999995,
+          "text": "Dollars / kWh"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Demand Profile",
+      "y": 323.968,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 76.272,
+          "text": "Demand Profile"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Max. Demand",
+      "y": 335.553,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 63.199,
+          "text": "Max. Demand"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Important Messages About Your Account",
+      "y": 479.12,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 189.416,
+          "text": "Important Messages About Your Account"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "Thank you for participating in the Online Bill and Payment Service.",
+      "y": 490.332,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 223.07999999999998,
+          "text": "Thank you for participating in the Online Bill and Payment Service."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "For tax purposes, your 2025 interest paid for late payment charges was",
+      "y": 514.236,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 238.65599999999995,
+          "text": "For tax purposes, your 2025 interest paid for late payment charges was"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "$69.02.",
+      "y": 526.188,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 50.616,
+          "text": "$69.02."
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "This meter is tax exempt",
+      "y": 550.092,
+      "cells": [
+        {
+          "x": 27.576,
+          "endX": 100.53600000000002,
+          "text": "This meter is tax exempt"
+        }
+      ]
+    },
+    {
+      "pageNumber": 3,
+      "text": "CE_260108PROD.TXT",
+      "y": 775.773,
+      "cells": [
+        {
+          "x": 527.658,
+          "endX": 578.52,
+          "text": "CE_260108PROD.TXT"
+        }
+      ]
+    }
+  ]
+}
