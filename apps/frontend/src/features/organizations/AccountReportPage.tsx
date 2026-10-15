@@ -1,19 +1,11 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, MenuItem, Stack, TextField } from "@mui/material";
 import * as XLSX from "xlsx";
-<<<<<<< HEAD
 import { parseAccountReportWorkbook, summarizeAccountReport, money, monthLabel, displayDate, displayProcessedDate, type AccountReportRow } from "./accountReport";
-=======
-import { parseAccountReport, summarizeAccountReport, money, monthLabel, displayDate, displayProcessedDate, type AccountReportRow } from "./accountReport";
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 import { createAccountReportPdf } from "./accountReportPdf";
 
 export function AccountReportPage() {
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
-<<<<<<< HEAD
-=======
-  const [sheet, setSheet] = useState("");
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<AccountReportRow[]>([]);
   const [month, setMonth] = useState("");
@@ -36,11 +28,7 @@ export function AccountReportPage() {
       if (file.size > 20 * 1024 * 1024) throw new Error("Choose a spreadsheet smaller than 20 MB.");
       const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false, raw: true });
       if (!book.SheetNames.length) throw new Error("The spreadsheet has no worksheets.");
-<<<<<<< HEAD
       setWorkbook(book);
-=======
-      setWorkbook(book); setSheet(book.SheetNames[0]);
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -48,13 +36,7 @@ export function AccountReportPage() {
     setRows([]); setError(""); setMonth(""); setUtility("");
     try {
       if (!workbook) return;
-<<<<<<< HEAD
       const parsed = parseAccountReportWorkbook(workbook, fileName);
-=======
-      const parsed = parseAccountReport(workbook.Sheets[sheet], !!workbook.Workbook?.WBProps?.date1904, sheet, fileName);
-      summarizeAccountReport(parsed);
-      if (!Number.isSafeInteger(parsed.reduce((sum, row) => sum + row.cents, 0))) throw new Error("Total New Charges is too large.");
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       setRows(parsed);
     } catch (e) { setError((e as Error).message); }
   }
@@ -81,11 +63,7 @@ export function AccountReportPage() {
     <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: "wrap", alignItems: "center" }}>
       <Button component="label" variant="outlined" disabled={busy}>Choose spreadsheet<input aria-label="Choose spreadsheet" hidden type="file" accept=".xlsx,.xls,.csv" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></Button>
       <span>{fileName || "No file selected"}</span>
-<<<<<<< HEAD
       {workbook && <span>All {workbook.SheetNames.length} worksheets included</span>}
-=======
-      {workbook && <TextField select size="small" label="Worksheet" value={sheet} onChange={e => { setSheet(e.target.value); setRows([]); setError(""); }} sx={{ minWidth: 180 }}>{workbook.SheetNames.map(name => <MenuItem key={name} value={name}>{name}</MenuItem>)}</TextField>}
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       <Button variant="contained" disabled={!workbook || busy} onClick={submit}>{busy ? "Working..." : "Submit"}</Button>
     </Stack>
     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
@@ -97,19 +75,11 @@ export function AccountReportPage() {
         <Button variant="contained" onClick={() => void download()} disabled={busy || !filtered.length}>Download PDF</Button>
       </Stack>
       <h3>Account Total: {money(total)}</h3>
-<<<<<<< HEAD
       <p className="muted">{filtered.length} statement rows from all worksheets. One PDF combines the selected rows by utility and statement month. Product shows the source worksheet.</p>
       {!filtered.length ? <Alert severity="info">No statements match these filters.</Alert> : <>
         <div className="account-report-table-wrap"><table className="account-report-table"><thead><tr><th>Statement month</th><th>Utility type</th><th>Statements</th><th>Account Total</th></tr></thead><tbody>{summary.map(group => <tr key={`${group.month}-${group.utilityType}`}><td>{monthLabel(group.month)}</td><td>{group.utilityType}</td><td>{group.count}</td><td>{money(group.cents)}</td></tr>)}</tbody></table></div>
         <h3>Statement details</h3>
         <div className="account-report-table-wrap"><table className="account-report-table"><thead><tr>{["Account Number", "Company", "City", "Utility", "Product", "Amount", "Statement Date", "Service Address", "Due Date"].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{filtered.map((row, index) => <tr key={index}>{[row.account, row.utility, row.city, row.utility, row.product, money(row.cents), displayDate(row.statementDate), row.address, displayProcessedDate(row.processedDate)].map((value, i) => <td key={i}>{value || "—"}</td>)}</tr>)}</tbody></table></div>
-=======
-      <p className="muted">{filtered.length} statement rows. PDF includes the selected rows, with a separate section for each company and month.</p>
-      {!filtered.length ? <Alert severity="info">No statements match these filters.</Alert> : <>
-        <div className="account-report-table-wrap"><table className="account-report-table"><thead><tr><th>Statement month</th><th>Utility type</th><th>Statements</th><th>Account Total</th></tr></thead><tbody>{summary.map(group => <tr key={`${group.month}-${group.utilityType}`}><td>{monthLabel(group.month)}</td><td>{group.utilityType}</td><td>{group.count}</td><td>{money(group.cents)}</td></tr>)}</tbody></table></div>
-        <h3>Statement details</h3>
-        <div className="account-report-table-wrap"><table className="account-report-table"><thead><tr>{["Account Number", "Company Folder Name", "City", "Utility", "Product", "Amount", "Statement Date", "Service Address", "Processed Date"].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{filtered.map((row, index) => <tr key={index}>{[row.account, row.utility, row.city, row.utility, row.product, money(row.cents), displayDate(row.statementDate), row.address, displayProcessedDate(row.processedDate)].map((value, i) => <td key={i}>{value || "—"}</td>)}</tr>)}</tbody></table></div>
->>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       </>}
     </>}
   </section>;
