@@ -1634,7 +1634,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       {(hasCompanyDashboard && isDashboardView) || isCompaniesView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
-            <h2>Companies</h2>
+            <h2><b>Companies</b></h2>
             <div className="panel-title-actions">
               <TextField
                 size="small"
