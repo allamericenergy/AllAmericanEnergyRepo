@@ -98,8 +98,11 @@ export function ExtractPdfDialog({ open, onClose }: { open: boolean; onClose: ()
   }
 
   const results = uploads.filter((item) => item.result);
-  const rows: FieldRow[] = results.flatMap((item) => Object.entries(item.result!.bill ?? {}).map(([field, value]) => ({
-    id: `${item.id}-${field}`, fileName: item.file.name, field: fieldLabel(field), value: displayValue(value),
+  const rows: FieldRow[] = results.flatMap((item) => Object.entries({ ...item.result!.bill, readDemand: item.result!.bill?.readDemand ?? null }).map(([field, value]) => ({
+    id: `${item.id}-${field}`, fileName: item.file.name, field: fieldLabel(field),
+    value: field === "readDemand" && value == null
+      ? (item.result!.extraction.issues.some((issue) => issue.field === "readDemand") ? "Needs review" : "Not found in PDF")
+      : displayValue(value),
     review: item.result!.extraction.issues.filter((issue) => issue.field === field || issue.field.startsWith(`${field}.`)).map((issue) => issue.message).join(" ")
   })));
   const finished = uploads.filter((item) => ["Complete", "Needs review", "Failed"].includes(item.status)).length;
@@ -107,7 +110,7 @@ export function ExtractPdfDialog({ open, onClose }: { open: boolean; onClose: ()
   return <Dialog open={open} onClose={close} fullWidth maxWidth="xl" aria-labelledby="extract-pdf-title">
     <DialogTitle id="extract-pdf-title">ExtractPDF</DialogTitle>
     <DialogContent>
-      <p className="muted">Select multiple utility bill PDFs (maximum 10 MB per file), then click Submit to extract them.</p>
+      <p className="muted">Select multiple utility bill PDFs (maximum 10 MB per file), then click Submit to extract them. Results include Read Demand and Billed Demand as separate fields, with their units when found.</p>
       <div className="bulk-upload-controls">
         <Button component="label" variant="outlined" startIcon={<Upload size={16} />} disabled={loading}>
           Choose PDFs
