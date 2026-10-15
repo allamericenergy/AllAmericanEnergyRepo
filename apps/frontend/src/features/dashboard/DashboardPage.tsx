@@ -1,11 +1,16 @@
+import { loadAllMeters } from "../../lib/loadAllMeters";
+import { formatCompanyPhone } from "../../lib/companyPhone";
+import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Eye, FileText, Folder, FolderOpen, GitBranch, Pencil, Plus, Power, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
+import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
 import { MembersPanel } from "../members/MembersPage";
@@ -16,16 +21,38 @@ interface DashboardPageProps {
 
 export function DashboardPage({ view }: DashboardPageProps) {
   const navigate = useNavigate();
+  const [companyViewParams, setCompanyViewParams] = useSearchParams();
+  const requestedCompanyId = companyViewParams.get("companyId");
   const user = useAuthStore((state) => state.user);
   const isCompaniesView = view === "companies";
   const isContractsView = view === "contracts";
   const isMetersView = view === "meters";
   const isDashboardView = !view || view === "reports";
   const hasAdminDashboard = user?.role === "superadmin" || user?.role === "admin";
+  const hasCompanyDashboard = hasAdminDashboard || user?.role === "member";
   const canManageMembers = hasAdminDashboard;
+  const canDeleteCompanies = user?.role === "superadmin";
+  const [companiesToDelete, setCompaniesToDelete] = useState<TblCompanyRow[]>([]);
+  const [isDeletingCompanies, setIsDeletingCompanies] = useState(false);
+  const [deleteCompanyError, setDeleteCompanyError] = useState("");
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [companyFormMode, setCompanyFormMode] = useState<"create" | "edit">("create");
   const [viewedCompany, setViewedCompany] = useState<TblCompanyRow | null>(null);
+  const [companyTray, setCompanyTray] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const [isCompanyMeterListDismissed, setIsCompanyMeterListDismissed] = useState(true);
+  const [isCompanyContractListOpen, setIsCompanyContractListOpen] = useState(false);
+  const [isCompanyMemberListOpen, setIsCompanyMemberListOpen] = useState(false);
+  useEffect(() => {
+    setCompanyTray(false);
+    // Contract List opens only through its button, never automatically.
+    setIsCompanyContractListOpen(false);
+    // Member List also opens only through its button.
+    setIsCompanyMemberListOpen(false);
+    // Automatic meter pop-out is disabled; Open Meter List opens it on demand.
+    // setIsCompanyMeterListDismissed(false);
+    setIsCompanyMeterListDismissed(true);
+  }, [viewedCompany?.id]);
   const [editingCompanyId, setEditingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [activatingCompanyId, setActivatingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
@@ -40,6 +67,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     newCompany.state,
     newCompany.postalCode
   ].every((value) => value.trim())
+    && /^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)
     && (!newCompany.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCompany.email.trim()));
   const [isBulkCompanyModalOpen, setIsBulkCompanyModalOpen] = useState(false);
   const [bulkCompanyRows, setBulkCompanyRows] = useState<NewCompanyForm[]>([]);
@@ -62,6 +90,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [contractFormMode, setContractFormMode] = useState<"create" | "edit">("create");
   const [viewedContract, setViewedContract] = useState<ContractRow | null>(null);
+  const [contractTray, setContractTray] = useState(false);
   const [editingContractId, setEditingContractId] = useState<ContractRow["id"] | null>(null);
   const [savingContract, setSavingContract] = useState(false);
   const [isContractSubmitConfirmOpen, setIsContractSubmitConfirmOpen] = useState(false);
@@ -82,15 +111,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
   const [meterFormMode, setMeterFormMode] = useState<"create" | "edit">("create");
   const [viewedMeter, setViewedMeter] = useState<MeterRow | null>(null);
+  const [meterTray, setMeterTray] = useState(false);
   const [editingMeterId, setEditingMeterId] = useState<MeterRow["id"] | null>(null);
   const [savingMeter, setSavingMeter] = useState(false);
   const [togglingMeterId, setTogglingMeterId] = useState<MeterRow["id"] | null>(null);
   const [selectedMeters, setSelectedMeters] = useState<MeterRow[]>([]);
   const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
   const [meterGridKey, setMeterGridKey] = useState(0);
+  const [isMeterColumnMenuOpen, setIsMeterColumnMenuOpen] = useState(true);
+  const [meterColumnVisibility, setMeterColumnVisibility] = useState<Record<string, boolean>>({});
   const [meterError, setMeterError] = useState("");
   const [meterAvailabilityNotice, setMeterAvailabilityNotice] = useState("");
   const [meterForm, setMeterForm] = useState<MeterForm>(emptyMeterForm());
+  const meterDuplicateSession = useRef(0);
+  const meterDuplicateApproved = useRef(new Set<string>());
+  const meterDuplicateRequests = useRef(new Map<string, Promise<boolean>>());
+  const [meterDuplicates, setMeterDuplicates] = useState<Array<{ field: "accountNumber" | "serviceRefPod"; value: string }>>([]);
+  const latestMeterForm = useRef(meterForm);
+  latestMeterForm.current = meterForm;
+  const accountNumberInput = useRef<HTMLInputElement>(null);
+  const serviceRefInput = useRef<HTMLInputElement>(null);
   const [isBulkMeterModalOpen, setIsBulkMeterModalOpen] = useState(false);
   const [bulkMeterRows, setBulkMeterRows] = useState<MeterForm[]>([]);
   const [bulkMeterFileName, setBulkMeterFileName] = useState("");
@@ -105,24 +145,36 @@ export function DashboardPage({ view }: DashboardPageProps) {
     return () => window.clearTimeout(timeoutId);
   }, [contractAvailabilityNotice]);
   const pipeline = useQuery({
-    queryKey: ["pipeline"],
+    queryKey: ["pipeline", user?.id],
     queryFn: async () => (await api.get("/reports/pipeline")).data,
+    enabled: isDashboardView && user?.role !== "member",
     retry: false
   });
   const companies = useQuery({
-    queryKey: ["tbl-companies"],
+    queryKey: ["tbl-companies", user?.id],
     queryFn: async () => (await api.get("/reports/tbl-companies")).data as { total: number; data: TblCompanyRow[] },
-    enabled: hasAdminDashboard || isCompaniesView || isContractsView || isMetersView,
+    enabled: hasCompanyDashboard || isCompaniesView || isContractsView || isMetersView,
     retry: false
   });
+  useEffect(() => {
+    if (!isCompaniesView || !requestedCompanyId || !companies.data) return;
+    const company = companies.data.data.find((item) => String(item.id) === requestedCompanyId);
+    if (!company) return;
+    setViewedCompany(company);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("companyId");
+      return next;
+    }, { replace: true });
+  }, [isCompaniesView, requestedCompanyId, companies.data, setCompanyViewParams]);
   const contracts = useQuery({
-    queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id],
+    queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get("/reports/contracts", {
-        params: { companyId: isContractsView ? undefined : viewedCompany?.id }
+        params: { companyId: isContractsView || viewedCompany?.companyType === "Company" ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: ContractRow[] },
-    enabled: Boolean(viewedCompany) || isContractsView || (hasAdminDashboard && isDashboardView),
+    enabled: Boolean(viewedCompany) || isContractsView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
   const contractLookups = useQuery({
@@ -139,17 +191,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
     retry: false
   });
   const meters = useQuery({
-    queryKey: ["meters", isMetersView ? "all" : viewedCompany?.id],
-    queryFn: async () => (
-      await api.get("/reports/meters", {
-        params: { companyId: isMetersView ? undefined : viewedCompany?.id }
-      })
-    ).data as { total: number; data: MeterRow[] },
-    enabled: Boolean(viewedCompany?.id) || isMetersView || (hasAdminDashboard && isDashboardView),
+    queryKey: ["meters", isMetersView ? "all" : viewedCompany?.id, user?.id],
+    queryFn: ({ signal }) => loadAllMeters<MeterRow>({ companyId: isMetersView || viewedCompany?.companyType === "Company" ? undefined : viewedCompany?.id }, signal),
+    enabled: Boolean(viewedCompany?.id) || isMetersView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
   const members = useQuery({
-    queryKey: ["members", "dashboard"],
+    queryKey: ["members", "dashboard", user?.id],
     queryFn: async () => (await api.get("/reports/members")).data as { total: number },
     enabled: hasAdminDashboard && isDashboardView,
     retry: false
@@ -187,18 +235,86 @@ export function DashboardPage({ view }: DashboardPageProps) {
       : { ...current, state: match.state, city: match.city });
   }, [meterForm.zip, meterZipMatches.data]);
   const contractMeters = useQuery({
-    queryKey: ["contract-meters", contractCompanyId, contractForm.productId],
-    queryFn: async () => (
-      await api.get("/reports/meters", {
-        params: {
-          companyId: contractCompanyId || undefined,
-          productId: contractForm.productId || undefined
-        }
-      })
-    ).data as { total: number; data: MeterRow[] },
+    queryKey: ["contract-meters", contractCompanyId, contractForm.productId, user?.id],
+    queryFn: ({ signal }) => loadAllMeters<MeterRow>({
+      companyId: contractCompanyId || undefined,
+      productId: contractForm.productId || undefined
+    }, signal),
     enabled: Boolean(isContractModalOpen && contractCompanyId),
     retry: false
   });
+  const visibleCompanies = useMemo(() => {
+    const query = companySearch.trim().toLocaleLowerCase();
+    if (!query) return companies.data?.data ?? [];
+    return (companies.data?.data ?? []).filter((company) => [
+      company.companyName,
+      company.legalEntityName,
+      company.customerId,
+      company.city,
+      company.state,
+      company.phoneNumber,
+      company.email,
+      company.parentCompanyName
+    ].some((value) => String(value ?? "").toLocaleLowerCase().includes(query)));
+  }, [companies.data?.data, companySearch]);
+  const viewedCompanyIds = useMemo(() => {
+    if (!viewedCompany) return [];
+    const ids = new Set([String(viewedCompany.id)]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      (companies.data?.data ?? []).forEach((company) => {
+        if (company.parentCompanyId != null && ids.has(String(company.parentCompanyId)) && !ids.has(String(company.id))) {
+          ids.add(String(company.id));
+          changed = true;
+        }
+      });
+    }
+    return Array.from(ids);
+  }, [companies.data?.data, viewedCompany]);
+  const companyLabels = useMemo(() => Object.fromEntries(
+    viewedCompanyIds.map((id) => {
+      const company = (companies.data?.data ?? []).find((item) => String(item.id) === String(id));
+      const marker = String(id) === String(viewedCompany?.id) ? "▾ Parent" : "↳ Child";
+      return [String(id), `${marker} · ${company?.companyName ?? "Company"}`];
+    })
+  ), [companies.data?.data, viewedCompany?.id, viewedCompanyIds]);
+  const viewedContractMeters = useQuery({
+    queryKey: ["viewed-contract-meters", viewedContract?.id, user?.id],
+    queryFn: ({ signal }) => loadAllMeters<MeterRow>({ contractId: viewedContract!.id }, signal),
+    enabled: Boolean(viewedContract),
+    retry: false
+  });
+  function viewContract(contract: ContractRow) {
+    window.focus();
+    setViewedMeter(null);
+    setContractTray(false);
+    setViewedContract(contract);
+  }
+  const viewedMeterContracts = useQuery({
+    queryKey: ["viewed-meter-contracts", viewedMeter?.id, user?.id],
+    queryFn: async ({ signal }) => {
+      const data: ContractRow[] = [];
+      let total = 0;
+      do {
+        const response = await api.get<{ total: number; data: ContractRow[] }>("/reports/contracts", {
+          params: { meterId: viewedMeter!.id, take: 500, skip: data.length }, signal
+        });
+        total = response.data.total;
+        if (!response.data.data.length && data.length < total) throw new Error("Unable to load all related contracts.");
+        data.push(...response.data.data);
+      } while (data.length < total);
+      return { total, data };
+    },
+    enabled: Boolean(viewedMeter),
+    retry: false
+  });
+  function viewMeter(meter: MeterRow) {
+    window.focus();
+    setViewedContract(null);
+    setMeterTray(false);
+    setViewedMeter(meter);
+  }
   useEffect(() => {
     if (!isContractModalOpen || contractFormMode !== "create" || contractMeters.data?.data.length !== 1) return;
     const meterId = Number(contractMeters.data.data[0].id);
@@ -207,7 +323,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       : { ...current, meterIds: [meterId] });
   }, [contractFormMode, contractMeters.data, isContractModalOpen]);
   const companyDocuments = useQuery({
-    queryKey: ["company-documents", viewedCompany?.id],
+    queryKey: ["company-documents", viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get(`/reports/tbl-companies/${viewedCompany?.id}/documents`)
     ).data as CompanyDocumentsResponse,
@@ -286,6 +402,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Pencil size={16} />
             </IconButton>
           </Tooltip>
+          {canDeleteCompanies ? (
+            <Tooltip title="Delete company">
+              <IconButton size="small" color="error" aria-label="Delete company" disabled={isDeletingCompanies} onClick={(event) => {
+                event.stopPropagation(); setDeleteCompanyError(""); setCompaniesToDelete([row]);
+              }}><Trash2 size={16} /></IconButton>
+            </Tooltip>
+          ) : null}
           <Tooltip title={`Add subcompany to ${row.companyName ?? "company"}`}>
             <IconButton size="small" aria-label="Add subcompany" onClick={(event) => { event.stopPropagation(); openCreateSubcompany(row); }}>
               <GitBranch size={16} />
@@ -317,12 +440,29 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const contractColumns: GridColumn<ContractRow>[] = [
 
     { field: "contractId", headerName: "Contract ID", width: 140 },
-    { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
+    {
+      field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
+      renderCell: ({ row, value }) => (
+        <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (row.companyId != null) {
+            setViewedContract(null);
+            setViewedMeter(null);
+            navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`);
+          }
+        }} disabled={row.companyId == null}>
+          {String(value ?? "")}
+        </button>
+      )
+    },
     { field: "broker", headerName: "Broker", minWidth: 180 },
     { field: "supplier", headerName: "Supplier", minWidth: 180 },
     { field: "swing", headerName: "Swing", minWidth: 140 },
     { field: "passThrough", headerName: "Pass Through", minWidth: 150 },
     { field: "billType", headerName: "Bill Type", minWidth: 140 },
+    { field: "rate", headerName: "Rate", width: 120, valueFormatter: formatContractAmount },
+    { field: "fee", headerName: "Fee", width: 120, valueFormatter: formatContractAmount },
     { field: "startDate", headerName: "Start Date", width: 140, valueFormatter: formatDate },
     { field: "endDate", headerName: "End Date", width: 140, valueFormatter: formatDate },
     {
@@ -342,7 +482,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       renderCell: ({ row }) => (
         <span className="grid-action-buttons">
           <Tooltip title="View contract">
-            <IconButton size="small" aria-label="View contract" onClick={(event) => { event.stopPropagation(); setViewedContract(row); }}>
+            <IconButton size="small" aria-label="View contract" onClick={(event) => { event.stopPropagation(); viewContract(row); }}>
               <Eye size={16} />
             </IconButton>
           </Tooltip>
@@ -369,9 +509,23 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ];
   const meterColumns: GridColumn<MeterRow>[] = [
 
-    { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
-    { field: "accountNumber", headerName: "Account Number", minWidth: 170 },
-    { field: "serviceRefPod", headerName: "Service Ref/POD", minWidth: 170 },
+    {
+      field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
+      renderCell: ({ row, value }) => <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); if (row.companyId != null) { setViewedContract(null); setViewedMeter(null); navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`); } }} disabled={row.companyId == null}>{String(value ?? "")}</button>
+    },
+    { field: "utilityAccountName", headerName: "Utility Account Name", minWidth: 220 },
+    {
+      field: "accountNumber",
+      headerName: "Account Number",
+      minWidth: 170,
+      renderCell: ({ row, value }) => row.accountNumberSize === 0 ? "NO" : String(value ?? "")
+    },
+    {
+      field: "serviceRefPod",
+      headerName: "Service Ref/POD",
+      minWidth: 170,
+      renderCell: ({ row, value }) => row.serviceRefSize === 0 ? "NO" : String(value ?? "")
+    },
     { field: "nameKey", headerName: "Name Key", minWidth: 140 },
     { field: "meter", headerName: "Meter", minWidth: 140 },
     { field: "serviceAddress", headerName: "Service Address", minWidth: 220 },
@@ -413,7 +567,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       renderCell: ({ row }) => (
         <span className="grid-action-buttons">
           <Tooltip title="View meter">
-            <IconButton size="small" aria-label="View meter" onClick={(event) => { event.stopPropagation(); setViewedMeter(row); }}>
+            <IconButton size="small" aria-label="View meter" onClick={(event) => { event.stopPropagation(); viewMeter(row); }}>
               <Eye size={16} />
             </IconButton>
           </Tooltip>
@@ -439,6 +593,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
     },
 
   ];
+  const visibleMeterColumns = meterColumns.map((column) => ({
+    ...column,
+    csvPreserveLeadingZeros: true,
+    hidden: meterColumnVisibility[String(column.field)] === false
+  }));
+  const visibleMeterColumnCount = meterColumns.filter(
+    (column) => meterColumnVisibility[String(column.field)] !== false
+  ).length;
+
+  function toggleMeterColumn(field: keyof MeterRow) {
+    const key = String(field);
+    setMeterColumnVisibility((current) => ({
+      ...current,
+      [key]: current[key] === false
+    }));
+  }
+
+  function showAllMeterColumns() {
+    setMeterColumnVisibility({});
+  }
 
   function updateNewCompany<K extends keyof NewCompanyForm>(field: K, value: NewCompanyForm[K]) {
     setNewCompany((current) => ({ ...current, [field]: value }));
@@ -470,8 +644,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function updateContractFile(file: File | null) {
+    setContractError("");
     if (!file) {
       setContractForm((current) => ({ ...current, contractFile: null, cFile: "" }));
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setContractForm((current) => ({ ...current, contractFile: null, cFile: "" }));
+      setContractError("Contract file must be 15 MB or smaller.");
       return;
     }
 
@@ -505,10 +686,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function updateMeterUtility(value: number) {
+    const utility = meterLookups.data?.utilities.find((option) => Number(option.id) === value);
     setMeterForm((current) => ({
       ...current,
       utilityId: value,
-      rate: current.utilityId === value ? current.rate : 0
+      rate: current.utilityId === value ? current.rate : 0,
+      accountNumber: utility?.accountNumberSize === 0 && !utility.accountNumberRequired ? "" : current.accountNumber,
+      serviceRefPod: utility?.serviceRefSize === 0 && !utility.serviceRefRequired ? "" : current.serviceRefPod
     }));
   }
 
@@ -532,7 +716,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       state: parent.state ?? "",
       country: parent.country ?? "",
       postalCode: parent.postalCode ?? "",
-      phoneNumber: parent.phoneNumber ?? ""
+      phoneNumber: formatCompanyPhone(parent.phoneNumber ?? "")
     });
     setIsCompanyModalOpen(true);
   }
@@ -571,10 +755,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
     const companyCount = companyResult?.total ?? companyResult?.data.length;
     if (companyCount === 0) {
       setContractAvailabilityNotice("A contract cannot be assigned without a company. Add a company before creating a contract.");
-      return;
-    }
-    if (viewedCompany && !viewedCompany.isActive) {
-      setContractError("Make company active to add contracts.");
       return;
     }
     if (viewedCompany?.id) {
@@ -622,6 +802,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   const contractMonths = calculateContractMonths(contractForm.startDate, contractForm.endDate);
   const meterLoadProfile = calculateMeterLoadProfile(meterForm.demand, meterForm.annualUsage);
+  const selectedMeterUtility = meterLookups.data?.utilities.find((utility) => Number(utility.id) === meterForm.utilityId);
+  const accountNumberDisabled = selectedMeterUtility?.accountNumberSize === 0 && !selectedMeterUtility.accountNumberRequired;
+  const serviceRefDisabled = selectedMeterUtility?.serviceRefSize === 0 && !selectedMeterUtility.serviceRefRequired;
   const bulkMeterCompany = viewedCompany ?? companies.data?.data.find((company) => Number(company.id) === bulkMeterCompanyId);
   const contractNotesText = contractForm.notes.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, "").trim();
   const requiredContractFieldsValid = Boolean(
@@ -645,7 +828,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ));
   const selectedContractMeterNumbers = (contractMeters.data?.data ?? [])
     .filter((meter) => contractForm.meterIds.includes(Number(meter.id)))
-    .map((meter) => meter.meter || meter.accountNumber || `Meter ${meter.id}`);
+    .map(contractMeterLabel);
   const displayedContractFileName = shortenFileName(contractForm.cFile);
 
   function requestContractSubmit() {
@@ -726,10 +909,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
-    if (viewedCompany && !viewedCompany.isActive) {
-      setMeterError("Make company active to add meters.");
-      return;
-    }
+    resetMeterDuplicateChecks();
     setMeterError("");
     setMeterFormMode("create");
     setEditingMeterId(null);
@@ -741,10 +921,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
-    if (viewedCompany && !viewedCompany.isActive) {
-      setMeterError("Make company active to add meters.");
-      return;
-    }
     setBulkMeterError("");
     setBulkMeterResult(null);
     setBulkMeterRows([]);
@@ -762,6 +938,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function closeMeterModal() {
+    resetMeterDuplicateChecks();
     setIsMeterModalOpen(false);
     setEditingMeterId(null);
     setMeterFormMode("create");
@@ -769,6 +946,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function editMeter(meter: MeterRow) {
+    resetMeterDuplicateChecks();
     setMeterError("");
     setMeterFormMode("edit");
     setEditingMeterId(meter.id);
@@ -790,10 +968,67 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  function resetMeterDuplicateChecks() {
+    meterDuplicateSession.current += 1;
+    meterDuplicateApproved.current.clear();
+    meterDuplicateRequests.current.clear();
+    setMeterDuplicates([]);
+  }
+
+  function checkMeterDuplicate(field: "accountNumber" | "serviceRefPod"): Promise<boolean> {
+    const value = latestMeterForm.current[field].trim();
+    if (meterFormMode !== "create" || !value || (field === "accountNumber" ? accountNumberDisabled : serviceRefDisabled)) return Promise.resolve(true);
+    const key = `${field}:${value}`;
+    if (meterDuplicateApproved.current.has(key)) return Promise.resolve(true);
+    const existing = meterDuplicateRequests.current.get(key);
+    if (existing) return existing;
+    const session = meterDuplicateSession.current;
+    const request = (async () => {
+      try {
+        const response = await api.get<{ exists: boolean }>("/reports/meters/check-duplicate", { params: { field, value } });
+        if (session !== meterDuplicateSession.current || latestMeterForm.current[field].trim() !== value) return false;
+        if (response.data.exists) {
+          setMeterDuplicates((current) => current.some((item) => item.field === field && item.value === value) ? current : [...current, { field, value }]);
+          return false;
+        }
+        return true;
+      } catch {
+        if (session === meterDuplicateSession.current && latestMeterForm.current[field].trim() === value) {
+          setMeterError("Unable to check for duplicate meter details. Please try again before saving.");
+        }
+        return false;
+      } finally {
+        if (session === meterDuplicateSession.current) meterDuplicateRequests.current.delete(key);
+      }
+    })();
+    meterDuplicateRequests.current.set(key, request);
+    return request;
+  }
+
+  function resolveMeterDuplicate(keepValue: boolean) {
+    const duplicate = meterDuplicates[0];
+    if (!duplicate) return;
+    if (keepValue) meterDuplicateApproved.current.add(`${duplicate.field}:${duplicate.value}`);
+    else {
+      if (latestMeterForm.current[duplicate.field].trim() === duplicate.value) updateMeterForm(duplicate.field, "");
+      window.setTimeout(() => (duplicate.field === "accountNumber" ? accountNumberInput : serviceRefInput).current?.focus(), 0);
+    }
+    setMeterDuplicates((current) => current.slice(1));
+  }
+
   async function saveMeter() {
+    if (savingMeter) return;
     const companyId = viewedCompany?.id ? Number(viewedCompany.id) : meterForm.companyId;
     if (!companyId) {
       setMeterError("Company is required.");
+      return;
+    }
+    if (selectedMeterUtility?.accountNumberRequired && !meterForm.accountNumber.trim()) {
+      setMeterError("Account Number is required for the selected utility.");
+      return;
+    }
+    if (selectedMeterUtility?.serviceRefRequired && !meterForm.serviceRefPod.trim()) {
+      setMeterError("Service Ref/POD is required for the selected utility.");
       return;
     }
     if (isMeterZipUnavailable && (!meterForm.city.trim() || !meterForm.state.trim())) {
@@ -804,6 +1039,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterError("");
     setSavingMeter(true);
     try {
+      const session = meterDuplicateSession.current;
+      const results = await Promise.all([checkMeterDuplicate("accountNumber"), checkMeterDuplicate("serviceRefPod")]);
+      if (results.some((allowed) => !allowed) || session !== meterDuplicateSession.current || latestMeterForm.current !== meterForm) return;
       const payload = {
         ...meterForm,
         companyId,
@@ -858,6 +1096,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
       return;
     }
 
+    if (!/^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)) {
+      setCompanyError("Enter a phone number in xxx-xxx-xxxx format.");
+      return;
+    }
     setIsSavingCompany(true);
     try {
       const payload = {
@@ -879,7 +1121,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
       };
 
       if (companyFormMode === "edit" && editingCompanyId !== null) {
-        await api.patch(`/reports/tbl-companies/${editingCompanyId}`, payload);
+        const response = await api.patch<{ data: TblCompanyRow }>(`/reports/tbl-companies/${editingCompanyId}`, payload);
+        setViewedCompany((current) => current?.id === editingCompanyId ? response.data.data : current);
       } else {
         await api.post("/reports/tbl-companies", payload);
       }
@@ -1037,6 +1280,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
   }
 
+  async function confirmDeleteCompanies() {
+    if (!canDeleteCompanies || !companiesToDelete.length || isDeletingCompanies) return;
+    setIsDeletingCompanies(true);
+    setDeleteCompanyError("");
+    try {
+      const ids = companiesToDelete.map((company) => company.id);
+      const response = ids.length === 1
+        ? await api.delete(`/reports/tbl-companies/${ids[0]}`)
+        : await api.delete("/reports/tbl-companies/bulk", { data: { ids } });
+      if (viewedCompany && ids.includes(viewedCompany.id)) setViewedCompany(null);
+      setCompaniesToDelete([]);
+      setSelectedCompanies([]);
+      setCompanyGridKey((current) => current + 1);
+      await companies.refetch();
+      setCompanyUploadNotice({ severity: "success", message: `${response.data.deleted} compan${response.data.deleted === 1 ? "y" : "ies"} deleted.` });
+    } catch (error) {
+      setDeleteCompanyError(companyApiError(error) ?? "Unable to delete companies.");
+    } finally { setIsDeletingCompanies(false); }
+  }
+
   async function updateSelectedCompanyStatus(isActive: boolean) {
     if (!selectedCompanies.length) return;
     setCompanyError("");
@@ -1093,7 +1356,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       companyName: "Example Company",
       legalEntityName: "Example Company LLC",
       email: "company@example.com",
-      phoneNumber: "555-0100",
+      phoneNumber: "212-555-0100",
       mailingAddress: "100 Main Street",
       city: "Austin",
       state: "TX",
@@ -1160,6 +1423,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     workbook.calcProperties.fullCalcOnLoad = true;
     const meterSheet = workbook.addWorksheet("Meters", { views: [{ state: "frozen", ySplit: 1 }] });
     meterSheet.columns = [
+      { header: "Utility Account Name", key: "utilityAccountName", width: 24 },
       { header: "Account Number", key: "accountNumber", width: 18 },
       { header: "Service Ref/POD", key: "serviceRefPod", width: 18 },
       { header: "Name Key", key: "nameKey", width: 14 },
@@ -1340,19 +1604,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
     <section className="page">
       {isDashboardView ? (
       <div className="kpi-grid">
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/companies")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/companies"); }}>
             <span>Companies</span>
             <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
             <span>Contracts</span>
             <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
           </article>
         ) : null}
-        {hasAdminDashboard ? (
+        {hasCompanyDashboard ? (
           <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
             <span>Meters</span>
             <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
@@ -1367,13 +1631,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
       </div>
       ) : null}
 
-      {(hasAdminDashboard && isDashboardView) || isCompaniesView ? (
+      {(hasCompanyDashboard && isDashboardView) || isCompaniesView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
             <h2>Companies</h2>
             <div className="panel-title-actions">
+              <TextField
+                size="small"
+                value={companySearch}
+                onChange={(event) => setCompanySearch(event.target.value)}
+                placeholder="Search companies"
+                aria-label="Search companies"
+                slotProps={{ htmlInput: { "data-testid": "company-search" } }}
+              />
               {selectedCompanies.length ? (
                 <>
+                  {canDeleteCompanies ? (
+                    <Button variant="outlined" color="error" startIcon={<Trash2 size={16} />} disabled={isDeletingCompanies || selectedCompanies.length > 500} onClick={() => {
+                      setDeleteCompanyError(""); setCompaniesToDelete([...selectedCompanies]);
+                    }}>Delete Selected ({selectedCompanies.length})</Button>
+                  ) : null}
                   {selectedCompanies.some((company) => !company.isActive) ? (
                     <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
                       {isUpdatingCompanyStatus ? "Updating..." : "Active"}
@@ -1405,7 +1682,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             getTreeDataPath={getCompanyTreeDataPath}
             defaultTreeExpansionDepth={0}
             columns={companyColumns}
-            rows={companies.data?.data ?? []}
+            rows={visibleCompanies}
             onRowClick={viewCompany}
             onSelectionChange={(_ids, rows) => setSelectedCompanies(rows)}
           />
@@ -1430,14 +1707,28 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {contractError ? <p className="error">{contractError}</p> : null}
           {contracts.isError ? <p className="error">Unable to load contracts.</p> : null}
           {contracts.isLoading ? <p className="muted">Loading contracts...</p> : null}
-          <IntiliGrid key={contractGridKey} checkboxSelection columns={contractColumns} rows={contracts.data?.data ?? []} onSelectionChange={(_ids, rows) => setSelectedContracts(rows)} />
+          <IntiliGrid key={contractGridKey} checkboxSelection columns={contractColumns} rows={contracts.data?.data ?? []} onRowClick={viewContract} onSelectionChange={(_ids, rows) => setSelectedContracts(rows)} />
         </section>
       ) : null}
 
       {isMetersView ? (
-        <section className="panel companies-panel">
+        <section className="panel companies-panel meters-page-panel">
           <div className="panel-title-row">
-            <h2>Meters</h2>
+            <div className="meter-title-block">
+              <h2>Meters</h2>
+              <Tooltip title={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}>
+                <IconButton
+                  size="small"
+                  className={`meter-columns-toggle ${isMeterColumnMenuOpen ? "active" : ""}`}
+                  onClick={() => setIsMeterColumnMenuOpen((current) => !current)}
+                  aria-label={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}
+                  aria-expanded={isMeterColumnMenuOpen}
+                  aria-controls="meter-column-menu"
+                >
+                  <Columns3 size={18} />
+                </IconButton>
+              </Tooltip>
+            </div>
             <div className="panel-title-actions">
               {selectedMeters.length ? (
                 <>
@@ -1473,13 +1764,50 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {meterError ? <p className="error">{meterError}</p> : null}
           {meters.isError ? <p className="error">Unable to load meters.</p> : null}
           {meters.isLoading ? <p className="muted">Loading meters...</p> : null}
-          <IntiliGrid
-            key={meterGridKey}
-            checkboxSelection
-            columns={meterColumns}
-            rows={meters.data?.data ?? []}
-            onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
-          />
+          <div className={`meter-grid-layout ${isMeterColumnMenuOpen ? "" : "menu-hidden"}`}>
+            {isMeterColumnMenuOpen ? (
+              <aside id="meter-column-menu" className="meter-column-menu" aria-label="Meter grid columns">
+                <div className="meter-column-menu-heading">
+                  <span><Columns3 size={18} /><strong>Grid Columns</strong></span>
+                  <IconButton size="small" aria-label="Hide column menu" onClick={() => setIsMeterColumnMenuOpen(false)}>
+                    <PanelLeftClose size={17} />
+                  </IconButton>
+                </div>
+                <div className="meter-column-menu-summary">
+                  <span>{visibleMeterColumnCount} of {meterColumns.length} shown</span>
+                  <button type="button" onClick={showAllMeterColumns} disabled={visibleMeterColumnCount === meterColumns.length}>Show all</button>
+                </div>
+                <div className="meter-column-options">
+                  {meterColumns.map((column) => {
+                    const field = String(column.field);
+                    const checked = meterColumnVisibility[field] !== false;
+                    return (
+                      <label className="meter-column-option" key={field}>
+                        <Checkbox
+                          size="small"
+                          checked={checked}
+                          onChange={() => toggleMeterColumn(column.field)}
+                          slotProps={{ input: { "aria-label": `${checked ? "Hide" : "Show"} ${column.headerName} column` } }}
+                        />
+                        <span>{column.headerName}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </aside>
+            ) : null}
+            <div className="meter-grid-area">
+              <IntiliGrid
+                key={meterGridKey}
+                initialPageSize={50}
+                checkboxSelection
+                columns={visibleMeterColumns}
+                rows={meters.data?.data ?? []}
+                onRowClick={viewMeter}
+                onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
+              />
+            </div>
+          </div>
         </section>
       ) : null}
 
@@ -1513,7 +1841,22 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <TextField label="Company Name" required value={newCompany.companyName} onChange={(event) => updateNewCompany("companyName", event.target.value)} />
             <TextField label="Legal Entity Name" required value={newCompany.legalEntityName} onChange={(event) => updateNewCompany("legalEntityName", event.target.value)} />
             <TextField label="Email" type="email" value={newCompany.email} onChange={(event) => updateNewCompany("email", event.target.value)} />
-            <TextField label="Phone Number" type="tel" required value={newCompany.phoneNumber} onChange={(event) => updateNewCompany("phoneNumber", event.target.value)} />
+            <TextField
+              label="Phone Number"
+              type="tel"
+              required
+              value={newCompany.phoneNumber}
+              placeholder="xxx-xxx-xxxx"
+              helperText="Format: xxx-xxx-xxxx (e.g. 212-555-0100)"
+              error={Boolean(newCompany.phoneNumber) && !/^\d{3}-\d{3}-\d{4}$/.test(newCompany.phoneNumber)}
+              slotProps={{ htmlInput: { pattern: "[0-9]{3}-[0-9]{3}-[0-9]{4}", inputMode: "numeric" } }}
+              onChange={(event) => {
+                const value = companyFormMode === "edit"
+                  ? event.target.value.replace(/\D/g, "").slice(0, 10)
+                  : event.target.value;
+                updateNewCompany("phoneNumber", formatCompanyPhone(value));
+              }}
+            />
             <TextField label="Mailing Address" required value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
             <TextField label="City" required value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
             <TextField select label="State" required value={newCompany.state} onChange={(event) => updateNewCompany("state", event.target.value)}>
@@ -1540,6 +1883,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogTitle>Bulk Upload Companies</DialogTitle>
         <DialogContent>
           <p className="muted">Upload an Excel or CSV file containing up to 500 companies. Company Name is required. Use the template&apos;s Parent Company dropdown to create subcompanies. Organization ID defaults to 1 and Active defaults to true when omitted.</p>
+          <p className="muted">Phone numbers must contain 10 digits. They are formatted as xxx-xxx-xxxx (for example, 212-555-0100).</p>
           {bulkCompanyError ? <p className="error">{bulkCompanyError}</p> : null}
           {bulkCompanyResult ? (
             <Alert severity={bulkCompanyResult.failed ? "warning" : "success"}>
@@ -1590,15 +1934,36 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={companiesToDelete.length > 0} onClose={() => !isDeletingCompanies && setCompaniesToDelete([])} fullWidth maxWidth="sm">
+        <DialogTitle>Delete {companiesToDelete.length === 1 ? "Company" : "Selected Companies"}</DialogTitle>
+        <DialogContent>
+          <p>Are you sure you want to delete {companiesToDelete.length === 1 ? "this company" : "these companies"}? This action cannot be undone.</p>
+          <ul>{companiesToDelete.map((company) => <li key={company.id}>{company.companyName ?? company.id}</li>)}</ul>
+          {deleteCompanyError ? <Alert severity="error">{deleteCompanyError}</Alert> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isDeletingCompanies} onClick={() => setCompaniesToDelete([])}>Cancel</Button>
+          <Button variant="contained" color="error" disabled={isDeletingCompanies} onClick={() => void confirmDeleteCompanies()}>{isDeletingCompanies ? "Deleting..." : "Delete"}</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(viewedCompany)} onClose={() => setViewedCompany(null)} fullWidth maxWidth="xl" slotProps={{ paper: { className: "company-account-dialog" } }}>
         <DialogContent className="company-account-view">
           {viewedCompany ? (
             <>
               <div className="company-account-header">
                 <div>
-                  <h1><Building2 size={34} />{viewedCompany.companyName ?? "Company Account"}</h1>
+                  <h1>
+                    <Building2 size={34} />
+                    <button type="button" className="company-title-button" onClick={() => setViewedCompany(null)}>
+                      {viewedCompany.companyName ?? "Company Account"}
+                    </button>
+                  </h1>
                   <p>
-                    Company &gt; Account
+                    <button type="button" className="company-breadcrumb-button" onClick={() => setViewedCompany(null)}>
+                      Company
+                    </button>
+                    <span> &gt; Account</span>
                     <span className={`status-badge company-header-status ${viewedCompany.isActive ? "active" : "inactive"}`}>
                       {viewedCompany.isActive ? "Active" : "Inactive"}
                     </span>
@@ -1621,10 +1986,27 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 </div>
               </div>
 
-              <div className="company-account-layout">
+              <div className={`company-account-layout${companyTray ? "" : " company-account-layout-collapsed"}`}>
                 <div className="company-account-side">
-                  <section className="account-card">
-                    <h2>Account Information</h2>
+                  <div className="company-account-tray" role="group" aria-label="Company details">
+                      <Tooltip title={`${companyTray ? "Hide" : "Show"} Account Information, Notes, and Documents`}>
+                        <IconButton
+                          size="small"
+                          aria-label="Account Information, Notes, and Documents"
+                          aria-expanded={companyTray}
+                          aria-controls="company-tray-info company-tray-notes company-tray-documents"
+                          color={companyTray ? "primary" : "default"}
+                          onClick={() => setCompanyTray((current) => !current)}
+                        >
+                          {companyTray ? <PanelLeftClose size={20} /> : <Building2 size={20} />}
+                        </IconButton>
+                      </Tooltip>
+                  </div>
+                  <section id="company-tray-info" className="account-card" hidden={!companyTray}>
+                    <div className="account-card-heading">
+                      <h2><Building2 size={16} aria-hidden="true" />Account Information</h2>
+                      <Button size="small" className="account-info-edit" startIcon={<Pencil size={13} />} onClick={() => editCompany(viewedCompany)}>Edit</Button>
+                    </div>
                     <dl className="account-info-list">
                       <dt>Status</dt>
                       <dd>
@@ -1643,7 +2025,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <dt>Legal Name</dt>
                       <dd>{viewedCompany.legalEntityName ?? "-"}</dd>
                       <dt>Address</dt>
-                      <dd>{viewedCompany.mailingAddress ?? "-"}</dd>
+                      <dd>{[
+                        viewedCompany.mailingAddress?.trim(),
+                        viewedCompany.city?.trim(),
+                        [viewedCompany.state?.trim(), viewedCompany.postalCode?.trim()].filter(Boolean).join(" ")
+                      ].filter(Boolean).join(", ") || "-"}</dd>
                       <dt>Phone</dt>
                       <dd>{viewedCompany.phoneNumber ?? "-"}</dd>
                       <dt>Tax ID</dt>
@@ -1653,8 +2039,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     </dl>
                   </section>
 
-                  <section className="account-card notes-card">
-                    <h2>Notes</h2>
+                  <section id="company-tray-notes" className="account-card notes-card" hidden={!companyTray}>
+                    <h2><FileText size={16} aria-hidden="true" />Notes</h2>
                     {viewedCompany.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? (
                       <>
                         <div
@@ -1682,8 +2068,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     )}
                   </section>
 
-                  <section className="account-card documents-card">
-                    <h2>Documents</h2>
+                  <section id="company-tray-documents" className="account-card documents-card" hidden={!companyTray}>
+                    <h2><Folder size={16} aria-hidden="true" />Documents</h2>
                     <div className="documents-section">
                       {companyDocuments.isLoading ? <p className="muted">Loading documents...</p> : null}
                       {companyDocuments.isError ? <p className="error">Unable to load documents.</p> : null}
@@ -1700,27 +2086,29 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
                 <div className="company-account-main">
                   <ContractListPanel
+                    onRowClick={viewContract}
                     columns={contractColumns}
-                    contracts={(contracts.data?.data ?? []).map((contract) => ({ ...contract, companyName: contract.companyName ?? viewedCompany.companyName ?? "" }))}
+                    contracts={(contracts.data?.data ?? []).filter((contract) => viewedCompanyIds.includes(String(contract.companyId))).map((contract) => ({ ...contract, companyName: companyLabels[String(contract.companyId)] ?? contract.companyName ?? viewedCompany.companyName ?? "" }))}
                     isLoading={contracts.isLoading}
                     isError={contracts.isError}
                     error={contractError}
                     availabilityNotice={contractAvailabilityNotice}
                     onAdd={() => void openCreateContract()}
-                    addDisabled={!viewedCompany.isActive}
+                    onExpand={() => setIsCompanyContractListOpen(true)}
                   />
                   <MeterListPanel
+                    onRowClick={viewMeter}
                     columns={meterColumns}
-                    meters={meters.data?.data ?? []}
+                    meters={(meters.data?.data ?? []).filter((meter) => viewedCompanyIds.includes(String(meter.companyId))).map((meter) => ({ ...meter, companyName: companyLabels[String(meter.companyId)] ?? meter.companyName ?? viewedCompany.companyName ?? "" }))}
                     isLoading={meters.isLoading}
                     isError={meters.isError}
                     error={meterError}
                     onAdd={openCreateMeter}
                     onAddMore={openBulkMeterUpload}
-                    addDisabled={!viewedCompany.isActive}
+                    onExpand={() => setIsCompanyMeterListDismissed(false)}
                   />
                   {canManageMembers ? (
-                    <MembersPanel companyId={viewedCompany.id} canAdd compact />
+                    <MembersPanel companyId={viewedCompany.id} companyIds={viewedCompanyIds} companyLabels={companyLabels} canAdd compact onExpand={() => setIsCompanyMemberListOpen(true)} />
                   ) : null}
                 </div>
               </div>
@@ -1728,6 +2116,75 @@ export function DashboardPage({ view }: DashboardPageProps) {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {viewedCompany && canManageMembers && isCompanyMemberListOpen ? (
+        <CompanyListWindow
+          key={`members-${viewedCompany.id}`}
+          listName="Member"
+          title={`${viewedCompany.companyName ?? "Company"} — Member List`}
+          onClose={() => setIsCompanyMemberListOpen(false)}
+        >
+          <DialogTitle className="company-meter-list-header">
+            <span>{viewedCompany.companyName ?? "Company"} — Member List</span>
+            <Button onClick={() => setIsCompanyMemberListOpen(false)}>Close</Button>
+          </DialogTitle>
+          <DialogContent className="company-meter-list-content">
+            <MembersPanel companyId={viewedCompany.id} companyIds={viewedCompanyIds} companyLabels={companyLabels} canAdd compact />
+          </DialogContent>
+        </CompanyListWindow>
+      ) : null}
+
+      {viewedCompany && isCompanyContractListOpen ? (
+        <CompanyListWindow
+          key={`contracts-${viewedCompany.id}`}
+          listName="Contract"
+          title={`${viewedCompany.companyName ?? "Company"} — Contract List`}
+          onClose={() => setIsCompanyContractListOpen(false)}
+        >
+          <DialogTitle className="company-meter-list-header">
+            <span>{viewedCompany.companyName ?? "Company"} — Contract List</span>
+            <Button onClick={() => setIsCompanyContractListOpen(false)}>Close</Button>
+          </DialogTitle>
+          <DialogContent className="company-meter-list-content">
+            <ContractListPanel
+              onRowClick={viewContract}
+              columns={contractColumns}
+              contracts={(contracts.data?.data ?? []).filter((contract) => viewedCompanyIds.includes(String(contract.companyId))).map((contract) => ({ ...contract, companyName: companyLabels[String(contract.companyId)] ?? contract.companyName ?? viewedCompany.companyName ?? "" }))}
+              isLoading={contracts.isLoading}
+              isError={contracts.isError}
+              error={contractError}
+              availabilityNotice={contractAvailabilityNotice}
+              onAdd={() => { window.focus(); void openCreateContract(); }}
+            />
+          </DialogContent>
+        </CompanyListWindow>
+      ) : null}
+
+      {viewedCompany && meters.data?.data.length && !isCompanyMeterListDismissed ? (
+      <CompanyListWindow
+        listName="Meter"
+        key={viewedCompany.id}
+        title={`${viewedCompany.companyName ?? "Company"} — Meter List`}
+        onClose={() => setIsCompanyMeterListDismissed(true)}
+      >
+        <DialogTitle id="company-meter-list-title" className="company-meter-list-header">
+          <span>{viewedCompany?.companyName ?? "Company"} — Meter List</span>
+          <Button onClick={() => setIsCompanyMeterListDismissed(true)}>Close</Button>
+        </DialogTitle>
+        <DialogContent className="company-meter-list-content">
+          <MeterListPanel
+            onRowClick={viewMeter}
+            columns={meterColumns}
+            meters={meters.data?.data ?? []}
+            isLoading={meters.isLoading}
+            isError={meters.isError}
+            error={meterError}
+            onAdd={() => { window.focus(); openCreateMeter(); }}
+            onAddMore={() => { window.focus(); openBulkMeterUpload(); }}
+          />
+        </DialogContent>
+      </CompanyListWindow>
+      ) : null}
 
       <Dialog open={isContractModalOpen} onClose={() => setIsContractModalOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>{contractFormMode === "edit" ? "Edit Contract" : "Add New Contract"}</DialogTitle>
@@ -1772,7 +2229,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
             <div className="file-upload-field">
               <Button variant="outlined" component="label">
-                Upload Contract File *
+                Upload Contract File (max 15 MB) *
                 <input type="file" hidden onChange={(event) => updateContractFile(event.target.files?.[0] ?? null)} />
               </Button>
               <Tooltip title={contractForm.cFile.length > 20 ? contractForm.cFile : ""} followCursor>
@@ -1799,7 +2256,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                         checked={contractForm.meterIds.includes(meterId)}
                         onChange={(event) => toggleContractMeter(meterId, event.target.checked)}
                       />
-                      <span>{meter.accountNumber || meter.meter || `Meter ${meter.id}`}</span>
+                      <span>{contractMeterLabel(meter)}</span>
                       <span>{meter.serviceAddress || "-"}</span>
                       <span>{meter.city || "-"}</span>
                       <span>{meter.utility || "-"}</span>
@@ -1839,43 +2296,126 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(viewedContract)} onClose={() => setViewedContract(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Contract Details</DialogTitle>
-        <DialogContent>
+      <Dialog open={Boolean(viewedContract)} onClose={() => setViewedContract(null)} fullWidth maxWidth="xl" aria-labelledby="contract-view-title" slotProps={{ paper: { className: "company-account-dialog" } }}>
+        <DialogContent className="company-account-view">
           {viewedContract ? (
-            <dl className="company-detail-list">
-              <dt>Contract ID</dt>
-              <dd>{viewedContract.contractId ?? "-"}</dd>
-              <dt>Company</dt>
-              <dd>{viewedContract.companyName ?? viewedCompany?.companyName ?? "-"}</dd>
-              <dt>Broker</dt>
-              <dd>{viewedContract.broker ?? "-"}</dd>
-              <dt>Supplier</dt>
-              <dd>{viewedContract.supplier ?? "-"}</dd>
-              <dt>Swing</dt>
-              <dd>{viewedContract.swing ?? "-"}</dd>
-              <dt>Pass Through</dt>
-              <dd>{viewedContract.passThrough ?? "-"}</dd>
-              <dt>Bill Type</dt>
-              <dd>{viewedContract.billType ?? "-"}</dd>
-              <dt>Start Date</dt>
-              <dd>{formatDate(viewedContract.startDate)}</dd>
-              <dt>End Date</dt>
-              <dd>{formatDate(viewedContract.endDate)}</dd>
-              <dt>Rate</dt>
-              <dd>{viewedContract.rate ?? "-"}</dd>
-              <dt>Fee</dt>
-              <dd>{viewedContract.fee ?? "-"}</dd>
-              <dt>Status</dt>
-              <dd>{viewedContract.isActive ? "Active" : "Inactive"}</dd>
-              <dt>Notes</dt>
-              <dd>{viewedContract.notes ? <div dangerouslySetInnerHTML={{ __html: viewedContract.notes }} /> : "-"}</dd>
-            </dl>
+            <>
+              <div className="company-account-header">
+                <div>
+                  <h1 id="contract-view-title"><FileText size={34} />Contract {viewedContract.contractId ?? viewedContract.id}</h1>
+                  <p>
+                    <button type="button" className="grid-link-button" onClick={() => {
+                      if (viewedContract.companyId == null) return;
+                      setViewedContract(null);
+                      navigate(`/companies?companyId=${encodeURIComponent(String(viewedContract.companyId))}`);
+                    }} disabled={viewedContract.companyId == null}>
+                      {viewedContract.companyName ?? viewedCompany?.companyName ?? "Company"}
+                    </button>
+                    <span> &gt; Contract</span>
+                    <span className={`status-badge company-header-status ${viewedContract.isActive ? "active" : "inactive"}`}>
+                      {viewedContract.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                </div>
+                <div className="company-account-actions">
+                  <Button variant="outlined" startIcon={<Pencil size={16} />} onClick={() => { const contract = viewedContract; setViewedContract(null); editContract(contract); }}>Edit Contract</Button>
+                  <Button onClick={() => setViewedContract(null)}>Close</Button>
+                </div>
+              </div>
+              <div className={`company-account-layout contract-account-layout${contractTray ? "" : " company-account-layout-collapsed"}`}>
+                <div className="company-account-side">
+                  <div className="company-account-tray" role="group" aria-label="Contract details">
+                    <Tooltip title={`${contractTray ? "Hide" : "Show"} Contract Information, Billing & Terms, and Notes`}>
+                      <IconButton
+                        size="small"
+                        aria-label={`${contractTray ? "Hide" : "Show"} Contract Information, Billing & Terms, and Notes`}
+                        aria-expanded={contractTray}
+                        aria-controls="contract-tray-info contract-tray-billing contract-tray-notes"
+                        color={contractTray ? "primary" : "default"}
+                        onClick={() => setContractTray((current) => !current)}
+                      >
+                        {contractTray ? <PanelLeftClose size={20} /> : <FileText size={20} />}
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                  <section id="contract-tray-info" className="account-card" hidden={!contractTray}>
+                    <h2><FileText size={16} />Contract Information</h2>
+                    <dl className="account-info-list">
+                      <dt>Contract ID</dt><dd>{viewedContract.contractId ?? "-"}</dd>
+                      <dt>Company</dt>
+                      <dd>
+                        <button type="button" className="grid-link-button" onClick={() => {
+                          if (viewedContract.companyId == null) return;
+                          setViewedContract(null);
+                          navigate(`/companies?companyId=${encodeURIComponent(String(viewedContract.companyId))}`);
+                        }} disabled={viewedContract.companyId == null}>
+                          {viewedContract.companyName ?? viewedCompany?.companyName ?? "-"}
+                        </button>
+                      </dd>
+                      <dt>Broker</dt><dd>{viewedContract.broker ?? "-"}</dd>
+                      <dt>Supplier</dt><dd>{viewedContract.supplier ?? "-"}</dd>
+                    </dl>
+                  </section>
+                  <section id="contract-tray-billing" className="account-card" hidden={!contractTray}>
+                    <h2><Activity size={16} />Billing &amp; Terms</h2>
+                    <dl className="account-info-list">
+                      <dt>Bill Type</dt><dd>{viewedContract.billType ?? "-"}</dd>
+                      <dt>Swing</dt><dd>{viewedContract.swing ?? "-"}</dd>
+                      <dt>Pass Through</dt><dd>{viewedContract.passThrough ?? "-"}</dd>
+                      <dt>Rate</dt><dd>{viewedContract.rate ?? "-"}</dd>
+                      <dt>Fee</dt><dd>{viewedContract.fee ?? "-"}</dd>
+                    </dl>
+                  </section>
+                  <section className="account-card contract-document-card" hidden={!contractTray}>
+                    <h2><Folder size={16} />Related Document</h2>
+                    <div className="contract-document-link">
+                      {viewedContract.cFile ? (
+                        <a
+                          href={viewedContract.companyId ? `/companies/${viewedContract.companyId}/documents?fileName=${encodeURIComponent(viewedContract.cFile)}` : undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open related document ${viewedContract.cFile}`}
+                        >
+                          <FileText size={16} aria-hidden="true" />
+                          <span title={viewedContract.cFile}>{shortenFileName(viewedContract.cFile, 28)}</span>
+                        </a>
+                      ) : <p className="muted">No document attached to this contract.</p>}
+                    </div>
+                  </section>
+                  <section id="contract-tray-notes" className="account-card notes-card" hidden={!contractTray}>
+                    <h2><FileText size={16} />Notes</h2>
+                    {viewedContract.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? (
+                      <div className="contract-view-notes" dangerouslySetInnerHTML={{ __html: viewedContract.notes }} />
+                    ) : <p className="muted">No notes entered for this contract.</p>}
+                  </section>
+                </div>
+                <div className="company-account-main">
+                  <dl className="contract-view-summary">
+                    <div><dt>Start Date</dt><dd>{formatDate(viewedContract.startDate)}</dd></div>
+                    <div><dt>End Date</dt><dd>{formatDate(viewedContract.endDate)}</dd></div>
+                    <div><dt>Term</dt><dd>{viewedContract.months != null ? `${viewedContract.months} months` : "-"}</dd></div>
+                    <div><dt>Rate</dt><dd>{formatContractAmount(viewedContract.rate)}</dd></div>
+                    <div><dt>Fee</dt><dd>{formatContractAmount(viewedContract.fee)}</dd></div>
+                    <div><dt>Related Meters</dt><dd>{viewedContractMeters.isLoading ? "…" : viewedContractMeters.isError ? "-" : viewedContractMeters.data?.total ?? 0}</dd></div>
+                  </dl>
+                  <section className="account-data-panel contract-view-meters">
+                    <div className="account-data-title"><h2>Related Meter List</h2></div>
+                    <p className="contract-view-caption">Meters linked to this contract</p>
+                    {viewedContractMeters.isLoading ? <p className="contract-view-message muted" role="status">Loading related meters...</p> : viewedContractMeters.isError ? (
+                      <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedContractMeters.refetch()}>Retry</Button>}>Unable to load related meters.</Alert>
+                    ) : viewedContractMeters.data?.data.length ? (
+                      <div className="contract-grid-wrap">
+                        <IntiliGrid key={viewedContract.id} columns={meterColumns} rows={viewedContractMeters.data.data} onRowClick={viewMeter} />
+                      </div>
+                    ) : (
+                      <div className="contract-view-empty"><Activity size={28} aria-hidden="true" /><strong>No linked meters</strong><p>Meters assigned to this contract will appear here.</p></div>
+                    )}
+                  </section>
+                </div>
+              </div>
+            </>
           ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewedContract(null)}>Close</Button>
-        </DialogActions>
       </Dialog>
 
       <Dialog open={isBulkMeterModalOpen} onClose={() => !isUploadingMeters && setIsBulkMeterModalOpen(false)} fullWidth maxWidth="sm">
@@ -1894,7 +2434,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             >
               <MenuItem value={0}>Select company</MenuItem>
               {(companies.data?.data ?? []).map((company) => (
-                <MenuItem key={company.id} value={Number(company.id)} disabled={!company.isActive}>
+                <MenuItem key={company.id} value={Number(company.id)}>
                   {company.companyName}{company.isActive ? "" : " (Inactive)"}
                 </MenuItem>
               ))}
@@ -2021,8 +2561,27 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
 
             <div className="meter-form-row meter-form-row-four">
-              <TextField label="Account Number" value={meterForm.accountNumber} onChange={(event) => updateMeterForm("accountNumber", event.target.value)} />
-              <TextField label="Service Ref/POD" value={meterForm.serviceRefPod} onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)} />
+              <TextField label="Utility Account Name" value={meterForm.utilityAccountName} onChange={(event) => updateMeterForm("utilityAccountName", event.target.value)} />
+              <TextField
+                label="Account Number"
+                inputRef={accountNumberInput}
+                onBlur={() => void checkMeterDuplicate("accountNumber")}
+                required={Boolean(selectedMeterUtility?.accountNumberRequired)}
+                value={accountNumberDisabled ? "NO" : meterForm.accountNumber}
+                onChange={(event) => updateMeterForm("accountNumber", event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                disabled={accountNumberDisabled}
+                helperText={accountNumberDisabled ? "Not used for this utility" : selectedMeterUtility?.accountNumberSize ? `Exactly ${selectedMeterUtility.accountNumberSize} numeric digits; spaces and special characters are removed` : "Spaces and special characters are removed"}
+              />
+              <TextField
+                label="Service Ref/POD"
+                inputRef={serviceRefInput}
+                onBlur={() => void checkMeterDuplicate("serviceRefPod")}
+                required={Boolean(selectedMeterUtility?.serviceRefRequired)}
+                value={serviceRefDisabled ? "NO" : meterForm.serviceRefPod}
+                onChange={(event) => updateMeterForm("serviceRefPod", event.target.value)}
+                disabled={serviceRefDisabled}
+                helperText={serviceRefDisabled ? "Not used for this utility" : selectedMeterUtility?.serviceRefSize ? `Exactly ${selectedMeterUtility.serviceRefSize} numeric digits; separators are ignored` : ""}
+              />
               <TextField label="Meter" value={meterForm.meter} onChange={(event) => updateMeterForm("meter", event.target.value)} />
               <TextField label="Name Key" value={meterForm.nameKey} onChange={(event) => updateMeterForm("nameKey", event.target.value)} />
             </div>
@@ -2052,44 +2611,113 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(viewedMeter)} onClose={() => setViewedMeter(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Meter Details</DialogTitle>
+      <Dialog open={meterDuplicates.length > 0} onClose={() => resolveMeterDuplicate(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Duplicate {meterDuplicates[0]?.field === "accountNumber" ? "Account Number" : "Service Ref/POD"}</DialogTitle>
         <DialogContent>
-          {viewedMeter ? (
-            <dl className="company-detail-list">
-              <dt>Account Number</dt>
-              <dd>{viewedMeter.accountNumber ?? "-"}</dd>
-              <dt>Service Ref/POD</dt>
-              <dd>{viewedMeter.serviceRefPod ?? "-"}</dd>
-              <dt>Name Key</dt>
-              <dd>{viewedMeter.nameKey ?? "-"}</dd>
-              <dt>Meter</dt>
-              <dd>{viewedMeter.meter ?? "-"}</dd>
-              <dt>Service Address</dt>
-              <dd>{viewedMeter.serviceAddress ?? "-"}</dd>
-              <dt>City / State / Zip</dt>
-              <dd>{[viewedMeter.city, viewedMeter.state, viewedMeter.zip].filter(Boolean).join(", ") || "-"}</dd>
-              <dt>Status</dt>
-              <dd>{viewedMeter.status ?? "-"}</dd>
-              <dt>Type</dt>
-              <dd>{viewedMeter.type ?? "-"}</dd>
-              <dt>Product</dt>
-              <dd>{viewedMeter.product ?? "-"}</dd>
-              <dt>Utility</dt>
-              <dd>{viewedMeter.utility ?? "-"}</dd>
-              <dt>Active</dt>
-              <dd>{viewedMeter.isActive ? "Active" : "Inactive"}</dd>
-              <dt>Notes</dt>
-              <dd>{viewedMeter.notes ? <div dangerouslySetInnerHTML={{ __html: viewedMeter.notes }} /> : "-"}</dd>
-            </dl>
-          ) : null}
+          <p>{meterDuplicates[0]?.field === "accountNumber" ? "Account Number" : "Service Ref/POD"} <strong>{meterDuplicates[0]?.value}</strong> already exists in the database. Do you want to continue using this value?</p>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setViewedMeter(null)}>Close</Button>
+          <Button onClick={() => resolveMeterDuplicate(false)}>Change Value</Button>
+          <Button variant="contained" onClick={() => resolveMeterDuplicate(true)}>Continue</Button>
         </DialogActions>
       </Dialog>
 
-      {isDashboardView ? (
+      <Dialog open={Boolean(viewedMeter)} onClose={() => setViewedMeter(null)} fullWidth maxWidth="xl" aria-labelledby="meter-view-title" slotProps={{ paper: { className: "company-account-dialog" } }}>
+        <DialogContent className="company-account-view">
+          {viewedMeter ? (
+            <>
+              <div className="company-account-header">
+                <div>
+                  <h1 id="meter-view-title"><Activity size={34} />Meter {viewedMeter.meter || viewedMeter.accountNumber || viewedMeter.id}</h1>
+                  <p>
+                    <button type="button" className="grid-link-button" onClick={() => {
+                      if (viewedMeter.companyId == null) return;
+                      setViewedMeter(null);
+                      navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
+                    }} disabled={viewedMeter.companyId == null}>
+                      {viewedMeter.companyName ?? viewedCompany?.companyName ?? "Company"}
+                    </button>
+                    <span> &gt; Meter</span>
+                    <span className={`status-badge company-header-status ${viewedMeter.isActive ? "active" : "inactive"}`}>{viewedMeter.isActive ? "Active" : "Inactive"}</span>
+                  </p>
+                </div>
+                <div className="company-account-actions">
+                  <Button variant="outlined" startIcon={<Pencil size={16} />} onClick={() => { const meter = viewedMeter; setViewedMeter(null); editMeter(meter); }}>Edit Meter</Button>
+                  <Button onClick={() => setViewedMeter(null)}>Close</Button>
+                </div>
+              </div>
+              <div className={`company-account-layout contract-account-layout${meterTray ? "" : " company-account-layout-collapsed"}`}>
+                <div className="company-account-side">
+                  <div className="company-account-tray" role="group" aria-label="Meter details">
+                    <Tooltip title={`${meterTray ? "Hide" : "Show"} Meter Information, Service & Usage, and Notes`}>
+                      <IconButton size="small" aria-label={`${meterTray ? "Hide" : "Show"} Meter Information, Service & Usage, and Notes`} aria-expanded={meterTray} aria-controls="meter-tray-info meter-tray-service meter-tray-notes" color={meterTray ? "primary" : "default"} onClick={() => setMeterTray((current) => !current)}>
+                        {meterTray ? <PanelLeftClose size={20} /> : <Activity size={20} />}
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                  <section id="meter-tray-info" className="account-card" hidden={!meterTray}>
+                    <h2><FileText size={16} />Meter Information</h2>
+                    <dl className="account-info-list">
+                      <dt>Meter</dt><dd>{viewedMeter.meter ?? "-"}</dd>
+                      <dt>Company</dt>
+                      <dd>
+                        <button type="button" className="grid-link-button" onClick={() => {
+                          if (viewedMeter.companyId == null) return;
+                          setViewedMeter(null);
+                          navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
+                        }} disabled={viewedMeter.companyId == null}>
+                          {viewedMeter.companyName ?? viewedCompany?.companyName ?? "-"}
+                        </button>
+                      </dd>
+                      <dt>Account Name</dt><dd>{viewedMeter.utilityAccountName || "-"}</dd>
+                      <dt>Account Number</dt><dd>{viewedMeter.accountNumberSize === 0 ? "NO" : viewedMeter.accountNumber ?? "-"}</dd>
+                      <dt>Service Ref/POD</dt><dd>{viewedMeter.serviceRefSize === 0 ? "NO" : viewedMeter.serviceRefPod ?? "-"}</dd>
+                      <dt>Name Key</dt><dd>{viewedMeter.nameKey ?? "-"}</dd>
+                      <dt>Type</dt><dd>{viewedMeter.type ?? "-"}</dd>
+                    </dl>
+                  </section>
+                  <section id="meter-tray-service" className="account-card" hidden={!meterTray}>
+                    <h2><Activity size={16} />Service &amp; Usage</h2>
+                    <dl className="account-info-list">
+                      <dt>Address</dt><dd>{viewedMeter.serviceAddress ?? "-"}</dd>
+                      <dt>City / State / Zip</dt><dd>{[viewedMeter.city, viewedMeter.state, viewedMeter.zip].filter(Boolean).join(", ") || "-"}</dd>
+                      <dt>Utility</dt><dd>{viewedMeter.utility ?? "-"}</dd>
+                      <dt>Product</dt><dd>{viewedMeter.product ?? "-"}</dd>
+                      <dt>Status</dt><dd>{viewedMeter.status ?? "-"}</dd>
+                      <dt>Demand</dt><dd>{viewedMeter.demand ?? "-"}</dd>
+                      <dt>Annual Usage</dt><dd>{viewedMeter.annualUsage ?? "-"}</dd>
+                      <dt>Load Profile</dt><dd>{viewedMeter.loadProfile ?? "-"}</dd>
+                    </dl>
+                  </section>
+                  <section id="meter-tray-notes" className="account-card notes-card" hidden={!meterTray}>
+                    <h2><FileText size={16} />Notes</h2>
+                    {viewedMeter.notes?.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim() ? <div className="contract-view-notes" dangerouslySetInnerHTML={{ __html: viewedMeter.notes }} /> : <p className="muted">No notes entered for this meter.</p>}
+                  </section>
+                </div>
+                <div className="company-account-main">
+                  <dl className="contract-view-summary">
+                    <div><dt>Utility</dt><dd>{viewedMeter.utility ?? "-"}</dd></div>
+                    <div><dt>Product</dt><dd>{viewedMeter.product ?? "-"}</dd></div>
+                    <div><dt>Annual Usage</dt><dd>{viewedMeter.annualUsage ?? "-"}</dd></div>
+                    <div><dt>Related Contracts</dt><dd>{viewedMeterContracts.isLoading ? "…" : viewedMeterContracts.isError ? "-" : viewedMeterContracts.data?.total ?? 0}</dd></div>
+                  </dl>
+                  <section className="account-data-panel">
+                    <div className="account-data-title"><h2>Related Contract List</h2></div>
+                    <p className="contract-view-caption">Contracts linked to this meter</p>
+                    {viewedMeterContracts.isLoading ? <p className="contract-view-message muted" role="status">Loading related contracts...</p> : viewedMeterContracts.isError ? (
+                      <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterContracts.refetch()}>Retry</Button>}>Unable to load related contracts.</Alert>
+                    ) : viewedMeterContracts.data?.data.length ? (
+                      <div className="contract-grid-wrap"><IntiliGrid key={viewedMeter.id} columns={contractColumns} rows={viewedMeterContracts.data.data} onRowClick={viewContract} /></div>
+                    ) : <div className="contract-view-empty"><FileText size={28} aria-hidden="true" /><strong>No linked contracts</strong><p>Contracts assigned to this meter will appear here.</p></div>}
+                  </section>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {isDashboardView && user?.role !== "member" ? (
       <div className="content-grid">
         <section className="panel">
           <h2>Pipeline by stage</h2>
@@ -2112,7 +2740,86 @@ export function DashboardPage({ view }: DashboardPageProps) {
   );
 }
 
+function CompanyListWindow({ title, listName, onClose, children }: { title: string; listName: "Meter" | "Contract" | "Member"; onClose: () => void; children: ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const popupRef = useRef<Window | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  function openWindow() {
+    const popup = window.open("", "", `popup=yes,width=${window.screen.availWidth},height=${window.screen.availHeight},left=0,top=0`);
+    if (!popup) {
+      setBlocked(true);
+      return;
+    }
+    popupRef.current = popup;
+    popup.document.title = title;
+    const root = popup.document.createElement("div");
+    root.className = "company-meter-window";
+    popup.document.body.appendChild(root);
+    setTarget(root);
+    setBlocked(false);
+    popup.focus();
+  }
+
+  useEffect(() => {
+    openWindow();
+    return () => { popupRef.current?.close(); };
+  }, []);
+
+  useEffect(() => {
+    if (!target) return;
+    const popup = target.ownerDocument.defaultView;
+    if (!popup) return;
+    // Mirror both stylesheet links and runtime styles (including MUI styles).
+    const copiedStyles: Node[] = [];
+    const syncStyles = () => {
+      copiedStyles.splice(0).forEach((node) => node.parentNode?.removeChild(node));
+      document.head.querySelectorAll("style, link[rel='stylesheet']").forEach((source) => {
+        const copy = source.cloneNode(true) as HTMLElement;
+        if (source instanceof HTMLStyleElement && source.sheet) {
+          try { copy.textContent = Array.from(source.sheet.cssRules).map((rule) => rule.cssText).join("\n"); } catch { /* Keep the original style text. */ }
+        }
+        popup.document.head.appendChild(copy);
+        copiedStyles.push(copy);
+      });
+    };
+    syncStyles();
+    const observer = new MutationObserver(syncStyles);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true });
+    const timer = window.setInterval(() => {
+      if (popup.closed) closeRef.current();
+    }, 500);
+    const closePopup = () => popup.close();
+    window.addEventListener("pagehide", closePopup);
+    return () => {
+      observer.disconnect();
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", closePopup);
+      copiedStyles.forEach((node) => node.parentNode?.removeChild(node));
+    };
+  }, [target]);
+
+  return <>
+    {target ? createPortal(
+      <div className="company-meter-window-layout" onClickCapture={(event) => {
+        // List actions open the existing edit/view dialogs in the company window.
+        if ((event.target as HTMLElement).closest(".grid-action-buttons, .member-row-actions, .member-title-actions button")) window.focus();
+      }}>{children}</div>, target) : null}
+    <Dialog open={blocked} onClose={onClose}>
+      <DialogTitle>Open {listName} List</DialogTitle>
+      <DialogContent>The browser blocked the {listName.toLowerCase()} window. Click below to open it.</DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button variant="contained" onClick={openWindow}>Open {listName} Window</Button>
+      </DialogActions>
+    </Dialog>
+  </>;
+}
+
 interface ContractListPanelProps {
+  onRowClick: (contract: ContractRow) => void;
   columns: GridColumn<ContractRow>[];
   contracts: ContractRow[];
   isLoading: boolean;
@@ -2120,7 +2827,7 @@ interface ContractListPanelProps {
   error: string;
   availabilityNotice?: string;
   onAdd: () => void;
-  addDisabled?: boolean;
+  onExpand?: () => void;
 }
 
 export function CompanyDocumentsPage() {
@@ -2128,6 +2835,10 @@ export function CompanyDocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFileId = searchParams.get("fileId") ?? "";
   const selectedFileName = searchParams.get("fileName") ?? "";
+  const [showDocuments, setShowDocuments] = useState(!selectedFileId && !selectedFileName);
+  useEffect(() => {
+    setShowDocuments(!selectedFileId && !selectedFileName);
+  }, [selectedFileId, selectedFileName]);
   const [pdfUrl, setPdfUrl] = useState("");
   const companyDocuments = useQuery({
     queryKey: ["company-documents", companyId],
@@ -2143,6 +2854,12 @@ export function CompanyDocumentsPage() {
   });
 
   useEffect(() => {
+    if (selectedFileId || !selectedFileName || !companyDocuments.data?.tree.length) return;
+    const matchingFile = findDocumentByName(companyDocuments.data.tree, selectedFileName);
+    if (matchingFile) setSearchParams({ fileId: matchingFile.id, fileName: matchingFile.name }, { replace: true });
+  }, [companyDocuments.data, selectedFileId, selectedFileName, setSearchParams]);
+
+  useEffect(() => {
     if (!selectedFile.data) {
       setPdfUrl("");
       return;
@@ -2154,13 +2871,41 @@ export function CompanyDocumentsPage() {
   }, [selectedFile.data]);
 
   function selectFile(node: DocumentNode) {
+    setShowDocuments(false);
     setSearchParams({ fileId: node.id, fileName: node.name });
   }
 
+  const visibleDocumentTree = companyDocuments.data?.tree ?? [];
+
   return (
     <section className="page document-viewer-page">
-      <div className="document-viewer-shell">
-        <aside className="document-viewer-tree">
+      <header className="document-company-heading">
+        {companyDocuments.data?.company ? (
+          <h1>
+            <Link to={`/companies?companyId=${encodeURIComponent(String(companyDocuments.data.company.id))}`}>
+              <Building2 size={28} aria-hidden="true" />
+              {companyDocuments.data.company.companyName || "Company"}
+            </Link>
+          </h1>
+        ) : null}
+      </header>
+      <div className={`document-viewer-shell${showDocuments ? "" : " documents-hidden"}`}>
+        <div className="company-account-side">
+          <div className="company-account-tray" role="group" aria-label="Company documents">
+            <Tooltip title={`${showDocuments ? "Hide" : "Show"} Documents`}>
+              <IconButton
+                size="small"
+                aria-label={`${showDocuments ? "Hide" : "Show"} Documents`}
+                aria-expanded={showDocuments}
+                aria-controls="document-folder-section"
+                color={showDocuments ? "primary" : "default"}
+                onClick={() => setShowDocuments((current) => !current)}
+              >
+                {showDocuments ? <PanelLeftClose size={20} /> : <Folder size={20} />}
+              </IconButton>
+            </Tooltip>
+          </div>
+        <aside id="document-folder-section" className="document-viewer-tree" hidden={!showDocuments}>
           <div className="document-viewer-title">
             <h2>Documents</h2>
             <Tooltip title={selectedFileName.length > 20 ? selectedFileName : ""} followCursor>
@@ -2171,10 +2916,17 @@ export function CompanyDocumentsPage() {
           {companyDocuments.isError ? <p className="error">Unable to load documents.</p> : null}
           {companyDocuments.data?.skipped ? <p className="muted">SharePoint is not configured.</p> : null}
           {!companyDocuments.isLoading && !companyDocuments.isError && !companyDocuments.data?.skipped ? (
-            <DocumentTree nodes={companyDocuments.data?.tree ?? []} onFileClick={selectFile} selectedFileId={selectedFileId} />
+            <DocumentTree nodes={visibleDocumentTree} onFileClick={selectFile} selectedFileId={selectedFileId} />
           ) : null}
         </aside>
+        </div>
         <main className="document-pdf-panel">
+          {selectedFileName ? (
+            <div className="focused-document-header">
+              <Button size="small" startIcon={<Folder size={16} />} onClick={() => { setSearchParams({}); setShowDocuments(true); }}>Back to Documents</Button>
+              <strong title={selectedFileName}>{selectedFileName}</strong>
+            </div>
+          ) : null}
           {selectedFile.isLoading ? <p className="muted document-viewer-message">Loading PDF...</p> : null}
           {selectedFile.isError ? <p className="error document-viewer-message">Unable to load PDF.</p> : null}
           {pdfUrl ? (
@@ -2320,18 +3072,21 @@ function DocumentTreeNode({
   );
 }
 
-function ContractListPanel({ columns, contracts, isLoading, isError, error, availabilityNotice, onAdd, addDisabled = false }: ContractListPanelProps) {
+function ContractListPanel({ columns, contracts, isLoading, isError, error, availabilityNotice, onAdd, onExpand, onRowClick }: ContractListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
         <h2>Contract List</h2>
         <div className="account-data-actions">
+          {onExpand && contracts.length > 0 ? (
+            <Button size="small" variant="outlined" onClick={onExpand}>Open Contract List</Button>
+          ) : null}
           {/*  <IconButton size="small" aria-label="Search contracts">
             <Search size={17} />
           </IconButton> */}
-          <Tooltip title={addDisabled ? "Make company active to add contracts" : "Add new contract"}>
+          <Tooltip title="Add new contract">
             <span>
-              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />} disabled={addDisabled}>Add New Contract</Button>
+              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />}>Add New Contract</Button>
             </span>
           </Tooltip>
           {/*  <IconButton size="small" aria-label="Choose contract columns">
@@ -2346,7 +3101,7 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, avai
       {isLoading ? <p className="muted contract-panel-message">Loading contracts...</p> : null}
       <div className="contract-grid-wrap">
 
-        <IntiliGrid checkboxSelection columns={columns} rows={contracts} />
+        <IntiliGrid checkboxSelection columns={columns} rows={contracts} onRowClick={onRowClick} />
 
       </div>
     </section>
@@ -2354,6 +3109,7 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, avai
 }
 
 interface MeterListPanelProps {
+  onRowClick: (meter: MeterRow) => void;
   columns: GridColumn<MeterRow>[];
   meters: MeterRow[];
   isLoading: boolean;
@@ -2361,26 +3117,39 @@ interface MeterListPanelProps {
   error: string;
   onAdd: () => void;
   onAddMore: () => void;
-  addDisabled?: boolean;
+  onExpand?: () => void;
 }
 
-function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, addDisabled = false }: MeterListPanelProps) {
+function findDocumentByName(nodes: DocumentNode[], fileName: string): DocumentNode | null {
+  const normalizedName = fileName.trim().toLowerCase();
+  for (const node of nodes) {
+    if (node.type === "file" && node.name.trim().toLowerCase() === normalizedName) return node;
+    const match = node.children ? findDocumentByName(node.children, fileName) : null;
+    if (match) return match;
+  }
+  return null;
+}
+
+function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onAddMore, onExpand, onRowClick }: MeterListPanelProps) {
   return (
     <section className="account-data-panel">
       <div className="account-data-title">
         <h2>Meter List</h2>
         <div className="account-data-actions">
+          {onExpand && meters.length > 0 ? (
+            <Button size="small" variant="outlined" onClick={onExpand}>Open Meter List</Button>
+          ) : null}
           {/*  <IconButton size="small" aria-label="Search meters">
             <Search size={17} />
           </IconButton> */}
-          <Tooltip title={addDisabled ? "Make company active to add meters" : "Add new meter"}>
+          <Tooltip title="Add new meter">
             <span>
-              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />} disabled={addDisabled}>Add New Meter</Button>
+              <Button size="small" variant="contained" onClick={onAdd} startIcon={<Plus size={16} />}>Add New Meter</Button>
             </span>
           </Tooltip>
-          <Tooltip title={addDisabled ? "Make company active to add meters" : "Add multiple meters to this company"}>
+          <Tooltip title="Add multiple meters to this company">
             <span>
-              <Button size="small" variant="outlined" onClick={onAddMore} startIcon={<Upload size={16} />} disabled={addDisabled}>Add More Meters</Button>
+              <Button size="small" variant="outlined" onClick={onAddMore} startIcon={<Upload size={16} />}>Add More Meters</Button>
             </span>
           </Tooltip>
           {/* <IconButton size="small" aria-label="Choose meter columns">
@@ -2393,7 +3162,7 @@ function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onA
       {isError ? <p className="error contract-panel-message">Unable to load meters.</p> : null}
       {isLoading ? <p className="muted contract-panel-message">Loading meters...</p> : null}
       <div className="contract-grid-wrap">
-        <IntiliGrid checkboxSelection columns={columns} rows={meters} />
+        <IntiliGrid checkboxSelection columns={columns} rows={meters} onRowClick={onRowClick} />
       </div>
     </section>
   );
@@ -2487,6 +3256,7 @@ function contractToForm(contract: ContractRow): ContractForm {
 
 interface MeterForm {
   companyId: number;
+  utilityAccountName: string;
   accountNumber: string;
   serviceRefPod: string;
   nameKey: string;
@@ -2515,6 +3285,7 @@ interface MeterForm {
 function emptyMeterForm(): MeterForm {
   return {
     companyId: 0,
+    utilityAccountName: "",
     accountNumber: "",
     serviceRefPod: "",
     nameKey: "",
@@ -2544,6 +3315,7 @@ function emptyMeterForm(): MeterForm {
 function meterToForm(meter: MeterRow): MeterForm {
   return {
     companyId: Number(meter.companyId ?? 0),
+    utilityAccountName: meter.utilityAccountName ?? "",
     accountNumber: meter.accountNumber ?? "",
     serviceRefPod: meter.serviceRefPod ?? "",
     nameKey: meter.nameKey ?? "",
@@ -2650,6 +3422,11 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
     if (parentCompanyName && !parentCompany && !(Number.isInteger(parentCompanyValue) && parentCompanyValue > 0)) {
       throw new Error(`Row ${index + 2}: Parent company "${parentCompanyName}" was not found. Choose a value from the template dropdown.`);
     }
+    const phoneNumber = formatCompanyPhone(text("phonenumber", "phone"));
+    if (!/^\d{3}-\d{3}-\d{4}$/.test(phoneNumber)) {
+      const rowNumber = typeof source.__rowNum__ === "number" ? source.__rowNum__ + 1 : index + 2;
+      throw new Error(`Row ${rowNumber}: Phone number must contain 10 digits in xxx-xxx-xxxx format.`);
+    }
 
     return {
       organizationId: Number.isInteger(organizationValue) && organizationValue > 0 ? organizationValue : 1,
@@ -2664,7 +3441,7 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
       country: text("country"),
       postalCode: text("postalcode", "zipcode", "zip"),
       email: text("email"),
-      phoneNumber: text("phonenumber", "phone"),
+      phoneNumber,
       taxId: text("taxid"),
       url: text("url", "website"),
       notes: text("notes"),
@@ -2674,9 +3451,12 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
 }
 
 function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?: MeterLookups): MeterForm[] {
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+  const rows = XLSX.utils
+    .sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" })
+    .filter(hasMeterInputData);
   return rows.map((source, index) => {
-    const rowNumber = index + 2;
+    const worksheetRowIndex = source.__rowNum__;
+    const rowNumber = typeof worksheetRowIndex === "number" ? worksheetRowIndex + 1 : index + 2;
     const row = new Map(Object.entries(source).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), value]));
     const value = (...keys: string[]) => keys.map((key) => row.get(key)).find((item) => item !== undefined);
     const text = (...keys: string[]) => String(value(...keys) ?? "").trim();
@@ -2707,6 +3487,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
 
     return {
       companyId,
+      utilityAccountName: text("utilityaccountname"),
       accountNumber,
       serviceRefPod: text("servicerefpod", "serviceref", "pod"),
       nameKey: text("namekey"),
@@ -2766,7 +3547,7 @@ function companyToForm(company: TblCompanyRow): NewCompanyForm {
     country: company.country ?? "",
     postalCode: company.postalCode ?? "",
     email: company.email ?? "",
-    phoneNumber: company.phoneNumber ?? "",
+    phoneNumber: formatCompanyPhone(company.phoneNumber ?? ""),
     taxId: company.taxId ?? "",
     url: company.url ?? "",
     notes: company.notes ?? "",
@@ -2859,8 +3640,12 @@ function RichTextEditor({ label, value, onChange }: { label: string; value: stri
 }
 
 interface LookupOption {
+  accountNumberRequired?: boolean | null;
+  serviceRefRequired?: boolean | null;
   id: string | number;
   name?: string;
+  accountNumberSize?: number | null;
+  serviceRefSize?: number | null;
 }
 
 function lookupName(value: unknown, options?: LookupOption[]) {
@@ -2879,6 +3664,12 @@ interface ZipDetailOption {
 function shortenFileName(fileName: string, maximumLength = 20) {
   if (fileName.length <= maximumLength) return fileName;
   return `${fileName.slice(0, maximumLength - 3)}...`;
+}
+
+function formatContractAmount(value: unknown) {
+  if (value === null || value === undefined || String(value).trim() === "") return "-";
+  // Preserve the API decimal text so small rates/fees are never rounded to 0.
+  return String(value).trim();
 }
 
 interface USStateOption {
@@ -2900,6 +3691,7 @@ interface MeterLookups {
 }
 
 interface CompanyDocumentsResponse {
+  company: { id: string | number; companyName?: string | null };
   skipped: boolean;
   tree: DocumentNode[];
 }
@@ -2946,6 +3738,10 @@ interface MeterRow {
   id: string | number;
   companyId?: string | number | null;
   companyName?: string | null;
+  utilityAccountName?: string | null;
+  masterAccountNumber?: boolean | number | null;
+  masterAccountNumberType?: "Account Number" | "Service Ref/POD ID" | "BOTH" | null;
+  masterServiceRefPodId?: boolean | number | null;
   accountNumber?: string | null;
   serviceRefPod?: string | null;
   nameKey?: string | null;
@@ -2972,6 +3768,8 @@ interface MeterRow {
   product?: string | null;
   utilityId?: string | number | null;
   utility?: string | null;
+  accountNumberSize?: number | null;
+  serviceRefSize?: number | null;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;

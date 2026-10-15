@@ -18,6 +18,9 @@ export interface GridProps<T extends GridRowModel> {
 
     loading?: boolean;
 
+    /** Number of rows per page on mount. Defaults to 25. */
+    initialPageSize?: number;
+
     checkboxSelection?: boolean;
 
     /** Enables expandable parent-child rows. Paths must be unique and ordered root-to-row. */
