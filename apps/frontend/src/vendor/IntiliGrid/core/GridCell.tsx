@@ -203,6 +203,7 @@ export default function GridCell<T extends GridRowModel>({
 
     return (
         <Box
+            data-grid-field={String(column.field)}
             sx={{
                 width,
                 minWidth: width,

@@ -1682,6 +1682,21 @@ nav a:hover {
   flex-shrink: 0;
 }
 
+[data-grid-field="companyName"] {
+  background: #0f5da8 !important;
+  color: #fff;
+  border-radius: 8px;
+}
+
+[data-grid-field="companyName"] .MuiTypography-root,
+[data-grid-field="companyName"] .MuiIconButton-root,
+[data-grid-field="companyName"] .grid-link-button,
+[data-grid-field="companyName"] .grid-link-button:hover,
+[data-grid-field="companyName"] .grid-link-button:focus-visible,
+[data-grid-field="companyName"] a {
+  color: inherit;
+}
+
 .grid-link-button {
   border: 0;
   padding: 0;
@@ -1720,6 +1735,14 @@ nav a:hover {
   color: inherit;
   cursor: pointer;
   font: inherit;
+}
+
+.company-view-header .company-title-button,
+.company-view-header .company-breadcrumb-button {
+  background: #0f5da8;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
 }
 
 .document-pdf-panel {

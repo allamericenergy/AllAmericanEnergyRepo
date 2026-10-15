@@ -1951,7 +1951,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <DialogContent className="company-account-view">
           {viewedCompany ? (
             <>
-              <div className="company-account-header">
+              <div className="company-account-header company-view-header">
                 <div>
                   <h1>
                     <Building2 size={34} />
