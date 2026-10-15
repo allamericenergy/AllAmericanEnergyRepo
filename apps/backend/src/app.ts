@@ -13,12 +13,16 @@ import { usersRoutes } from "./routes/users.routes.js";
 import { crmRoutes } from "./routes/crm.routes.js";
 import { reportsRoutes } from "./routes/reports.routes.js";
 import { rbacRoutes } from "./routes/rbac.routes.js";
+<<<<<<< HEAD
 import { authenticate } from "./middleware/authenticate.js";
 import { createApp as createPdfApp } from "./pdf/app.js";
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 
 export function createApp() {
   const app = express();
   const registry = new client.Registry();
+<<<<<<< HEAD
   const configuredOrigins = env.CORS_ORIGIN.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -26,6 +30,10 @@ export function createApp() {
     ...configuredOrigins,
     "https://red-pebble-056a3ca0f.7.azurestaticapps.net",
     "https://www.allamerican.energy",
+=======
+  const allowedOrigins = new Set([
+    env.CORS_ORIGIN,
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     "http://localhost:5173",
     "http://127.0.0.1:5173"
   ]);
@@ -38,8 +46,11 @@ export function createApp() {
       return callback(new Error(`CORS origin not allowed: ${origin}`));
     }
   }));
+<<<<<<< HEAD
   // A 15 MB contract file expands to 20 MB in Base64, plus form fields.
   app.use("/api/reports/contracts", express.json({ limit: "21mb" }));
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   app.use(express.json({ limit: "1mb" }));
   app.use((req, res, next) => {
     const startedAt = Date.now();
@@ -64,7 +75,10 @@ export function createApp() {
   app.use("/api/auth", authLimiter, authRoutes);
   app.use("/api/users", usersRoutes);
   app.use("/api/rbac", rbacRoutes);
+<<<<<<< HEAD
   app.use("/api/pdf", authenticate, createPdfApp({ extractionPath: "/extract" }));
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   app.use("/api", crmRoutes);
   app.use("/api/reports", reportsRoutes);
 

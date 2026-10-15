@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
+<<<<<<< HEAD
 import { parseAccountReport, parseAccountReportWorkbook, summarizeAccountReport, processedDateFromFilename, displayProcessedDate } from "./accountReport";
+=======
+import { parseAccountReport, summarizeAccountReport, processedDateFromFilename, displayProcessedDate } from "./accountReport";
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 import { createAccountReportPdf } from "./accountReportPdf";
 const headers = ["Statement Date", "Utility", "New Charges", "Account Number"];
 const parse = (rows: unknown[][]) => parseAccountReport(XLSX.utils.aoa_to_sheet([headers, ...rows]));
 describe("Account Report", () => {
+<<<<<<< HEAD
   it("combines every sheet by utility while preserving source products in a single PDF", () => {
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([headers, ["09/14/2026", "Eversource", 10, "001"]]), "Electric");
@@ -38,6 +43,8 @@ describe("Account Report", () => {
     for (const name of ["Electric", "Gas"]) XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([headers, [46279, "Utility", 10]]), name);
     expect(parseAccountReportWorkbook(book).map(row => row.statementDate)).toEqual(["2030-09-15", "2030-09-15"]);
   });
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   it("reads the date after Daily Bill Check_ and includes it in the PDF", () => {
     const sheet = XLSX.utils.aoa_to_sheet([headers, ["09-14-2026", "Eversource", 10, "001"]]);
     const rows = parseAccountReport(sheet, false, "Electric", "Daily Bill Check_20261003.xlsx");

@@ -16,6 +16,7 @@ const createUserSchema = z.object({
   orgId: z.string().optional()
 });
 
+<<<<<<< HEAD
 const nullableProfileText = (maxLength: number) => z.union([
   z.string().trim().max(maxLength),
   z.null()
@@ -41,6 +42,8 @@ const updateMyAccountSchema = z.object({
   profilePhotoUrl: profilePhoto
 }).strict().refine((input) => Object.keys(input).length > 0, "Provide at least one account field to update");
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 export const usersRoutes = Router();
 
 usersRoutes.use(authenticate);
@@ -48,6 +51,7 @@ usersRoutes.use(authenticate);
 usersRoutes.get("/me", async (req, res, next) => {
   try {
     const role = req.user!.role as Role;
+<<<<<<< HEAD
     const [permissions, account] = await Promise.all([
       permissionService.permissionsForUser(req.user!.id, role),
       prisma.user.findUniqueOrThrow({
@@ -76,6 +80,11 @@ usersRoutes.get("/me", async (req, res, next) => {
     const { organization, ...profile } = account;
     return res.json({
       user: { ...profile, organizationName: organization?.name ?? null },
+=======
+    const permissions = await permissionService.permissionsForUser(req.user!.id, role);
+    return res.json({
+      user: req.user,
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       permissions: permissions.length > 0 ? permissions : permissionMatrix[role]
     });
   } catch (error) {
@@ -83,6 +92,7 @@ usersRoutes.get("/me", async (req, res, next) => {
   }
 });
 
+<<<<<<< HEAD
 usersRoutes.patch("/me", async (req, res, next) => {
   try {
     const input = updateMyAccountSchema.parse(req.body);
@@ -116,6 +126,8 @@ usersRoutes.patch("/me", async (req, res, next) => {
   }
 });
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 usersRoutes.get("/", authorize("user:administer"), async (req, res, next) => {
   try {
     const orgId = req.user!.role === "superadmin" ? (req.query.orgId as string | undefined) : req.user!.orgId;

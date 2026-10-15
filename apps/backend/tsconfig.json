@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+<<<<<<< HEAD
     "allowJs": true,
     "checkJs": false,
     "esModuleInterop": true,
@@ -14,4 +15,13 @@
     "types": ["node"]
   },
   "include": ["src/**/*"]
+=======
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }

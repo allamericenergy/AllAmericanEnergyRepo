@@ -4,8 +4,12 @@ BEGIN TRAN;
 IF COL_LENGTH('dbo.aae_users', 'company') IS NULL ALTER TABLE [dbo].[aae_users] ADD [company] NVARCHAR(1000) NULL;
 IF COL_LENGTH('dbo.aae_users', 'department') IS NULL ALTER TABLE [dbo].[aae_users] ADD [department] NVARCHAR(1000) NULL;
 IF COL_LENGTH('dbo.aae_users', 'designation') IS NULL ALTER TABLE [dbo].[aae_users] ADD [designation] NVARCHAR(1000) NULL;
+<<<<<<< HEAD
 IF COL_LENGTH('dbo.aae_users', 'profilePhotoUrl') IS NULL ALTER TABLE [dbo].[aae_users] ADD [profilePhotoUrl] NVARCHAR(MAX) NULL;
 IF COL_LENGTH('dbo.aae_users', 'profilePhotoUrl') IS NOT NULL ALTER TABLE [dbo].[aae_users] ALTER COLUMN [profilePhotoUrl] NVARCHAR(MAX) NULL;
+=======
+IF COL_LENGTH('dbo.aae_users', 'profilePhotoUrl') IS NULL ALTER TABLE [dbo].[aae_users] ADD [profilePhotoUrl] NVARCHAR(1000) NULL;
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 IF COL_LENGTH('dbo.aae_users', 'documents') IS NULL ALTER TABLE [dbo].[aae_users] ADD [documents] NVARCHAR(MAX) NULL;
 IF COL_LENGTH('dbo.aae_users', 'approvedBy') IS NULL ALTER TABLE [dbo].[aae_users] ADD [approvedBy] NVARCHAR(1000) NULL;
 IF COL_LENGTH('dbo.aae_users', 'approvedAt') IS NULL ALTER TABLE [dbo].[aae_users] ADD [approvedAt] DATETIME2 NULL;

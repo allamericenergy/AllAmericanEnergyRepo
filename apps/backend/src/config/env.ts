@@ -14,7 +14,10 @@ const envSchema = z.object({
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+<<<<<<< HEAD
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   SENTRY_DSN: z.string().optional(),
   SHAREPOINT_TENANT_ID: z.string().optional(),
   SHAREPOINT_CLIENT_ID: z.string().optional(),

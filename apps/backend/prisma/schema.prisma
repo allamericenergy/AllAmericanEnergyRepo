@@ -1,6 +1,10 @@
 generator client {
+<<<<<<< HEAD
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
+=======
+  provider = "prisma-client-js"
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }
 
 datasource db {
@@ -35,16 +39,24 @@ model User {
   company          String?
   department       String?
   designation      String?
+<<<<<<< HEAD
   profilePhotoUrl  String?        @db.NVarChar(Max)
   documents        String?
   temporaryPasswordEncrypted String? @db.NVarChar(Max)
+=======
+  profilePhotoUrl  String?
+  documents        String?
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   passwordHash     String
   firstName        String
   lastName         String
   role             String
   status           String         @default("invited")
   emailVerified    Boolean        @default(false)
+<<<<<<< HEAD
   mustChangePassword Boolean      @default(false)
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   failedLoginAttempts Int         @default(0)
   lockoutEnd       DateTime?
   orgId            String?
@@ -257,13 +269,19 @@ model Note {
   user        User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   relatedType String
   relatedId   String
+<<<<<<< HEAD
   companyId   Int?
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   content     String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([orgId, relatedType, relatedId])
+<<<<<<< HEAD
   @@index([companyId])
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   @@map("aae_notes")
 }
 

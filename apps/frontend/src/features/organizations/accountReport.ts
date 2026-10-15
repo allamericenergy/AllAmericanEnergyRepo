@@ -49,7 +49,11 @@ export function processedDateFromFilename(fileName: string): string {
   catch { throw new Error("The YYYYMMdd date in the spreadsheet filename is invalid."); }
 }
 
+<<<<<<< HEAD
 export function parseAccountReport(sheet: XLSX.WorkSheet, date1904 = false, sheetName = "", fileName = "", allowEmpty = false): AccountReportRow[] {
+=======
+export function parseAccountReport(sheet: XLSX.WorkSheet, date1904 = false, sheetName = "", fileName = ""): AccountReportRow[] {
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   const filenameProcessedDate = processedDateFromFilename(fileName);
   if (fileName && !filenameProcessedDate) throw new Error("The spreadsheet filename must contain a date, for example Daily Bill Check_20261003.xlsx or 20261003_accounts.xlsx.");
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: true, blankrows: true });
@@ -81,6 +85,7 @@ export function parseAccountReport(sheet: XLSX.WorkSheet, date1904 = false, shee
         processedDate: filenameProcessedDate });
     } catch (error) { throw new Error(`Row ${headerIndex + index + 2}: ${(error as Error).message}`); }
   });
+<<<<<<< HEAD
   if (!result.length && !allowEmpty) throw new Error("The worksheet has no data rows.");
   return result;
 }
@@ -103,6 +108,12 @@ export function parseAccountReportWorkbook(workbook: XLSX.WorkBook, fileName = "
   return result.sort((a, b) => a.utilityType.toLowerCase().localeCompare(b.utilityType.toLowerCase()) || a.month.localeCompare(b.month) || a.statementDate.localeCompare(b.statementDate));
 }
 
+=======
+  if (!result.length) throw new Error("The worksheet has no data rows.");
+  return result;
+}
+
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 export function summarizeAccountReport(rows: AccountReportRow[]) {
   const groups = new Map<string, { month: string; utilityType: string; cents: number; count: number }>();
   for (const row of rows) {

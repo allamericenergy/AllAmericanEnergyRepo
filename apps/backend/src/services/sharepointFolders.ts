@@ -167,11 +167,17 @@ export async function listCompanySharePointDocuments(folderIds: {
   const tree: SharePointDocumentNode[] = [];
   let contractFolderId = folderIds.contractFolderId;
   let utilityBillsFolderId = folderIds.utilityBillsFolderId;
+<<<<<<< HEAD
   let accountReportsFolder: SharePointDocumentNode | undefined;
 
   if (folderIds.companyFolderId) {
     const companyChildren = await listFolderChildren(accessToken, folderIds.companyFolderId);
     accountReportsFolder = companyChildren.find((node) => node.type === "folder" && node.name.toLowerCase() === "account reports");
+=======
+
+  if (folderIds.companyFolderId && (!contractFolderId || !utilityBillsFolderId)) {
+    const companyChildren = await listFolderChildren(accessToken, folderIds.companyFolderId);
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     contractFolderId =
       contractFolderId ?? companyChildren.find((node) => node.type === "folder" && node.name.toLowerCase() === "contracts")?.id;
     utilityBillsFolderId =
@@ -196,10 +202,13 @@ export async function listCompanySharePointDocuments(folderIds: {
     });
   }
 
+<<<<<<< HEAD
   if (accountReportsFolder) {
     tree.push(accountReportsFolder);
   }
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   return { skipped: false, tree };
 }
 
@@ -252,6 +261,7 @@ export async function uploadSharePointFile(folderId: string, file: { name: strin
   return data;
 }
 
+<<<<<<< HEAD
 export async function addAccountReportsFolders(companies: Array<{ id: number; companyName: string; companyFolderId: string | null }>) {
   if (!isSharePointConfigured()) throw new Error("SharePoint is not configured.");
   const accessToken = await getGraphAccessToken();
@@ -296,6 +306,8 @@ export async function addAccountReportsFolders(companies: Array<{ id: number; co
   return result;
 }
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 export async function ensureContractsFolder(companyFolderId: string) {
   if (!isSharePointConfigured()) throw new Error("SharePoint is not configured.");
 
@@ -351,9 +363,12 @@ export async function createCompanySharePointFolders(companyName: string): Promi
   const accessToken = await getGraphAccessToken();
   const companyFolder = await createFolder(accessToken, env.SHAREPOINT_COMPANY_ROOT_PATH, folderName);
   const subfolders = configuredFolderNames(env.SHAREPOINT_COMPANY_SUBFOLDERS);
+<<<<<<< HEAD
   if (!subfolders.some((name) => name.toLowerCase() === "account reports")) {
     subfolders.push("Account Reports");
   }
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   const utilityBillSubfolders = configuredFolderNames(env.SHAREPOINT_COMPANY_SUBFOLDERS_UTILITYBILLS);
   const companyPath = [env.SHAREPOINT_COMPANY_ROOT_PATH, companyFolder.name ?? folderName].filter(Boolean).join("/");
   let contractFolderId: string | undefined;

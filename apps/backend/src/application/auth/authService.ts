@@ -10,8 +10,11 @@ import {
 } from "../../security/auth.js";
 import { validatePasswordPolicy, wasPasswordReused } from "../../security/passwordPolicy.js";
 import type { Role } from "../../security/permissions.js";
+<<<<<<< HEAD
 import { emailService } from "../../services/emailService.js";
 import { env } from "../../config/env.js";
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MINUTES = 30;
@@ -65,7 +68,11 @@ function hashToken(token: string) {
 export class AuthService {
   async login(input: LoginInput, context: RequestContext) {
     const email = input.email.toLowerCase();
+<<<<<<< HEAD
     const user = await prisma.user.findFirst({ where: { OR: [{ email }, { username: email }] } });
+=======
+    const user = await prisma.user.findUnique({ where: { email } });
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 
     if (!user) {
       await this.recordLogin(null, email, false, "invalid_user", context);
@@ -123,11 +130,15 @@ export class AuthService {
     await this.recordLogin(user.id, email, true, null, context);
     await this.audit(user.id, user.orgId, "Auth.Login", "Security", undefined, undefined, context);
 
+<<<<<<< HEAD
     return {
       accessToken,
       refreshToken,
       user: { ...principal, mustChangePassword: user.mustChangePassword }
     };
+=======
+    return { accessToken, refreshToken, user: principal };
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   }
 
   async refresh(userId: string, refreshToken: string, context: RequestContext) {
@@ -154,6 +165,7 @@ export class AuthService {
     if (!policy.valid) throw Object.assign(new Error(policy.errors.join(" ")), { statusCode: 400 });
 
     const email = input.email.toLowerCase();
+<<<<<<< HEAD
     const existing = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -199,6 +211,8 @@ export class AuthService {
       };
     }
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const passwordHash = await bcrypt.hash(input.password, 12);
     const user = await prisma.user.create({
       data: {
@@ -220,16 +234,20 @@ export class AuthService {
         createdBy: input.createdBy?.id
       },
       select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true, orgId: true, company: true, department: true, designation: true, phone: true, createdAt: true }
+<<<<<<< HEAD
     }).catch((error: unknown) => {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
         throw Object.assign(new Error("An account with this email already exists"), { statusCode: 409 });
       }
       throw error;
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     });
 
     await prisma.passwordHistory.create({ data: { userId: user.id, passwordHash } });
     const verificationToken = user.role === "admin" ? null : await this.createEmailVerification(user.id);
     if (user.role === "admin") await this.notifySuperadminsForAdminRequest(user.id);
+<<<<<<< HEAD
     if (verificationToken && emailConfigured) {
       await emailService.sendRegistrationVerification({ email: user.email, firstName: user.firstName, token: verificationToken });
     }
@@ -247,10 +265,20 @@ export class AuthService {
     const user = await prisma.user.findFirst({ where: { OR: [{ email: identifier }, { username: identifier }] } });
     if (!user) return { accepted: true };
     await emailService.verifyConfiguration();
+=======
+    await this.audit(input.createdBy?.id, user.orgId, "Auth.Register", "Users", undefined, JSON.stringify(user), context);
+    return { user, verificationToken, pendingApproval: user.status === "pending_approval" };
+  }
+
+  async requestPasswordReset(email: string, context: RequestContext) {
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) return { accepted: true };
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const token = crypto.randomBytes(32).toString("hex");
     await prisma.passwordResetToken.create({
       data: { userId: user.id, tokenHash: await hashToken(token), expiresAt: addMinutes(RESET_TOKEN_MINUTES) }
     });
+<<<<<<< HEAD
     await emailService.sendPasswordReset({ email: user.email, firstName: user.firstName, token });
     await this.audit(user.id, user.orgId, "Auth.PasswordResetRequested", "Security", undefined, undefined, context);
     return { accepted: true };
@@ -259,6 +287,14 @@ export class AuthService {
   async resetPassword(email: string, token: string, newPassword: string, context: RequestContext) {
     const identifier = email.toLowerCase();
     const user = await prisma.user.findFirstOrThrow({ where: { OR: [{ email: identifier }, { username: identifier }] } });
+=======
+    await this.audit(user.id, user.orgId, "Auth.PasswordResetRequested", "Security", undefined, undefined, context);
+    return { accepted: true, resetToken: token };
+  }
+
+  async resetPassword(email: string, token: string, newPassword: string, context: RequestContext) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: email.toLowerCase() } });
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const resetTokens = await prisma.passwordResetToken.findMany({
       where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
@@ -280,8 +316,12 @@ export class AuthService {
   }
 
   async verifyEmail(email: string, token: string, context: RequestContext) {
+<<<<<<< HEAD
     const identifier = email.toLowerCase();
     const user = await prisma.user.findFirstOrThrow({ where: { OR: [{ email: identifier }, { username: identifier }] } });
+=======
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: email.toLowerCase() } });
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     const tokens = await prisma.emailVerification.findMany({
       where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
@@ -302,10 +342,14 @@ export class AuthService {
       throw Object.assign(new Error("Cannot reuse one of the last 5 passwords"), { statusCode: 400 });
     }
     const passwordHash = await bcrypt.hash(newPassword, 12);
+<<<<<<< HEAD
     await prisma.user.update({
       where: { id: userId },
       data: { passwordHash, temporaryPasswordEncrypted: null, mustChangePassword: false, updatedAt: new Date() }
     });
+=======
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash, updatedAt: new Date() } });
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     await prisma.passwordHistory.create({ data: { userId, passwordHash } });
     await this.audit(userId, undefined, "Auth.PasswordChanged", "Security", undefined, undefined, context);
   }

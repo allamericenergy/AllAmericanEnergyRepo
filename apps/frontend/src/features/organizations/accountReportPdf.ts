@@ -6,22 +6,35 @@ export function createAccountReportPdf(rows: AccountReportRow[]) {
   if (!rows.length) throw new Error("No statement rows selected.");
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
   const groups = new Map<string, AccountReportRow[]>();
+<<<<<<< HEAD
   for (const row of [...rows].sort((a, b) => a.utilityType.toLowerCase().localeCompare(b.utilityType.toLowerCase()) || a.month.localeCompare(b.month) || a.statementDate.localeCompare(b.statementDate))) {
     const key = JSON.stringify([row.utilityType.toLowerCase(), row.month]);
+=======
+  for (const row of [...rows].sort((a, b) => a.month.localeCompare(b.month) || a.company.localeCompare(b.company) || a.statementDate.localeCompare(b.statementDate))) {
+    const key = JSON.stringify([row.month, row.company]);
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     groups.set(key, [...(groups.get(key) ?? []), row]);
   }
   [...groups.values()].forEach((group, index) => {
     if (index) doc.addPage();
     const first = group[0];
     doc.setFillColor(0, 112, 192).rect(30, 30, 732, 25, "F");
+<<<<<<< HEAD
     doc.setTextColor(255).setFont("helvetica", "bold").setFontSize(15).text("Batch Report", 396, 47, { align: "center" });
+=======
+    doc.setTextColor(255).setFont("helvetica", "bold").setFontSize(15).text("Account Report", 396, 47, { align: "center" });
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
     autoTable(doc, { startY: 65, margin: { left: 30, right: 30 }, tableWidth: 360,
       body: [["Year", first.month.slice(0, 4)], ["Month", monthLabel(first.month).replace(/ \d{4}$/, "")], ["Company", first.company || "Not provided"], ["Total", money(group.reduce((sum, row) => sum + row.cents, 0))]],
       styles: { fontSize: 9, cellPadding: 4, lineWidth: 0.3, lineColor: 100 }, theme: "grid",
       columnStyles: { 0: { fillColor: [0, 0, 0], textColor: 255, cellWidth: 65 }, 1: { textColor: [225, 0, 90] } } });
     const metaEnd = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
     autoTable(doc, { startY: metaEnd + 12, margin: { left: 30, right: 30 },
+<<<<<<< HEAD
       head: [["Account Number", "Company", "City", "Utility", "Product", "Amount", "Statement Date", "Service Address", "Due Date"]],
+=======
+      head: [["Account Number", "Company Folder Name", "City", "Utility", "Product", "Amount", "Statement Date", "Service Address", "Processed Date"]],
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
       body: group.map(row => [row.account, row.utility, row.city, row.utility, row.product || "", money(row.cents), displayDate(row.statementDate), row.address, displayProcessedDate(row.processedDate)]),
       styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" }, headStyles: { fillColor: [255, 45, 150], textColor: 255, fontSize: 8 },
       columnStyles: { 0: { cellWidth: 78 }, 5: { halign: "right", cellWidth: 65 }, 7: { cellWidth: 120 } },

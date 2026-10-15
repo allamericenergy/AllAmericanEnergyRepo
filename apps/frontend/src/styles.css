@@ -1600,16 +1600,23 @@ nav a:hover {
 
 .document-viewer-page {
   height: calc(100vh - 120px);
+<<<<<<< HEAD
   display: flex;
   flex-direction: column;
   gap: 1rem;
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 }
 
 .document-viewer-shell {
   display: grid;
   grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: 1rem;
+<<<<<<< HEAD
   flex: 1;
+=======
+  height: 100%;
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
   min-height: 620px;
 }
 
@@ -1647,6 +1654,7 @@ nav a:hover {
   overflow-wrap: anywhere;
 }
 
+<<<<<<< HEAD
 .document-viewer-shell.documents-hidden {
   grid-template-columns: 48px minmax(0, 1fr);
 }
@@ -1722,6 +1730,8 @@ nav a:hover {
   font: inherit;
 }
 
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
 .document-pdf-panel {
   min-width: 0;
   display: grid;
@@ -2690,6 +2700,7 @@ nav a:hover {
   }
 
 }
+<<<<<<< HEAD
 /* Account report upload and statement preview. */
 .account-report-panel { min-width: 0; }
 .account-report-table-wrap { overflow-x: auto; max-width: 100%; }
@@ -2697,3 +2708,5 @@ nav a:hover {
 .account-report-table th, .account-report-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #dce3eb; }
 .account-report-table th { background: #0070c0; color: white; white-space: nowrap; }
 .account-report-table td { min-width: 100px; overflow-wrap: anywhere; }
+=======
+>>>>>>> 638d960c6840640ab32e0236dd4cc54e8287463d
