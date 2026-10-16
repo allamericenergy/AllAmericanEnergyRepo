@@ -11,8 +11,8 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    // "baseUrl": ".",
+    // "ignoreDeprecations": "6.0",
     "paths": {
       "@intiligrid": ["src/vendor/IntiliGrid/index.ts"],
       "@intiligrid/*": ["src/vendor/IntiliGrid/*"]
