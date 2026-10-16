@@ -10,7 +10,10 @@ import { api } from "../../lib/api";
 const registerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required."),
   lastName: z.string().trim().min(1, "Last name is required."),
-  email: z.string().trim().email("Enter a valid email address."),
+  email: z.string().trim().email("Enter a valid email address.").refine(
+    (email) => email.toLowerCase().endsWith("@allamerican.energy"),
+    "Email must use the @allamerican.energy domain."
+  ),
   phone: z.string().trim().min(1, "Phone is required."),
   company: z.string().trim().min(1, "Company is required."),
   department: z.string().trim().min(1, "Department is required."),
@@ -130,7 +133,10 @@ export function RegisterPage() {
           <Box component="form" onSubmit={handleSubmit(submit)} className="auth-form">
             <TextField label="First name" required error={Boolean(errors.firstName)} helperText={errors.firstName?.message} {...register("firstName", requiredText("First name is required."))} />
             <TextField label="Last name" required error={Boolean(errors.lastName)} helperText={errors.lastName?.message} {...register("lastName", requiredText("Last name is required."))} />
-            <TextField label="Email" type="email" required error={Boolean(errors.email)} helperText={errors.email?.message} {...register("email", { validate: (value) => registerSchema.shape.email.safeParse(value).success || "Enter a valid email address." })} />
+            <TextField label="Email" type="email" required placeholder="name@allamerican.energy" error={Boolean(errors.email)} helperText={errors.email?.message ?? "Use your @allamerican.energy email address."} {...register("email", { validate: (value) => {
+              const result = registerSchema.shape.email.safeParse(value);
+              return result.success || result.error.issues[0]?.message || "Enter a valid email address.";
+            } })} />
             <TextField label="Phone" required error={Boolean(errors.phone)} helperText={errors.phone?.message} {...register("phone", requiredText("Phone is required."))} />
             <TextField label="Company" required error={Boolean(errors.company)} helperText={errors.company?.message} {...register("company", requiredText("Company is required."))} />
             <TextField label="Department" required error={Boolean(errors.department)} helperText={errors.department?.message} {...register("department", requiredText("Department is required."))} />

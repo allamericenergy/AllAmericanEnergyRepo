@@ -20,6 +20,14 @@ vi.mock("../middleware/authenticate.js", () => ({
     }
 }));
 const app = express().use(express.json()).use("/reports", reportsRoutes);
+app.use((error, _req, res, _next) => {
+    if (error && typeof error === "object" && "issues" in error) {
+        return res.status(400).json({ error: "Validation failed", details: error });
+    }
+    const statusCode = error && typeof error === "object" && "statusCode" in error ? Number(error.statusCode) : 500;
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return res.status(statusCode).json({ error: message });
+});
 const member = { id: "member-a", email: "member@example.com", role: "member", orgId: null };
 beforeEach(() => {
     vi.resetAllMocks();
@@ -180,13 +188,26 @@ describe("member credentials", () => {
         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
         vi.mocked(prisma.user.create).mockResolvedValue({ id: "new-member" });
         vi.mocked(prisma.note.findFirst).mockResolvedValue(null);
-        const response = await request(app).post("/reports/members").set("x-test-role", "superadmin").send({ firstName: "New", lastName: "Member", email: "new@example.com", password: "TemporaryPass123!", notes: "" });
+        const response = await request(app).post("/reports/members").set("x-test-role", "superadmin").send({ firstName: "New", lastName: "Member", email: "new@allamerican.energy", password: "TemporaryPass123!", notes: "" });
         expect(response.status).toBe(201);
         expect(response.body.emailSent).toBe(false);
         expect(emailService.verifyConfiguration).not.toHaveBeenCalled();
         expect(emailService.sendMemberWelcome).not.toHaveBeenCalled();
         const data = vi.mocked(prisma.user.create).mock.calls[0][0].data;
+        expect(data.email).toBe("new@allamerican.energy");
+        expect(data.username).toBe("new.member@allamerican.energy");
         expect(data.temporaryPasswordEncrypted).not.toContain("TemporaryPass123!");
+    });
+    it("rejects member and admin email addresses outside the organization domain", async () => {
+        for (const memberType of ["member", "user", "admin"]) {
+            const response = await request(app).post("/reports/members").set("x-test-role", "superadmin").send({
+                firstName: "New", lastName: "Member", email: "new@example.com",
+                memberType, password: "TemporaryPass123!", notes: ""
+            });
+            expect(response.status).toBe(400);
+            expect(JSON.stringify(response.body)).toContain("@allamerican.energy");
+        }
+        expect(prisma.user.create).not.toHaveBeenCalled();
     });
 });
 it("paginates meters in stable order while retaining company scope", async () => {

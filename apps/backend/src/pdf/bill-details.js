@@ -76,7 +76,7 @@ export function extractBillDetails(rows) {
             const from = billDate(period[1]), to = billDate(period[2]);
             if (from && to && from <= to) {
               add('servicePeriod', { from, to }, next);
-              add('days', Number(period[3]), next);
+              add('days', Number(period[3]), next, {}, 2);
             }
             break;
           }
@@ -87,13 +87,17 @@ export function extractBillDetails(rows) {
       // Meter registers share an ID; keep it as text and use the labeled bill total for usage.
       match = text.match(/^(\d+)\s+(?:\(\d+\)\s+)?From\s*\/\s*To\b/i);
       if (match) add('meterNumber', match[1], row);
-      if (/^Meter\s+Meter\s+Current\s+Reading\s+Next$/i.test(text.trim())) {
-        const nextColumn = row.cells?.at(-1)?.x;
+      if (/^Meter\s+Meter\s+Current\s+Reading\s+Next(?:\s|$)/i.test(text.trim())) {
+        const nextColumn = row.cells?.[4]?.x;
         for (const next of rows.slice(index + 2, index + 9)) {
           if (next.pageNumber !== row.pageNumber || /^Service from|^Meter\s+Meter/i.test(next.text)) break;
           if (next.y != null && next.y - row.y > 80) break;
           const reading = next.text.match(/^(Actual|Estimated|Estimate)\s*$/i);
           if (reading) add('readingType', reading[1], next);
+          if (/^Unmetered\s*$/i.test(next.text)) {
+            const usage = rows.slice(index + 2, index + 9).find(candidate => candidate.pageNumber === row.pageNumber && /^0\s+CCF\b/i.test(candidate.text));
+            if (usage) add('currentUsage', 0, usage);
+          }
           for (const cell of cellsOf(next)) {
             if (nextColumn == null || Math.abs(cell.x - nextColumn) > 30) continue;
             const date = cell.text.match(new RegExp(`^(${DATE})$`, 'i'));

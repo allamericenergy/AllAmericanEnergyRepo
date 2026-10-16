@@ -12,6 +12,7 @@ export function extractBillFields(rows) {
     const issues = [];
     const sources = {};
     const isEversource = rows.some(row => /\beversource\b/i.test(row.text));
+    const isWaterUtility = rows.some(row => /aquarionwater\.com|themdc\.org|The Metropolitan District/i.test(row.text));
     for (const originalRow of rows) {
         const row = { ...originalRow, text: originalRow.text.replace(/[\uE000-\uF8FF]/g, '$') };
         const billedWithUnit = row.text.match(new RegExp(`=\\s*(${NUMBER})\\s+Billed\\s+(${UNIT})\\s+Usage\\b`, 'i'));
@@ -29,7 +30,7 @@ export function extractBillFields(rows) {
             const match = after.match(new RegExp(`^\\s*:?\\s*${money}(?=\\s|$)`, 'i'))
                 ?? before.match(new RegExp(`${money}\\s*$`, 'i'));
             if (match) {
-                const currency = /USD/i.test(match[0]) || (isEversource && match[0].includes('$')) ? 'USD' : null;
+                const currency = /USD/i.test(match[0]) || isWaterUtility || (isEversource && match[0].includes('$')) ? 'USD' : null;
                 chargeCandidates.push({ value: { value: asNumber(match[1]), currency }, source: row,
                     priority: /^total/i.test(label[0]) ? 2 : 1 });
             }
@@ -43,8 +44,14 @@ export function extractBillFields(rows) {
                 usageCandidates.push({ value: { value: asNumber(match[1]), unit: normalizeUnit(match[2]) }, source: row });
         }
         const cngUsage = row.text.match(/\b(\d+(?:\.\d+)?)\s*(CCF|therms?)\b/i);
-        if (cngUsage && (/this\s+month|natural\s+gas\s+use/i.test(row.text) || /^\d+(?:\.\d+)?\s*CCF\b/i.test(row.text))) {
+        if (cngUsage && !isEversource && (/this\s+month|natural\s+gas\s+use/i.test(row.text) || /^\d+(?:\.\d+)?\s*CCF\b/i.test(row.text))) {
             usageCandidates.push({ value: { value: asNumber(cngUsage[1]), unit: normalizeUnit(cngUsage[2]) }, source: row, priority: 2 });
+        }
+        if (isWaterUtility) {
+            const waterUsage = row.text.match(new RegExp(`\\bWater\\s+Usage\\s*\\(CCF\\)\\s*:?\\s*(${NUMBER})(?=\\s|$)`, 'i'))
+                ?? row.text.match(new RegExp(`\\bWater\\s+Usage\\s+Charge\\s+(${NUMBER})\\s*CCF\\b`, 'i'));
+            if (waterUsage)
+                usageCandidates.push({ value: { value: asNumber(waterUsage[1]), unit: 'CCF' }, source: row });
         }
         // Eversource states billed usage without a unit. Confirm it against a priced energy quantity.
         if (isEversource) {

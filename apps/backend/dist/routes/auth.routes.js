@@ -6,6 +6,7 @@ import { demoCredentials, demoRefreshToken, demoUser } from "../demo/demoData.js
 import { authService } from "../application/auth/authService.js";
 import { signAccessToken } from "../security/auth.js";
 const roleSchema = z.enum(["superadmin", "admin", "member", "user"]);
+const organizationEmailSchema = z.string().trim().email().refine((email) => email.toLowerCase().endsWith("@allamerican.energy"), "Email must use the @allamerican.energy domain.");
 const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(1),
@@ -18,7 +19,7 @@ const refreshSchema = z.object({
 const registerSchema = z.object({
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    email: z.string().email(),
+    email: organizationEmailSchema,
     username: z.string().min(3).optional(),
     phone: z.string().trim().min(1),
     company: z.string().trim().min(1),
@@ -113,7 +114,9 @@ authRoutes.post("/logout", authenticate, async (req, res, next) => {
 authRoutes.post("/request-password-reset", async (req, res, next) => {
     try {
         const input = passwordResetRequestSchema.parse(req.body);
-        const result = env.DEMO_MODE ? { accepted: true } : await authService.requestPasswordReset(input.email, requestContext(req));
+        const result = env.DEMO_MODE
+            ? { accepted: true, email: input.email.toLowerCase(), resetToken: "demo-reset-token" }
+            : await authService.requestPasswordReset(input.email, requestContext(req));
         return res.status(202).json(result);
     }
     catch (error) {

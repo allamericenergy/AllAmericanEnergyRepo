@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Paper, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../lib/api";
 
@@ -27,10 +27,10 @@ const resetPasswordSchema = z.object({
 type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
 export function ForgotPasswordPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [completedPassword, setCompletedPassword] = useState("");
   const resetEmail = searchParams.get("email");
   const resetToken = searchParams.get("token");
   const isResetLink = Boolean(resetEmail && resetToken);
@@ -47,11 +47,23 @@ export function ForgotPasswordPage() {
   async function submit(values: ForgotPasswordForm) {
     setMessage("");
     setError("");
+    const resetWindow = window.open("", "_blank");
     try {
       const parsed = forgotPasswordSchema.parse(values);
-      await api.post("/auth/request-password-reset", parsed);
-      setMessage("If an account exists for this email, password reset instructions will be sent.");
+      const response = await api.post<{ email?: string; resetToken?: string }>("/auth/request-password-reset", parsed);
+      if (!response.data.email || !response.data.resetToken) {
+        resetWindow?.close();
+        setError("No account was found for this email address.");
+        return;
+      }
+      const resetUrl = new URL("/forgot-password", window.location.origin);
+      resetUrl.searchParams.set("email", response.data.email);
+      resetUrl.searchParams.set("token", response.data.resetToken);
+      if (resetWindow) resetWindow.location.href = resetUrl.toString();
+      else window.open(resetUrl.toString(), "_blank", "noopener,noreferrer");
+      setMessage("The password reset page opened in a new tab. No email was sent.");
     } catch (submitError) {
+      resetWindow?.close();
       setError(submitError instanceof z.ZodError ? submitError.issues[0]?.message ?? "Invalid email address." : "Unable to request password reset. Please try again.");
     }
   }
@@ -63,7 +75,9 @@ export function ForgotPasswordPage() {
     try {
       const parsed = resetPasswordSchema.parse(values);
       await api.post("/auth/reset-password", { email: resetEmail, token: resetToken, newPassword: parsed.newPassword });
-      navigate("/login?passwordReset=1", { replace: true });
+      setCompletedPassword(parsed.newPassword);
+      setMessage("Congratulations! Your password was reset successfully.");
+      resetForm.reset();
     } catch (resetError) {
       setError(resetError instanceof z.ZodError ? resetError.issues[0]?.message ?? "Invalid password." : "Unable to reset password. The link may be invalid or expired.");
     }
@@ -73,13 +87,18 @@ export function ForgotPasswordPage() {
     <Box className="auth-page">
       <Paper className="auth-panel" elevation={0}>
         <Box component="img" className="auth-logo" src="/logo.png" alt="iEnergyBill" />
-        <Typography variant="h4">{isResetLink ? "Reset password" : "Forgot password"}</Typography>
+        <Typography variant="h4">{completedPassword ? "Password reset complete" : isResetLink ? "Reset password" : "Forgot password"}</Typography>
         <Typography color="text.secondary">{isResetLink
-          ? "Enter and confirm your new password."
-          : "Enter your email and we will send password reset instructions if the account exists."}</Typography>
+          ? completedPassword ? "Congratulations! You can now use your new password to sign in." : "Enter and confirm your new password."
+          : "Enter your email to open the password reset page in a new tab."}</Typography>
         {message ? <Alert severity="success">{message}</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
-        {isResetLink ? (
+        {completedPassword ? (
+          <Box className="auth-form">
+            <TextField label="Your new password" value={completedPassword} slotProps={{ input: { readOnly: true } }} />
+            <Button component={Link} to="/login" variant="contained">Continue to login</Button>
+          </Box>
+        ) : isResetLink ? (
           <Box component="form" onSubmit={resetForm.handleSubmit(resetPassword)} className="auth-form">
             <TextField label="New password" type="password" required error={Boolean(resetForm.formState.errors.newPassword)} helperText={resetForm.formState.errors.newPassword?.message ?? "Minimum 12 chars with uppercase, lowercase, number, and special character."} {...resetForm.register("newPassword")} />
             <TextField label="Confirm password" type="password" required error={Boolean(resetForm.formState.errors.confirmPassword)} helperText={resetForm.formState.errors.confirmPassword?.message} {...resetForm.register("confirmPassword")} />
@@ -91,7 +110,7 @@ export function ForgotPasswordPage() {
           <Box component="form" onSubmit={requestForm.handleSubmit(submit)} className="auth-form">
             <TextField label="Email" type="email" required error={Boolean(requestForm.formState.errors.email)} helperText={requestForm.formState.errors.email?.message} {...requestForm.register("email")} />
             <Button type="submit" variant="contained" disabled={requestForm.formState.isSubmitting}>
-              {requestForm.formState.isSubmitting ? "Sending..." : "Send reset instructions"}
+              {requestForm.formState.isSubmitting ? "Opening..." : "Open password reset"}
             </Button>
           </Box>
         )}

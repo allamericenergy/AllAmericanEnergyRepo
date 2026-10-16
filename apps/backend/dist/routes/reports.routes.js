@@ -738,6 +738,7 @@ const emptyParentCompanyToUndefined = (value) => {
 const optionalText = z.preprocess(emptyStringToUndefined, z.string().trim().optional());
 const optionalPositiveInt = z.preprocess(emptyStringToUndefined, z.coerce.number().int().positive().optional());
 const optionalDate = z.preprocess(emptyStringToUndefined, z.coerce.date().optional());
+const organizationEmailSchema = z.string().trim().email().refine((email) => email.toLowerCase().endsWith("@allamerican.energy"), "Email must use the @allamerican.energy domain.");
 async function rawUnsafeRows(query) {
     return await prisma.$queryRawUnsafe(query);
 }
@@ -749,7 +750,7 @@ function requireMemberManager(role) {
 const memberCreateSchema = z.object({
     firstName: z.string().trim().min(1),
     lastName: z.string().trim().min(1),
-    email: z.string().trim().email(),
+    email: organizationEmailSchema,
     phone: optionalText,
     companyId: optionalPositiveInt,
     company: optionalText,
@@ -1003,7 +1004,7 @@ async function saveMemberNote(memberId, content, user) {
 async function uniqueMemberLoginEmail(firstName, lastName) {
     const name = `${firstName}.${lastName}`.toLowerCase().replace(/[^a-z0-9.]/g, "").replace(/^\.+|\.+$/g, "") || "member";
     for (let suffix = 0; suffix < 1000; suffix += 1) {
-        const candidate = `${name}${suffix || ""}@allamericanenergy.com`;
+        const candidate = `${name}${suffix || ""}@allamerican.energy`;
         const exists = await prisma.user.findFirst({
             where: { OR: [{ email: candidate }, { username: candidate }] },
             select: { id: true }
@@ -1011,7 +1012,7 @@ async function uniqueMemberLoginEmail(firstName, lastName) {
         if (!exists)
             return candidate;
     }
-    return `${name}.${Date.now()}@allamericanenergy.com`;
+    return `${name}.${Date.now()}@allamerican.energy`;
 }
 async function findTblContractById(id) {
     const rows = await prisma.$queryRaw `

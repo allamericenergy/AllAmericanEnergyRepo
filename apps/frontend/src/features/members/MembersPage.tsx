@@ -52,9 +52,11 @@ interface MemberForm {
   password: string;
 }
 
+const isOrganizationEmail = (email: string) => /^[^\s@]+@allamerican\.energy$/i.test(email.trim());
+
 const memberColumns: GridColumn<MemberRow>[] = [
   { field: "fullName", headerName: "Name", minWidth: 190, flex: 1 },
-  { field: "email", headerName: "Personal Email", minWidth: 220, flex: 1 },
+  { field: "email", headerName: "Email", minWidth: 220, flex: 1 },
   { field: "loginEmail", headerName: "Login ID", minWidth: 250, flex: 1 },
   { field: "phone", headerName: "Phone", width: 150 },
   { field: "companyName", headerName: "Company", minWidth: 180 },
@@ -171,6 +173,10 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
 
   async function saveMember() {
     setError("");
+    if (!isOrganizationEmail(form.email)) {
+      setError("Email must use the @allamerican.energy domain.");
+      return;
+    }
     setIsSaving(true);
     const payload = {
       ...form,
@@ -241,7 +247,7 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
     setGridKey((current) => current + 1);
   }
 
-  const formValid = form.firstName.trim() && form.lastName.trim() && form.email.trim()
+  const formValid = form.firstName.trim() && form.lastName.trim() && isOrganizationEmail(form.email)
     && (formMode === "edit" ? !form.password || form.password.length >= 12 : form.password.length >= 12);
 
   return (
@@ -279,7 +285,7 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
           <div className="company-form-grid">
             <TextField label="First name" required value={form.firstName} onChange={(event) => updateMember("firstName", event.target.value)} />
             <TextField label="Last name" required value={form.lastName} onChange={(event) => updateMember("lastName", event.target.value)} />
-            <TextField label="Personal Email" type="email" required value={form.email} helperText={formMode === "create" ? "Contact email address. No welcome email is sent." : "Member contact email address."} onChange={(event) => updateMember("email", event.target.value)} />
+            <TextField label="Email" type="email" required placeholder="name@allamerican.energy" value={form.email} error={Boolean(form.email.trim()) && !isOrganizationEmail(form.email)} helperText={!form.email.trim() || isOrganizationEmail(form.email) ? "Use an @allamerican.energy email address." : "Email must use the @allamerican.energy domain."} onChange={(event) => updateMember("email", event.target.value)} />
             <TextField label="Phone" value={form.phone} onChange={(event) => updateMember("phone", event.target.value)} />
             {!companyId ? <TextField label="Company" value={form.company} onChange={(event) => updateMember("company", event.target.value)} /> : null}
             <TextField label="Department" value={form.department} onChange={(event) => updateMember("department", event.target.value)} />
@@ -314,7 +320,7 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
           {viewingMember ? (
             <dl className="company-detail-list">
               <dt>Name</dt><dd>{viewingMember.fullName ?? "-"}</dd>
-              <dt>Personal Email</dt><dd>{viewingMember.email ?? "-"}</dd>
+              <dt>Email</dt><dd>{viewingMember.email ?? "-"}</dd>
               <dt>Login ID</dt><dd>{viewingMember.loginEmail ?? "-"}</dd>
               <dt>Phone</dt><dd>{viewingMember.phone ?? "-"}</dd>
               <dt>Company</dt><dd>{viewingMember.companyName ?? "-"}</dd>

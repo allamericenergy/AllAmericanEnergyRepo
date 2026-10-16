@@ -189,14 +189,12 @@ export class AuthService {
         const user = await prisma.user.findFirst({ where: { OR: [{ email: identifier }, { username: identifier }] } });
         if (!user)
             return { accepted: true };
-        await emailService.verifyConfiguration();
         const token = crypto.randomBytes(32).toString("hex");
         await prisma.passwordResetToken.create({
             data: { userId: user.id, tokenHash: await hashToken(token), expiresAt: addMinutes(RESET_TOKEN_MINUTES) }
         });
-        await emailService.sendPasswordReset({ email: user.email, firstName: user.firstName, token });
         await this.audit(user.id, user.orgId, "Auth.PasswordResetRequested", "Security", undefined, undefined, context);
-        return { accepted: true };
+        return { accepted: true, email: identifier, resetToken: token };
     }
     async resetPassword(email, token, newPassword, context) {
         const identifier = email.toLowerCase();

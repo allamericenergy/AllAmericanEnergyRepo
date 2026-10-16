@@ -118,20 +118,5 @@ export const emailService = {
             html: `<p>Hello ${escapeHtml(input.firstName)},</p><p><strong>${escapeHtml(input.heading)}</strong></p><p>${escapeHtml(input.message)}</p><p><a href="${escapeHtml(activityUrl)}">Open Activity</a></p>`
         });
         return true;
-    },
-    async sendPasswordReset(input) {
-        const config = await loadConfiguration();
-        if (!config)
-            throw Object.assign(new Error("SMTP email is not configured"), { statusCode: 503 });
-        const resetUrl = new URL("/forgot-password", env.FRONTEND_URL);
-        resetUrl.searchParams.set("email", input.email);
-        resetUrl.searchParams.set("token", input.token);
-        await createTransport(config).sendMail({
-            from: `iEnergyBill Support <${config.fromEmail}>`,
-            to: input.email,
-            subject: "Reset your iEnergyBill password",
-            text: `Hello ${input.firstName},\n\nReset your iEnergyBill password by opening this link:\n${resetUrl.toString()}\n\nThis link expires in 30 minutes. If you did not request this, you can ignore this email.`,
-            html: `<p>Hello ${escapeHtml(input.firstName)},</p><p>Use the link below to reset your iEnergyBill password:</p><p><a href="${escapeHtml(resetUrl.toString())}">Reset password</a></p><p>This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>`
-        });
     }
 };
