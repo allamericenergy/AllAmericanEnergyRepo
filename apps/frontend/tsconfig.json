@@ -10,8 +10,9 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@intiligrid": ["src/vendor/IntiliGrid/index.ts"],
       "@intiligrid/*": ["src/vendor/IntiliGrid/*"]
