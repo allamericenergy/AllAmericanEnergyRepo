@@ -12,7 +12,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "allowImportingTsExtensions": true,
     "paths": {
       "@intiligrid": ["src/vendor/IntiliGrid/index.ts"],
       "@intiligrid/*": ["src/vendor/IntiliGrid/*"]
