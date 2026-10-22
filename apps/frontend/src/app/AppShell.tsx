@@ -6,6 +6,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navByRole, normalizeRole, roleLabels, type Role } from "../lib/permissions";
 import { useAuthStore } from "../features/auth/authStore";
 import { api } from "../lib/api";
+import { SessionTimeoutGuard } from "../features/auth/SessionTimeoutGuard";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -34,6 +35,7 @@ const pathMap: Record<string, string> = {
 export function AppShell() {
   return (
     <div className="shell">
+      <SessionTimeoutGuard />
       <AuthenticatedTopbar />
       <main className="main">
         <Outlet />

@@ -1,11 +1,13 @@
 import axios from "axios";
+import { isSessionInactive, SESSION_LAST_ACTIVITY_KEY } from "../features/auth/sessionTimeout";
 
 const authStorageKeys = [
   "aae_access_token",
   "aae_refresh_token",
   "aae_user",
   "aae_permissions",
-  "aae_role"
+  "aae_role",
+  SESSION_LAST_ACTIVITY_KEY
 ];
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
@@ -55,8 +57,14 @@ function redirectToLogin() {
 }
 
 api.interceptors.request.use(async (config) => {
-  let token = localStorage.getItem("aae_access_token");
   const requestUrl = String(config.url ?? "");
+  const isAuthAction = requestUrl.includes("/auth/login") || requestUrl.includes("/auth/logout") || requestUrl.includes("/auth/refresh");
+  if (!isAuthAction && localStorage.getItem("aae_access_token") && isSessionInactive()) {
+    clearStoredSession();
+    redirectToLogin();
+    return Promise.reject(new Error("Session timed out due to inactivity"));
+  }
+  let token = localStorage.getItem("aae_access_token");
   if (!token && localStorage.getItem("aae_refresh_token") && !requestUrl.includes("/auth/")) {
     try {
       token = await refreshAccessToken();

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api } from "../../lib/api";
 import type { Role } from "../../lib/permissions";
+import { recordSessionActivity, SESSION_LAST_ACTIVITY_KEY } from "./sessionTimeout";
 
 export interface AuthUser {
   id: string;
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem("aae_refresh_token", response.data.refreshToken);
     localStorage.setItem("aae_user", JSON.stringify(response.data.user));
     localStorage.setItem("aae_role", response.data.user.role);
+    recordSessionActivity();
     set({
       accessToken: response.data.accessToken,
       refreshToken: response.data.refreshToken,
@@ -70,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem("aae_user");
       localStorage.removeItem("aae_permissions");
       localStorage.removeItem("aae_role");
+      localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
       set({ user: null, permissions: [], accessToken: null, refreshToken: null });
     }
   },
