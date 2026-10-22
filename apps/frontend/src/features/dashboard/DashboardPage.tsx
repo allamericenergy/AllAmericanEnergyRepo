@@ -1,4 +1,5 @@
 import { loadAllMeters } from "../../lib/loadAllMeters";
+import { DeleteRecordButton } from "./DeleteRecordButton";
 import { formatCompanyPhone } from "../../lib/companyPhone";
 import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
@@ -491,6 +492,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Pencil size={16} />
             </IconButton>
           </Tooltip>
+          {canDeleteCompanies && <DeleteRecordButton kind="contracts" id={row.id} onDeleted={() => { setViewedContract(null); setSelectedContracts([]); setContractGridKey((key) => key + 1); }} />}
           <Tooltip title={row.isActive ? "Set inactive" : "Set active"}>
             <span>
               <IconButton
@@ -576,6 +578,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Pencil size={16} />
             </IconButton>
           </Tooltip>
+          {canDeleteCompanies && <DeleteRecordButton kind="meters" id={row.id} onDeleted={() => { setViewedMeter(null); setSelectedMeters([]); setMeterGridKey((key) => key + 1); }} />}
           <Tooltip title={row.isActive ? "Set inactive" : "Set active"}>
             <span>
               <IconButton
