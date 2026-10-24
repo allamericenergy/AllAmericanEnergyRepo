@@ -75,17 +75,34 @@ export async function createMasterAccountTemplate(utilities: TemplateUtility[], 
   return workbook;
 }
 
-export function parseMasterAccountUpload(workbook: XLSX.WorkBook): MasterAccountUploadRow[] {
+export function parseMasterAccountUploadDetailed(workbook: XLSX.WorkBook, utilities: TemplateUtility[] = []) {
   const worksheet = workbook.Sheets.Settings ?? workbook.Sheets[workbook.SheetNames[0]];
   if (!worksheet) throw new Error("The spreadsheet does not contain a worksheet.");
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "", raw: true });
   if (!rows.length) throw new Error("The spreadsheet has no settings to upload.");
   const uploaded: MasterAccountUploadRow[] = [];
+  const skippedUtilities: string[] = [];
   const utilityIds = new Set<number>();
+  const utilityIdsByName = new Map<string, number[]>();
+  for (const utility of utilities) {
+    const name = String(utility.name ?? "").trim().toLowerCase();
+    if (!name) continue;
+    utilityIdsByName.set(name, [...(utilityIdsByName.get(name) ?? []), utility.id]);
+  }
   rows.forEach((row, index) => {
     const rowNumber = index + 2;
-    const utilityId = Number(row["Utility ID"]);
-    if (!Number.isInteger(utilityId) || utilityId <= 0) throw new Error(`Row ${rowNumber}: Utility ID must be a positive number.`);
+    const suppliedUtilityId = Number(row["Utility ID"]);
+    let utilityId = suppliedUtilityId;
+    if (!Number.isInteger(suppliedUtilityId) || suppliedUtilityId <= 0) {
+      const utilityName = String(row.Utility ?? "").trim();
+      const matches = utilityIdsByName.get(utilityName.toLowerCase()) ?? [];
+      utilityId = matches.shift() ?? 0;
+      if (!utilityId) {
+        if (!utilities.length) throw new Error(`Row ${rowNumber}: Utility ID must be a positive number.`);
+        skippedUtilities.push(utilityName || `Row ${rowNumber}`);
+        return;
+      }
+    }
     if (utilityIds.has(utilityId)) throw new Error(`Row ${rowNumber}: Utility ID ${utilityId} appears more than once.`);
     utilityIds.add(utilityId);
     const masterAccountNumber = String(row.MasterAccountNumber ?? "").trim();
@@ -99,5 +116,10 @@ export function parseMasterAccountUpload(workbook: XLSX.WorkBook): MasterAccount
       serviceRefPodId: yesNo(row["Service Ref/POD ID"], rowNumber, "Service Ref/POD ID")
     });
   });
-  return uploaded;
+  if (!uploaded.length) throw new Error("None of the spreadsheet utilities match the current utility list.");
+  return { rows: uploaded, skippedUtilities };
+}
+
+export function parseMasterAccountUpload(workbook: XLSX.WorkBook, utilities: TemplateUtility[] = []): MasterAccountUploadRow[] {
+  return parseMasterAccountUploadDetailed(workbook, utilities).rows;
 }

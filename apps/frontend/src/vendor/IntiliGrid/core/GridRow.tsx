@@ -12,6 +12,7 @@ interface GridRowProps<T extends GridRowModel> {
     rowIndex: number;
     rowHeight?: number;
     onRowClick?: (row: T) => void;
+    backgroundColor?: string;
     treeNode?: GridTreeNodeMeta & { key: string };
     treeDataColumnField?: keyof T;
     onToggleTreeNode?: (key: string, expanded: boolean) => void;
@@ -22,6 +23,7 @@ export default function GridRow<T extends GridRowModel>({
     rowIndex,
     rowHeight = 38,
     onRowClick,
+    backgroundColor,
     treeNode,
     treeDataColumnField,
     onToggleTreeNode,
@@ -74,9 +76,9 @@ export default function GridRow<T extends GridRowModel>({
                 cursor: "pointer",
                 backgroundColor: isSelected
                     ? "#dceafe"
-                    : rowIndex % 2 === 0
+                    : backgroundColor ?? (rowIndex % 2 === 0
                         ? "background.paper"
-                        : "#fbfdff",
+                        : "#fbfdff"),
                 outline: isFocused ? "1px solid" : "none",
                 outlineColor: isFocused
                     ? "primary.main"
@@ -85,7 +87,7 @@ export default function GridRow<T extends GridRowModel>({
                 "&:hover": {
                     backgroundColor: isSelected
                         ? "#cfe1ff"
-                        : "#f1f6ff",
+                        : backgroundColor ?? "#f1f6ff",
                 },
             }}
         >

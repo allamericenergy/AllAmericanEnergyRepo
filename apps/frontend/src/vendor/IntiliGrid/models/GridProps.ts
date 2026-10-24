@@ -47,6 +47,9 @@ export interface GridProps<T extends GridRowModel> {
 
     onRowClick?: (row: T) => void;
 
+    /** Optional background applied to an unselected row. */
+    getRowBackgroundColor?: (row: T) => string | undefined;
+
     onSelectionChange?: (
         selectedIds: T["id"][],
         selectedRows: T[]

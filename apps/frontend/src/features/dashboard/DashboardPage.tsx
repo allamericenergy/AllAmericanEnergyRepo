@@ -1,4 +1,5 @@
 import { loadAllMeters } from "../../lib/loadAllMeters";
+import { companyRowBackground, companyStatusColor, effectiveCompanyStatus } from "../../lib/companyStatusColor";
 import { DeleteRecordButton } from "./DeleteRecordButton";
 import { formatCompanyPhone } from "../../lib/companyPhone";
 import { contractMeterLabel } from "../../lib/contractMeterLabel";
@@ -155,6 +156,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
     queryKey: ["tbl-companies", user?.id],
     queryFn: async () => (await api.get("/reports/tbl-companies")).data as { total: number; data: TblCompanyRow[] },
     enabled: hasCompanyDashboard || isCompaniesView || isContractsView || isMetersView,
+    retry: false
+  });
+  const companyStatuses = useQuery({
+    queryKey: ["company-status-lookups"],
+    queryFn: async () => (await api.get("/reports/company-status-lookups")).data as { data: LookupOption[] },
+    enabled: isCompanyModalOpen,
     retry: false
   });
   useEffect(() => {
@@ -362,22 +369,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
   );
 
   const companyColumns: GridColumn<TblCompanyRow>[] = [
-
     {
-      field: "isActive",
+      field: "companyStatus",
       headerName: "Status",
-      width: 120,
-      renderCell: (params) => {
-        const isActive = Boolean(params.value);
-
-        return (
-          <span className={`status-badge ${isActive ? "active" : "inactive"}`}>
-            {isActive ? "Active" : "Inactive"}
-          </span>
-        );
-      },
+      minWidth: 110,
+      renderCell: ({ row }) => {
+        const status = effectiveCompanyStatus(row);
+        return <span className="status-badge" style={companyStatusColor(status)}>{status}</span>;
+      }
     },
-    /* { field: "isActive", headerName: "Status", width: 120, valueFormatter: (value: unknown) => value ? "Active" : "Inactive" }, */
     { field: "customerId", headerName: "Customer ID", width: 140 },
     { field: "companyName", headerName: "Company", minWidth: 220, flex: 1 },
     { field: "legalEntityName", headerName: "Legal Entity", minWidth: 220 },
@@ -1107,6 +1107,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     try {
       const payload = {
         ...newCompany,
+        companyStatusId: newCompany.companyStatusId || null,
         organizationId: newCompany.organizationId || 1,
         parentCompanyId: newCompany.parentCompanyId || (companyFormMode === "edit" ? null : undefined),
         companyName: newCompany.companyName.trim(),
@@ -1255,7 +1256,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setBulkCompanyResult(null);
     setIsUploadingCompanies(true);
     try {
-      const response = await api.post("/reports/tbl-companies/bulk", { companies: bulkCompanyRows, confirmDuplicates });
+      const response = await api.post("/reports/tbl-companies/bulk", { companies: bulkCompanyRows.map((company) => ({ ...company, companyStatusId: company.companyStatusId || null })), confirmDuplicates });
       const result = response.data as BulkCompanyResult;
       setBulkCompanyResult(result);
       await companies.refetch();
@@ -1686,6 +1687,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             defaultTreeExpansionDepth={0}
             columns={companyColumns}
             rows={visibleCompanies}
+            getRowBackgroundColor={companyRowBackground}
             onRowClick={viewCompany}
             onSelectionChange={(_ids, rows) => setSelectedCompanies(rows)}
           />
@@ -1870,6 +1872,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </TextField>
             <TextField label="ZIP" required value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
             <TextField label="URL" value={newCompany.url} onChange={(event) => updateNewCompany("url", event.target.value)} />
+            <TextField
+              select
+              label="Company Status"
+              value={newCompany.companyStatusId}
+              onChange={(event) => updateNewCompany("companyStatusId", Number(event.target.value))}
+              disabled={companyStatuses.isLoading || companyStatuses.isError}
+              error={companyStatuses.isError}
+              helperText={companyStatuses.isLoading ? "Loading statuses..." : companyStatuses.isError ? "Unable to load company statuses. Reopen the form to retry." : undefined}
+            >
+              <MenuItem value={0}>Not set</MenuItem>
+              {newCompany.companyStatusId && !companyStatuses.data?.data.some((status) => Number(status.id) === newCompany.companyStatusId) ? <MenuItem value={newCompany.companyStatusId}>Current status</MenuItem> : null}
+              {companyStatuses.data?.data.map((status) => (
+                <MenuItem key={status.id} value={Number(status.id)}><span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span></MenuItem>
+              ))}
+            </TextField>
             <FormControlLabel control={<Checkbox checked={newCompany.isActive} onChange={(event) => updateNewCompany("isActive", event.target.checked)} />} label="Active" />
             <RichTextEditor label="Company Notes" value={newCompany.notes} onChange={(value) => updateNewCompany("notes", value)} />
           </div>
@@ -2011,12 +2028,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <Button size="small" className="account-info-edit" startIcon={<Pencil size={13} />} onClick={() => editCompany(viewedCompany)}>Edit</Button>
                     </div>
                     <dl className="account-info-list">
-                      <dt>Status</dt>
-                      <dd>
-                        <span className={`status-badge ${viewedCompany.isActive ? "active" : "inactive"}`}>
-                          {viewedCompany.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </dd>
+                      <dt>Company Status</dt>
+                      <dd>{(() => { const status = effectiveCompanyStatus(viewedCompany); return <span className="status-badge" style={companyStatusColor(status)}>{status}</span>; })()}</dd>
                       <dt>Company ID</dt>
                       <dd>{viewedCompany.customerId ?? "-"}</dd>
                       <dt>Company Name</dt>
@@ -3374,6 +3387,7 @@ function formatDate(value: unknown) {
 }
 
 interface NewCompanyForm {
+  companyStatusId: number;
   organizationId: number;
   parentCompanyId: number;
   companyName: string;
@@ -3448,6 +3462,7 @@ function parseBulkCompanies(worksheet: XLSX.WorkSheet, companies: TblCompanyRow[
       taxId: text("taxid"),
       url: text("url", "website"),
       notes: text("notes"),
+      companyStatusId: 0,
       isActive: activeValue ? !["false", "no", "0", "inactive"].includes(activeValue) : true
     };
   });
@@ -3520,6 +3535,7 @@ function parseBulkMeters(worksheet: XLSX.WorkSheet, companyId: number, lookups?:
 
 function emptyCompanyForm(): NewCompanyForm {
   return {
+    companyStatusId: 0,
     organizationId: 1,
     parentCompanyId: 0,
     companyName: "",
@@ -3540,6 +3556,7 @@ function emptyCompanyForm(): NewCompanyForm {
 
 function companyToForm(company: TblCompanyRow): NewCompanyForm {
   return {
+    companyStatusId: Number(company.companyStatusId ?? 0),
     organizationId: Number(company.organizationId ?? 1),
     parentCompanyId: Number(company.parentCompanyId ?? 0),
     companyName: company.companyName ?? "",
@@ -3565,6 +3582,8 @@ function companyApiError(error: unknown) {
 }
 
 interface TblCompanyRow {
+  companyStatusId?: number | null;
+  companyStatus?: string | null;
   id: string | number;
   organizationId?: string | number;
   parentCompanyId?: string | number | null;

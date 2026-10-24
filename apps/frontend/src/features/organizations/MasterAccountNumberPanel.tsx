@@ -6,7 +6,7 @@ import { Download, Pencil, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { api } from "../../lib/api";
-import { createMasterAccountTemplate, parseMasterAccountUpload } from "./masterAccountNumberSpreadsheet";
+import { createMasterAccountTemplate, parseMasterAccountUpload, parseMasterAccountUploadDetailed } from "./masterAccountNumberSpreadsheet";
 
 interface MasterAccountNumberRow {
   id: number;
@@ -30,6 +30,7 @@ export function MasterAccountNumberPanel() {
   const [uploadFileName, setUploadFileName] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploadRows, setUploadRows] = useState<ReturnType<typeof parseMasterAccountUpload>>([]);
+  const [skippedUploadUtilities, setSkippedUploadUtilities] = useState<string[]>([]);
   const uploadInput = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState<MasterAccountNumberRow | null>(null);
   const utilities = useQuery({
@@ -84,12 +85,14 @@ export function MasterAccountNumberPanel() {
     setUploadError("");
     setUploadRows([]);
     setUploadFileName("");
+    setSkippedUploadUtilities([]);
     if (!file) return;
     try {
       if (!/\.(xlsx|xls|csv)$/i.test(file.name)) throw new Error("Choose an XLSX, XLS, or CSV spreadsheet.");
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", raw: true });
-      const rows = parseMasterAccountUpload(workbook);
-      setUploadRows(rows);
+      const parsed = parseMasterAccountUploadDetailed(workbook, utilities.data?.data ?? []);
+      setUploadRows(parsed.rows);
+      setSkippedUploadUtilities(parsed.skippedUtilities);
       setUploadFileName(file.name);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Unable to read the spreadsheet.");
@@ -107,6 +110,7 @@ export function MasterAccountNumberPanel() {
       setUploadOpen(false);
       setUploadRows([]);
       setUploadFileName("");
+      setSkippedUploadUtilities([]);
     } catch (err) {
       setUploadError(isAxiosError<{ error?: string }>(err) ? err.response?.data.error ?? "Unable to upload settings." : "Unable to upload settings.");
     } finally {
@@ -191,6 +195,7 @@ export function MasterAccountNumberPanel() {
             <Button variant="outlined" startIcon={<Upload size={17} />} disabled={uploading} onClick={() => uploadInput.current?.click()}>Choose completed spreadsheet</Button>
           </div>
           {uploadFileName ? <p className="muted">{uploadFileName}: {uploadRows.length} setting(s) ready to upload.</p> : null}
+          {skippedUploadUtilities.length ? <p className="muted">Skipped {skippedUploadUtilities.length} utilities that are no longer in the current utility list: {skippedUploadUtilities.join(", ")}.</p> : null}
         </DialogContent>
         <DialogActions>
           <Button disabled={uploading} onClick={() => setUploadOpen(false)}>Cancel</Button>

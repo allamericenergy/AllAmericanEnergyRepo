@@ -22,6 +22,7 @@ import { useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
+import { companyStatusColor } from "../../lib/companyStatusColor";
 
 interface OrganizationRow {
   id: string;
@@ -85,6 +86,8 @@ const organizationColumns: GridColumn<OrganizationRow>[] = [
 ];
 
 const legacySections = [
+  { key: "company-statuses", label: "Company Status", endpoint: "company-statuses", tableName: "tbl_CompanyStatus", singularName: "Company Status", pluralName: "Company Status", icon: Building2 },
+  { key: "meter-statuses", label: "Meter Status", endpoint: "meter-statuses", tableName: "tbl_Status", singularName: "Meter Status", pluralName: "Meter Status", icon: Activity },
   { key: "rates", label: "Rate", endpoint: "rates", tableName: "tbl_Rate", singularName: "Rate", pluralName: "Rates", icon: CircleDollarSign },
   { key: "brokers", label: "Broker", endpoint: "brokers", tableName: "tbl_Broker", singularName: "Broker", pluralName: "Brokers", icon: BriefcaseBusiness },
   { key: "suppliers", label: "Supplier", endpoint: "suppliers", tableName: "tbl_Supplier", singularName: "Supplier", pluralName: "Suppliers", icon: Factory },
@@ -813,6 +816,20 @@ interface LegacyTablePanelProps {
 }
 
 function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: LegacyTablePanelProps) {
+  const queryClient = useQueryClient();
+
+  async function refreshStatusQueries() {
+    if (endpoint === "company-statuses") {
+      await Promise.all(["company-status-lookups", "tbl-companies"].map(
+        (key) => queryClient.invalidateQueries({ queryKey: [key] })
+      ));
+      return;
+    }
+    if (endpoint !== "meter-statuses") return;
+    await Promise.all(["meter-lookups", "meters", "contract-meters", "viewed-contract-meters"].map(
+      (key) => queryClient.invalidateQueries({ queryKey: [key] })
+    ));
+  }
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RateRow | null>(null);
   const [deleting, setDeleting] = useState<RateRow | null>(null);
@@ -878,6 +895,9 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       const isUtilityMeterSize = endpoint === "utilities" && ["accountnumbersize", "servicerefsize"].includes(column.name.toLowerCase());
       return {
         field: column.name as keyof RateRow,
+        renderCell: endpoint === "company-statuses" && column.name === "Status"
+          ? ({ value }) => <span className="status-badge" style={companyStatusColor(String(value ?? ""))}>{String(value ?? "")}</span>
+          : undefined,
         headerName: isUtility ? "Utility" : displayName(column.name),
         minWidth: isUtility ? 180 : rateColumnWidth(column),
         flex: ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType) ? 1 : undefined,
@@ -940,6 +960,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       await records.refetch();
       setFormOpen(false);
       setNotice(`${singularName} ${wasEditing ? "updated" : "added"} successfully.`);
+      await refreshStatusQueries();
     } catch (saveError) {
       setError(apiError(saveError) ?? `Unable to save the ${singularName.toLowerCase()}.`);
     } finally {
@@ -957,6 +978,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       setDeleting(null);
       await records.refetch();
       setNotice(`${singularName} deleted successfully.`);
+      await refreshStatusQueries();
     } catch (deleteError) {
       setError(apiError(deleteError) ?? `Unable to delete the ${singularName.toLowerCase()}.`);
       setDeleting(null);
@@ -1070,6 +1092,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   }
 
   const formValid = editableColumns.every((column) => column.nullable || column.hasDefault || form[column.name] !== "")
+    && (!["meter-statuses", "company-statuses"].includes(endpoint) || Boolean(String(form.Status ?? "").trim()))
     && (endpoint !== "rates" || Boolean(utilityColumn && form[utilityColumn.name] !== "" && !utilities.isLoading && !utilities.isError));
 
   return (

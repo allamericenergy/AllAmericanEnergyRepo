@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { createMasterAccountTemplate, MASTER_ACCOUNT_HEADERS, parseMasterAccountUpload } from "./masterAccountNumberSpreadsheet";
+import { createMasterAccountTemplate, MASTER_ACCOUNT_HEADERS, parseMasterAccountUpload, parseMasterAccountUploadDetailed } from "./masterAccountNumberSpreadsheet";
 
 describe("MasterAccount Number spreadsheet", () => {
   it("creates a populated template with dropdowns and a hidden utility ID", async () => {
@@ -27,6 +27,44 @@ describe("MasterAccount Number spreadsheet", () => {
     expect(parseMasterAccountUpload(workbook)).toEqual([{
       utilityId: 4, masterAccountNumber: "Service Ref/POD ID", accountNumber: false, serviceRefPodId: true
     }]);
+  });
+
+  it("recovers missing hidden utility IDs from utility names", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      MASTER_ACCOUNT_HEADERS.slice(0, 4),
+      ["Black Hills Energy", "Account Number", "YES", "YES"],
+      ["Black Hills Energy", "Service Ref/POD ID", "NO", "YES"]
+    ]), "Settings");
+    expect(parseMasterAccountUpload(workbook, [
+      { id: 14, name: "Black Hills Energy" },
+      { id: 27, name: "Black Hills Energy" }
+    ])).toEqual([
+      { utilityId: 14, masterAccountNumber: "Account Number", accountNumber: true, serviceRefPodId: true },
+      { utilityId: 27, masterAccountNumber: "Service Ref/POD ID", accountNumber: false, serviceRefPodId: true }
+    ]);
+  });
+
+  it("reports an unmatched utility when the hidden ID is missing", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      MASTER_ACCOUNT_HEADERS.slice(0, 4),
+      ["Unknown Utility", "Account Number", "YES", "YES"]
+    ]), "Settings");
+    expect(() => parseMasterAccountUpload(workbook, [{ id: 1, name: "Known Utility" }])).toThrow("None of the spreadsheet utilities match");
+  });
+
+  it("skips obsolete utilities while keeping current utility rows", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      MASTER_ACCOUNT_HEADERS.slice(0, 4),
+      ["Known Utility", "Account Number", "YES", "YES"],
+      ["Old Utility", "BOTH", "YES", "NO"]
+    ]), "Settings");
+    expect(parseMasterAccountUploadDetailed(workbook, [{ id: 8, name: "Known Utility" }])).toEqual({
+      rows: [{ utilityId: 8, masterAccountNumber: "Account Number", accountNumber: true, serviceRefPodId: true }],
+      skippedUtilities: ["Old Utility"]
+    });
   });
 
   it.each([

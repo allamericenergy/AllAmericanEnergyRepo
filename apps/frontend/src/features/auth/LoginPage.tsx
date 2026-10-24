@@ -24,8 +24,8 @@ export function LoginPage() {
   const passwordReset = searchParams.get("passwordReset") === "1";
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     defaultValues: {
-      email: "rjenergy411@gmail.com",
-      password: "RomanAllEnergy@411",
+      email: "superadmin@allamerican.energy",
+      password: "ChangeMe123#",
       rememberMe: true
     }
   });

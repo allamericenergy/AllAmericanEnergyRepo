@@ -49,6 +49,7 @@ export default function GridBody<T extends GridRowModel>({
                     rowIndex={rowOffset + index}
                     rowHeight={rowHeight}
                     onRowClick={props.onRowClick}
+                    backgroundColor={props.getRowBackgroundColor?.(row)}
                     treeNode={treeMetadata?.get(row.id)}
                     treeDataColumnField={props.treeDataColumnField}
                     onToggleTreeNode={onToggleTreeNode}
