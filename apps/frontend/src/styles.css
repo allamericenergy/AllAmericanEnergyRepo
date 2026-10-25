@@ -702,6 +702,41 @@ nav a:hover {
   font-size: 1.6rem;
 }
 
+.company-kpi-statuses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0;
+}
+
+.company-kpi-statuses .company-kpi-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  border: 0;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.company-kpi-status:hover,
+.company-kpi-status:focus-visible {
+  filter: brightness(0.92);
+  outline: 2px solid rgba(15, 23, 42, 0.22);
+  outline-offset: 1px;
+}
+
+.company-kpi-status.selected {
+  box-shadow: 0 0 0 3px rgba(15, 93, 168, 0.24);
+}
+
+.company-kpi-status b {
+  font-size: 0.9rem;
+}
+
 .clickable-kpi {
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
@@ -713,6 +748,205 @@ nav a:hover {
   box-shadow: 0 8px 22px rgba(15, 93, 168, 0.14);
   outline: none;
   transform: translateY(-1px);
+}
+
+.kpi-grid article.companies-kpi {
+  display: grid;
+  grid-template-columns: minmax(70px, 0.7fr) minmax(120px, 1.3fr);
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.companies-kpi::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 23px;
+  height: 44px;
+  background: url("/elemnt-01.svg") left top / 23px 44px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.company-page-cards {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.9fr) minmax(300px, 1fr) minmax(340px, 1.15fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.company-page-summary-card,
+.recent-company-card,
+.ending-contract-card {
+  position: relative;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.company-page-summary-card {
+  display: grid;
+  align-items: center;
+}
+
+.recent-company-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.ending-contract-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 23px;
+  height: 44px;
+  background: url("/elemnt-04.svg") left top / 23px 44px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.company-page-summary-totals {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.55fr) minmax(210px, 1.45fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.company-page-summary-card .company-kpi-total > span,
+.recent-company-title {
+  color: #627188;
+  font-weight: 700;
+}
+
+.company-page-summary-card .company-kpi-total strong {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 1.8rem;
+}
+
+.recent-company-block {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.recent-company-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.recent-company-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  border: 0;
+  padding: 0.3rem 0;
+  background: transparent;
+  color: #0f5da8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-company-list button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-company-list time {
+  color: #7b8798;
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.recent-company-list button:hover,
+.recent-company-list button:focus {
+  color: #0a4277;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.ending-contract-card {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ending-contract-title {
+  color: #627188;
+  font-weight: 700;
+}
+
+.ending-contract-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.ending-contract-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.12rem 0.65rem;
+  border: 0;
+  padding: 0.25rem 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ending-contract-company {
+  overflow: hidden;
+  color: #24364b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ending-contract-id {
+  color: #ef1e1e;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.ending-contract-dates {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 0.35rem;
+  color: #7b8798;
+  font-size: 0.73rem;
+}
+
+.ending-contract-list button:hover .ending-contract-company,
+.ending-contract-list button:focus .ending-contract-company {
+  color: #0f5da8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ending-contract-list button:focus {
+  outline: none;
+}
+
+.dashboard-ending-contract-card {
+  margin-bottom: 1rem;
+}
+
+.dashboard-ending-contract-card .ending-contract-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .content-grid {
@@ -2601,10 +2835,37 @@ nav a:hover {
   margin-top: 0.85rem;
 }
 
+@media (max-width: 1200px) {
+  .company-page-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ending-contract-card {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-ending-contract-card .ending-contract-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 840px) {
   .kpi-grid,
-  .content-grid {
+  .content-grid,
+  .company-page-cards {
     grid-template-columns: 1fr;
+  }
+
+  .ending-contract-card {
+    grid-column: auto;
+  }
+
+  .dashboard-ending-contract-card .ending-contract-list {
+    grid-template-columns: 1fr;
+  }
+
+  .company-page-summary-totals {
+    grid-template-columns: minmax(70px, 0.5fr) minmax(200px, 1.5fr);
   }
 
   .topbar {

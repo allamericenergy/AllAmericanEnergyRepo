@@ -1,9 +1,12 @@
-// Dark text on pale backgrounds keeps labels readable without relying on color alone.
 export function companyStatusColor(status: string | null | undefined) {
   const name = (status ?? "").trim().toLowerCase();
   if (!name) return { color: "#475569", backgroundColor: "#f1f5f9" };
-  if (/^(active|approved|completed|complete|won)$/.test(name)) return { color: "#166534", backgroundColor: "#dcfce7" };
-  if (/^(inactive|rejected|cancelled|canceled|lost|closed)$/.test(name)) return { color: "#991b1b", backgroundColor: "#fee2e2" };
+  if (name === "active") return { color: "#fff", backgroundColor: "#0ab39c", borderRadius: "4px" };
+  if (name === "inactive") return { color: "#fff", backgroundColor: "#f06548", borderRadius: "4px" };
+  if (name === "sold") return { color: "#fff", backgroundColor: "#405189", borderRadius: "4px" };
+  if (name === "closed") return { color: "#fff", backgroundColor: "#ff1919", borderRadius: "4px" };
+  if (/^(approved|completed|complete|won)$/.test(name)) return { color: "#166534", backgroundColor: "#dcfce7" };
+  if (/^(rejected|cancelled|canceled|lost)$/.test(name)) return { color: "#991b1b", backgroundColor: "#fee2e2" };
   if (/^(pending|on hold|in review|awaiting approval)$/.test(name)) return { color: "#92400e", backgroundColor: "#fef3c7" };
   const palette = [
     { color: "#1e40af", backgroundColor: "#dbeafe" },

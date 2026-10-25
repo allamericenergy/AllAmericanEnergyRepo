@@ -25,6 +25,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const navigate = useNavigate();
   const [companyViewParams, setCompanyViewParams] = useSearchParams();
   const requestedCompanyId = companyViewParams.get("companyId");
+  const requestedCompanyStatus = companyViewParams.get("status");
   const user = useAuthStore((state) => state.user);
   const isCompaniesView = view === "companies";
   const isContractsView = view === "contracts";
@@ -42,6 +43,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [viewedCompany, setViewedCompany] = useState<TblCompanyRow | null>(null);
   const [companyTray, setCompanyTray] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
+  const [companyStatusFilter, setCompanyStatusFilter] = useState<"" | "Active" | "Inactive" | "Sold" | "Closed">("");
   const [isCompanyMeterListDismissed, setIsCompanyMeterListDismissed] = useState(true);
   const [isCompanyContractListOpen, setIsCompanyContractListOpen] = useState(false);
   const [isCompanyMemberListOpen, setIsCompanyMemberListOpen] = useState(false);
@@ -58,6 +60,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [editingCompanyId, setEditingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [activatingCompanyId, setActivatingCompanyId] = useState<TblCompanyRow["id"] | null>(null);
+  const [isUpdatingViewedCompanyStatus, setIsUpdatingViewedCompanyStatus] = useState(false);
+  const [viewedCompanyStatusError, setViewedCompanyStatusError] = useState("");
   const [companyError, setCompanyError] = useState("");
   const [newCompany, setNewCompany] = useState<NewCompanyForm>(emptyCompanyForm());
   const isCompanyFormValid = [
@@ -161,7 +165,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const companyStatuses = useQuery({
     queryKey: ["company-status-lookups"],
     queryFn: async () => (await api.get("/reports/company-status-lookups")).data as { data: LookupOption[] },
-    enabled: isCompanyModalOpen,
+    enabled: isCompanyModalOpen || selectedCompanies.length > 0 || Boolean(viewedCompany),
     retry: false
   });
   useEffect(() => {
@@ -175,14 +179,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
       return next;
     }, { replace: true });
   }, [isCompaniesView, requestedCompanyId, companies.data, setCompanyViewParams]);
+  useEffect(() => {
+    if (!isCompaniesView) return;
+    const normalizedStatus = requestedCompanyStatus?.trim().toLowerCase();
+    const matchingStatus = (["Active", "Inactive", "Sold", "Closed"] as const)
+      .find((status) => status.toLowerCase() === normalizedStatus);
+    if (matchingStatus) setCompanyStatusFilter(matchingStatus);
+  }, [isCompaniesView, requestedCompanyStatus]);
   const contracts = useQuery({
-    queryKey: ["contracts", isContractsView ? "all" : viewedCompany?.id, user?.id],
+    queryKey: ["contracts", isContractsView || isCompaniesView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
       await api.get("/reports/contracts", {
-        params: { companyId: isContractsView || viewedCompany?.companyType === "Company" ? undefined : viewedCompany?.id }
+        params: { companyId: isContractsView || isCompaniesView || viewedCompany?.companyType === "Company" ? undefined : viewedCompany?.id }
       })
     ).data as { total: number; data: ContractRow[] },
-    enabled: Boolean(viewedCompany) || isContractsView || (hasCompanyDashboard && isDashboardView),
+    enabled: Boolean(viewedCompany) || isContractsView || isCompaniesView || (hasCompanyDashboard && isDashboardView),
     retry: false
   });
   const contractLookups = useQuery({
@@ -253,18 +264,55 @@ export function DashboardPage({ view }: DashboardPageProps) {
   });
   const visibleCompanies = useMemo(() => {
     const query = companySearch.trim().toLocaleLowerCase();
-    if (!query) return companies.data?.data ?? [];
-    return (companies.data?.data ?? []).filter((company) => [
-      company.companyName,
-      company.legalEntityName,
-      company.customerId,
-      company.city,
-      company.state,
-      company.phoneNumber,
-      company.email,
-      company.parentCompanyName
-    ].some((value) => String(value ?? "").toLocaleLowerCase().includes(query)));
-  }, [companies.data?.data, companySearch]);
+    return (companies.data?.data ?? []).filter((company) => {
+      if (companyStatusFilter && effectiveCompanyStatus(company).trim().toLowerCase() !== companyStatusFilter.toLowerCase()) return false;
+      if (!query) return true;
+      return [
+        company.companyName,
+        company.legalEntityName,
+        company.customerId,
+        company.city,
+        company.state,
+        company.phoneNumber,
+        company.email,
+        company.parentCompanyName
+      ].some((value) => String(value ?? "").toLocaleLowerCase().includes(query));
+    });
+  }, [companies.data?.data, companySearch, companyStatusFilter]);
+  const companyStatusCounts = useMemo(() => {
+    const counts = { Active: 0, Inactive: 0, Sold: 0, Closed: 0 };
+    for (const company of companies.data?.data ?? []) {
+      const status = effectiveCompanyStatus(company).trim().toLowerCase();
+      if (status === "active") counts.Active += 1;
+      else if (status === "inactive") counts.Inactive += 1;
+      else if (status === "sold") counts.Sold += 1;
+      else if (status === "closed") counts.Closed += 1;
+    }
+    return counts;
+  }, [companies.data?.data]);
+  const recentlyRegisteredCompanies = useMemo(() => [...(companies.data?.data ?? [])]
+    .sort((left, right) => {
+      const dateDifference = Date.parse(right.createdAt ?? "") - Date.parse(left.createdAt ?? "");
+      if (Number.isFinite(dateDifference) && dateDifference !== 0) return dateDifference;
+      return Number(right.id) - Number(left.id);
+    })
+    .slice(0, 4), [companies.data?.data]);
+  const contractsNearEndDate = useMemo(() => {
+    const today = new Date();
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thirdMonthEnd = new Date(today.getFullYear(), today.getMonth() + 3, 1);
+    return [...(contracts.data?.data ?? [])]
+      .filter((contract) => {
+        const endDate = contract.endDate ? new Date(contract.endDate) : null;
+        return contract.isActive !== false
+          && endDate
+          && !Number.isNaN(endDate.getTime())
+          && endDate >= currentMonthStart
+          && endDate < thirdMonthEnd;
+      })
+      .sort((left, right) => new Date(String(left.endDate)).getTime() - new Date(String(right.endDate)).getTime())
+      .slice(0, 4);
+  }, [contracts.data?.data]);
   const viewedCompanyIds = useMemo(() => {
     if (!viewedCompany) return [];
     const ids = new Set([String(viewedCompany.id)]);
@@ -725,7 +773,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
   }
 
   function viewCompany(company: TblCompanyRow) {
+    setViewedCompanyStatusError("");
     setViewedCompany(company);
+  }
+
+  function applyCompanyStatusFilter(status: "Active" | "Inactive" | "Sold" | "Closed") {
+    const nextStatus = companyStatusFilter === status ? "" : status;
+    setCompanyStatusFilter(nextStatus);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextStatus) next.set("status", nextStatus.toLowerCase());
+      else next.delete("status");
+      return next;
+    }, { replace: true });
   }
 
   function editCompany(company: TblCompanyRow) {
@@ -748,6 +808,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
       setCompanyError(serverMessage ?? "Unable to activate company. Try again.");
     } finally {
       setActivatingCompanyId(null);
+    }
+  }
+
+  async function updateViewedCompanyStatus(companyStatusId: number) {
+    if (!viewedCompany || isUpdatingViewedCompanyStatus) return;
+    const viewedCompanyId = viewedCompany.id;
+    setViewedCompanyStatusError("");
+    setIsUpdatingViewedCompanyStatus(true);
+    try {
+      await api.patch("/reports/tbl-companies/bulk-company-status", {
+        ids: [viewedCompanyId],
+        companyStatusId
+      });
+      const refreshed = await companies.refetch();
+      const updatedCompany = refreshed.data?.data.find((company) => String(company.id) === String(viewedCompanyId));
+      if (updatedCompany) setViewedCompany(updatedCompany);
+    } catch (error) {
+      setViewedCompanyStatusError(companyApiError(error) ?? "Unable to update company status.");
+    } finally {
+      setIsUpdatingViewedCompanyStatus(false);
     }
   }
 
@@ -1105,8 +1185,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
     setIsSavingCompany(true);
     try {
+      const selectedCompanyStatus = companyStatuses.data?.data.find(
+        (status) => Number(status.id) === newCompany.companyStatusId
+      );
       const payload = {
         ...newCompany,
+        isActive: selectedCompanyStatus
+          ? String(selectedCompanyStatus.name ?? "").trim().toLowerCase() !== "inactive"
+          : newCompany.isActive,
         companyStatusId: newCompany.companyStatusId || null,
         organizationId: newCompany.organizationId || 1,
         parentCompanyId: newCompany.parentCompanyId || (companyFormMode === "edit" ? null : undefined),
@@ -1304,25 +1390,27 @@ export function DashboardPage({ view }: DashboardPageProps) {
     } finally { setIsDeletingCompanies(false); }
   }
 
-  async function updateSelectedCompanyStatus(isActive: boolean) {
+  async function updateSelectedCompanyStatus(companyStatusId: number) {
     if (!selectedCompanies.length) return;
+    const selectedCount = selectedCompanies.length;
+    const selectedStatus = companyStatuses.data?.data.find((status) => Number(status.id) === companyStatusId);
     setCompanyError("");
     setIsUpdatingCompanyStatus(true);
     try {
-      if (selectedCompanies.length === 1) {
-        await api.patch(`/reports/tbl-companies/${selectedCompanies[0].id}`, { isActive });
-      } else {
-        await api.patch("/reports/tbl-companies/bulk-status", {
-          ids: selectedCompanies.map((company) => company.id),
-          isActive
-        });
+      await api.patch("/reports/tbl-companies/bulk-company-status", {
+        ids: selectedCompanies.map((company) => company.id),
+        companyStatusId
+      });
+      const refreshed = await companies.refetch();
+      if (viewedCompany) {
+        const updatedViewedCompany = refreshed.data?.data.find((company) => company.id === viewedCompany.id);
+        if (updatedViewedCompany) setViewedCompany(updatedViewedCompany);
       }
-      await companies.refetch();
       setSelectedCompanies([]);
       setCompanyGridKey((current) => current + 1);
       setCompanyUploadNotice({
         severity: "success",
-        message: `${selectedCompanies.length} companies marked ${isActive ? "active" : "inactive"}.`
+        message: `${selectedCount} compan${selectedCount === 1 ? "y" : "ies"} changed to ${selectedStatus?.name ?? "the selected status"}.`
       });
     } catch (error) {
       setCompanyError(companyApiError(error) ?? "Unable to update selected companies.");
@@ -1606,12 +1694,50 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   return (
     <section className="page">
+      {isDashboardView && contractsNearEndDate.length ? (
+        <article className="panel ending-contract-card dashboard-ending-contract-card">
+          <span className="ending-contract-title">Contracts ending this month and next 2 months</span>
+          <div className="ending-contract-list">
+            {contractsNearEndDate.map((contract) => (
+              <button key={contract.id} type="button" onClick={() => void viewContract(contract)}>
+                <span className="ending-contract-company" title={contract.companyName ?? "Company"}>{contract.companyName ?? "Company"}</span>
+                <span className="ending-contract-id">#{contract.contractId ?? contract.id}</span>
+                <span className="ending-contract-dates">
+                  <time dateTime={contract.startDate ?? undefined}>{formatDate(contract.startDate)}</time>
+                  <span aria-hidden="true">→</span>
+                  <time dateTime={contract.endDate ?? undefined}>{formatDate(contract.endDate)}</time>
+                </span>
+              </button>
+            ))}
+          </div>
+        </article>
+      ) : null}
       {isDashboardView ? (
       <div className="kpi-grid">
         {hasCompanyDashboard ? (
-          <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/companies")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/companies"); }}>
-            <span>Companies</span>
-            <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
+          <article className="clickable-kpi companies-kpi" role="button" tabIndex={0} onClick={() => navigate("/companies")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/companies"); }}>
+            <div className="company-kpi-total">
+              <span>Companies</span>
+              <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
+            </div>
+            <div className="company-kpi-statuses" aria-label="Company status totals">
+              {(Object.entries(companyStatusCounts) as Array<[keyof typeof companyStatusCounts, number]>).map(([status, count]) => (
+                <button
+                  key={status}
+                  type="button"
+                  className="company-kpi-status"
+                  style={companyStatusColor(status)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/companies?status=${status.toLowerCase()}`);
+                  }}
+                  aria-label={`Show ${status} companies`}
+                >
+                  <b>{companies.isLoading ? "..." : count}</b>
+                  {status}
+                </button>
+              ))}
+            </div>
           </article>
         ) : null}
         {hasCompanyDashboard ? (
@@ -1635,6 +1761,69 @@ export function DashboardPage({ view }: DashboardPageProps) {
       </div>
       ) : null}
 
+      {isCompaniesView ? (
+        <div className="company-page-cards">
+          <article className="panel company-page-summary-card companies-kpi">
+            <div className="company-page-summary-totals">
+              <div className="company-kpi-total">
+                <span>Companies</span>
+                <strong>{companies.isLoading ? "..." : companies.data?.total ?? 0}</strong>
+              </div>
+              <div className="company-kpi-statuses" aria-label="Company status totals">
+                {(Object.entries(companyStatusCounts) as Array<[keyof typeof companyStatusCounts, number]>).map(([status, count]) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className={`company-kpi-status${companyStatusFilter === status ? " selected" : ""}`}
+                    style={companyStatusColor(status)}
+                    onClick={() => applyCompanyStatusFilter(status)}
+                    aria-pressed={companyStatusFilter === status}
+                    aria-label={`Filter companies by ${status}`}
+                  >
+                    <b>{companies.isLoading ? "..." : count}</b>
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </article>
+          <article className="panel recent-company-card">
+            <div className="recent-company-block">
+              <span className="recent-company-title">Recently registered</span>
+              <div className="recent-company-list">
+                {companies.isLoading ? <span className="muted">Loading...</span> : recentlyRegisteredCompanies.length ? recentlyRegisteredCompanies.map((company) => {
+                  const companyName = company.companyName ?? `Company ${company.id}`;
+                  return (
+                    <Tooltip key={company.id} title={companyName} placement="top" arrow>
+                      <button type="button" onClick={() => viewCompany(company)}>
+                        <span>{companyName}</span>
+                        <time dateTime={company.createdAt}>{company.createdAt ? formatDate(company.createdAt) : "—"}</time>
+                      </button>
+                    </Tooltip>
+                  );
+                }) : <span className="muted">No companies registered.</span>}
+              </div>
+            </div>
+          </article>
+          <article className="panel ending-contract-card">
+            <span className="ending-contract-title">Contracts ending this month and next 2 months</span>
+            <div className="ending-contract-list">
+              {contracts.isLoading ? <span className="muted">Loading...</span> : contractsNearEndDate.length ? contractsNearEndDate.map((contract) => (
+                <button key={contract.id} type="button" onClick={() => void viewContract(contract)}>
+                  <span className="ending-contract-company" title={contract.companyName ?? "Company"}>{contract.companyName ?? "Company"}</span>
+                  <span className="ending-contract-id">#{contract.contractId ?? contract.id}</span>
+                  <span className="ending-contract-dates">
+                    <time dateTime={contract.startDate ?? undefined}>{formatDate(contract.startDate)}</time>
+                    <span aria-hidden="true">→</span>
+                    <time dateTime={contract.endDate ?? undefined}>{formatDate(contract.endDate)}</time>
+                  </span>
+                </button>
+              )) : <span className="muted">No contracts end this month or in the following two months.</span>}
+            </div>
+          </article>
+        </div>
+      ) : null}
+
       {(hasCompanyDashboard && isDashboardView) || isCompaniesView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
@@ -1655,16 +1844,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       setDeleteCompanyError(""); setCompaniesToDelete([...selectedCompanies]);
                     }}>Delete Selected ({selectedCompanies.length})</Button>
                   ) : null}
-                  {selectedCompanies.some((company) => !company.isActive) ? (
-                    <Button variant="outlined" color="success" onClick={() => void updateSelectedCompanyStatus(true)} disabled={isUpdatingCompanyStatus}>
-                      {isUpdatingCompanyStatus ? "Updating..." : "Active"}
-                    </Button>
-                  ) : null}
-                  {selectedCompanies.some((company) => company.isActive) ? (
-                    <Button variant="outlined" color="warning" onClick={() => void updateSelectedCompanyStatus(false)} disabled={isUpdatingCompanyStatus}>
-                      {isUpdatingCompanyStatus ? "Updating..." : "Inactive"}
-                    </Button>
-                  ) : null}
+                  <TextField
+                    select
+                    size="small"
+                    label={isUpdatingCompanyStatus ? "Updating..." : "Change status"}
+                    value=""
+                    disabled={isUpdatingCompanyStatus || companyStatuses.isLoading || companyStatuses.isError}
+                    onChange={(event) => void updateSelectedCompanyStatus(Number(event.target.value))}
+                    sx={{ minWidth: 170 }}
+                  >
+                    {companyStatuses.data?.data.map((status) => (
+                      <MenuItem key={status.id} value={Number(status.id)}>
+                        <span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span>
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </>
               ) : null}
               <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => setIsBulkCompanyModalOpen(true)}>Add Multiple Companies</Button>
@@ -1676,6 +1870,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               {companyUploadNotice.message}
             </Alert>
           ) : null}
+          {companyError && !isCompanyModalOpen ? <Alert severity="error" onClose={() => setCompanyError("")}>{companyError}</Alert> : null}
           {/*  <p className="muted">Detailed company list from SQL Server table tblCompany.</p> */}
           {companies.isError ? <p className="error">Unable to load tblCompany records.</p> : null}
           <IntiliGrid
@@ -1887,7 +2082,6 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 <MenuItem key={status.id} value={Number(status.id)}><span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span></MenuItem>
               ))}
             </TextField>
-            <FormControlLabel control={<Checkbox checked={newCompany.isActive} onChange={(event) => updateNewCompany("isActive", event.target.checked)} />} label="Active" />
             <RichTextEditor label="Company Notes" value={newCompany.notes} onChange={(value) => updateNewCompany("notes", value)} />
           </div>
         </DialogContent>
@@ -1984,27 +2178,41 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       Company
                     </button>
                     <span> &gt; Account</span>
-                    <span className={`status-badge company-header-status ${viewedCompany.isActive ? "active" : "inactive"}`}>
-                      {viewedCompany.isActive ? "Active" : "Inactive"}
-                    </span>
+                    {(() => {
+                      const status = effectiveCompanyStatus(viewedCompany);
+                      return <span className="status-badge company-header-status" style={companyStatusColor(status)}>{status}</span>;
+                    })()}
                   </p>
                 </div>
-                  <div className="company-account-actions">
+                <div className="company-account-actions">
                   <Button startIcon={<GitBranch size={17} />} onClick={() => { const parent = viewedCompany; setViewedCompany(null); openCreateSubcompany(parent); }}>
                     Add Subcompany
                   </Button>
-                  {!viewedCompany.isActive ? (
-                    <Button
-                      variant="contained"
-                      onClick={() => void activateCompany(viewedCompany)}
-                      disabled={activatingCompanyId === viewedCompany.id}
-                    >
-                      {activatingCompanyId === viewedCompany.id ? "Activating..." : "Make Active"}
-                    </Button>
-                  ) : null}
+                  <TextField
+                    select
+                    size="small"
+                    label={isUpdatingViewedCompanyStatus ? "Updating..." : "Company Status"}
+                    value={viewedCompany.companyStatusId ? Number(viewedCompany.companyStatusId) : ""}
+                    disabled={isUpdatingViewedCompanyStatus || companyStatuses.isLoading || companyStatuses.isError}
+                    error={companyStatuses.isError}
+                    onChange={(event) => void updateViewedCompanyStatus(Number(event.target.value))}
+                    sx={{ minWidth: 180 }}
+                  >
+                    <MenuItem value="" disabled>Select status</MenuItem>
+                    {viewedCompany.companyStatusId && !companyStatuses.data?.data.some((status) => Number(status.id) === Number(viewedCompany.companyStatusId)) ? (
+                      <MenuItem value={Number(viewedCompany.companyStatusId)}>{effectiveCompanyStatus(viewedCompany)}</MenuItem>
+                    ) : null}
+                    {companyStatuses.data?.data.map((status) => (
+                      <MenuItem key={status.id} value={Number(status.id)}>
+                        <span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span>
+                      </MenuItem>
+                    ))}
+                  </TextField>
                   <Button onClick={() => setViewedCompany(null)}>Close</Button>
                 </div>
               </div>
+
+              {viewedCompanyStatusError ? <Alert severity="error">{viewedCompanyStatusError}</Alert> : null}
 
               <div className={`company-account-layout${companyTray ? "" : " company-account-layout-collapsed"}`}>
                 <div className="company-account-side">

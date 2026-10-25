@@ -14,9 +14,11 @@ describe("effectiveCompanyStatus", () => {
     expect(effectiveCompanyStatus({ companyStatus: null, isActive: true })).toBe("Active");
   });
 
-  it("uses the existing status colors for activation values", () => {
-    expect(companyStatusColor("Active")).toEqual({ color: "#166534", backgroundColor: "#dcfce7" });
-    expect(companyStatusColor("Inactive")).toEqual({ color: "#991b1b", backgroundColor: "#fee2e2" });
+  it("uses the requested company status badge colors", () => {
+    expect(companyStatusColor("Active")).toEqual({ color: "#fff", backgroundColor: "#0ab39c", borderRadius: "4px" });
+    expect(companyStatusColor("Inactive")).toEqual({ color: "#fff", backgroundColor: "#f06548", borderRadius: "4px" });
+    expect(companyStatusColor("Sold")).toEqual({ color: "#fff", backgroundColor: "#405189", borderRadius: "4px" });
+    expect(companyStatusColor("Closed")).toEqual({ color: "#fff", backgroundColor: "#ff1919", borderRadius: "4px" });
   });
 });
 
