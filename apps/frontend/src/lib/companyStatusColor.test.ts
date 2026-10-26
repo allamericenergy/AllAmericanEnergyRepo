@@ -20,6 +20,12 @@ describe("effectiveCompanyStatus", () => {
     expect(companyStatusColor("Sold")).toEqual({ color: "#fff", backgroundColor: "#405189", borderRadius: "4px" });
     expect(companyStatusColor("Closed")).toEqual({ color: "#fff", backgroundColor: "#ff1919", borderRadius: "4px" });
   });
+
+  it("uses the requested meter status badge colors", () => {
+    expect(companyStatusColor("DROP REQUESTED")).toEqual({ color: "#fff", backgroundColor: "#0f5da8", borderRadius: "4px" });
+    expect(companyStatusColor("NO CONTRACT")).toEqual({ color: "#fff", backgroundColor: "#223A22", borderRadius: "4px" });
+    expect(companyStatusColor("UNDER CONTRACT")).toEqual({ color: "#fff", backgroundColor: "#354C0A", borderRadius: "4px" });
+  });
 });
 
 describe("companyRowBackground", () => {

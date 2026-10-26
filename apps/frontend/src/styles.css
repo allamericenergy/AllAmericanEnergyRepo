@@ -886,20 +886,30 @@ nav a:hover {
 
 .meter-page-cards {
   display: grid;
-  grid-template-columns: minmax(440px, 1fr) minmax(380px, 0.9fr) minmax(300px, 0.75fr) minmax(520px, 1.25fr);
-  gap: 1rem;
+  grid-template-columns: minmax(300px, 0.85fr) minmax(340px, 1fr) minmax(250px, 0.75fr) minmax(380px, 1.1fr);
+  align-items: stretch;
+  gap: 0.75rem;
   margin-top: 1rem;
   overflow-x: auto;
   padding-bottom: 0.35rem;
 }
 
+.meter-page-cards > .panel {
+  box-sizing: border-box;
+  height: 270px;
+  padding-top: 0.85rem;
+  padding-right: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
 .meter-summary-card {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(130px, 0.4fr) minmax(300px, 1.6fr);
+  grid-template-columns: minmax(80px, 0.4fr) minmax(0, 1.6fr);
   align-items: center;
-  gap: 1.25rem;
-  overflow: hidden;
+  align-content: start;
+  gap: 0.65rem;
+  overflow: auto;
   padding-left: 2rem;
 }
 
@@ -932,7 +942,7 @@ nav a:hover {
   display: block;
   margin-top: 0.35rem;
   color: #172b4d;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
 }
 
 .meter-page-summary-statuses {
@@ -945,7 +955,7 @@ nav a:hover {
   display: flex;
   grid-column: 1 / -1;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .meter-type-status {
@@ -954,7 +964,7 @@ nav a:hover {
   gap: 0.45rem;
   border: 0;
   border-radius: 4px;
-  padding: 0.32rem 0.55rem;
+  padding: 0.25rem 0.45rem;
   font: inherit;
   font-size: 0.75rem;
   font-weight: 600;
@@ -981,8 +991,9 @@ nav a:hover {
 .recent-meter-card {
   position: relative;
   display: grid;
-  gap: 0.55rem;
-  overflow: hidden;
+  align-content: start;
+  gap: 0.4rem;
+  overflow: auto;
   padding-left: 2rem;
 }
 
@@ -1004,16 +1015,18 @@ nav a:hover {
 .recent-meter-list {
   display: grid;
   gap: 0.3rem;
+  margin-top: 0.55rem;
 }
 
 .recent-meter-list button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(90px, 0.8fr) auto;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
   min-width: 0;
   border: 0;
-  padding: 0.3rem 0;
+  border-bottom: 1px solid #dbe3ec;
+  padding: 0.22rem 0;
   background: transparent;
   color: #0f5da8;
   font: inherit;
@@ -1026,7 +1039,10 @@ nav a:hover {
 .recent-meter-list-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(90px, 0.8fr) auto;
-  gap: 1rem;
+  gap: 0.65rem;
+  border-top: 1px solid #dbe3ec;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 0.3rem 0;
   color: #7b8798;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1035,6 +1051,13 @@ nav a:hover {
 }
 
 .recent-meter-list-header span:last-child { text-align: right; }
+
+.recent-meter-list-header span:nth-child(n + 2),
+.recent-meter-list button > small,
+.recent-meter-list button > time {
+  border-left: 1px solid #e2e8f0;
+  padding-left: 0.65rem;
+}
 
 .recent-meter-list button > span {
   overflow: hidden;
@@ -1070,8 +1093,8 @@ nav a:hover {
   position: relative;
   display: grid;
   align-content: start;
-  gap: 0.55rem;
-  overflow: hidden;
+  gap: 0.4rem;
+  overflow: auto;
   padding-left: 2rem;
 }
 
@@ -1094,7 +1117,7 @@ nav a:hover {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .meter-product-count {
@@ -1102,17 +1125,38 @@ nav a:hover {
   align-items: center;
   gap: 0.45rem;
   border-radius: 4px;
-  padding: 0.35rem 0.55rem;
+  padding: 0.27rem 0.45rem;
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .meter-product-count b { font-size: 0.9rem; }
 
+.meter-product-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  stroke-width: 2.4;
+}
+
 .meter-trend-card {
+  position: relative;
   display: grid;
-  gap: 0.75rem;
+  align-content: start;
+  gap: 0.35rem;
   min-width: 0;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.meter-trend-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
 }
 
 .meter-trend-heading {
@@ -1124,7 +1168,7 @@ nav a:hover {
 
 .meter-trend-heading > span {
   color: #24364b;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 800;
 }
 
@@ -1145,33 +1189,46 @@ nav a:hover {
   height: auto;
 }
 
-.meter-pie-chart-wrap {
+.meter-bar-chart-wrap {
   text-align: center;
 }
 
-.meter-pie-chart {
-  max-height: 280px;
+.meter-bar-chart {
+  max-height: 190px;
   margin: 0 auto;
 }
 
-.meter-pie-label {
-  fill: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.25);
-  stroke-width: 2px;
+.meter-bar {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  opacity: 0;
+  animation: meter-bar-grow 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.meter-pie-total-label {
-  fill: #718096;
-  font-size: 11px;
+.meter-bar-value {
+  fill: #526276;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0;
+  animation: meter-bar-value-in 0.3s ease-out forwards;
 }
 
-.meter-pie-total-value {
-  fill: #24364b;
-  font-size: 16px;
-  font-weight: 800;
+@keyframes meter-bar-grow {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes meter-bar-value-in {
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter-bar,
+  .meter-bar-value {
+    transform: none;
+    opacity: 1;
+    animation: none;
+  }
 }
 
 .meter-pie-date-range {

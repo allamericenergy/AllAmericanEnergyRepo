@@ -6,7 +6,7 @@ import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Columns3, Eye, FileText, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload } from "lucide-react";
+import { Activity, Building2, Columns3, Droplet, Eye, FileText, Flame, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload, Waves, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -2080,7 +2080,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <div className="meter-page-cards">
           <article className="panel meter-summary-card">
             <button type="button" className={`meter-summary-total${meterSummaryFilter === "" ? " selected" : ""}`} onClick={() => applyMeterSummaryFilter("")} aria-pressed={meterSummaryFilter === ""}>
-              <span>Total Meters</span>
+              <span>Meters</span>
               <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
             </button>
             <div className="meter-page-summary-statuses" aria-label="Meter status totals">
@@ -2123,17 +2123,44 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <article className="panel meter-product-card">
             <span className="meter-product-title">Meters by product</span>
             <div className="meter-product-list" aria-label="Meter product totals">
-              {meters.isLoading ? <span className="muted">Loading...</span> : meterProductCounts.length ? meterProductCounts.map(([product, count]) => (
-                <span key={product} className="meter-product-count" style={companyStatusColor(product)}>
-                  <b>{count}</b><span>{product}</span>
-                </span>
-              )) : <span className="muted">No meter products available.</span>}
+              {meters.isLoading ? <span className="muted">Loading...</span> : meterProductCounts.length ? meterProductCounts.map(([product, count]) => {
+                const normalizedProduct = product.trim().toLowerCase();
+                const isGasPower = normalizedProduct.includes("gas") && /power|electric/.test(normalizedProduct);
+                const ProductIcon = isGasPower
+                  ? Zap
+                  : normalizedProduct.includes("sewer")
+                    ? Waves
+                    : normalizedProduct.includes("gas")
+                  ? Flame
+                  : normalizedProduct.includes("water")
+                    ? Droplet
+                    : /power|electric/.test(normalizedProduct)
+                      ? Zap
+                      : null;
+                const productStyle = isGasPower
+                  ? { color: "#fff", backgroundColor: "#C52B6B", borderRadius: "4px" }
+                  : normalizedProduct.includes("sewer")
+                    ? { color: "#fff", backgroundColor: "#4F5F70", borderRadius: "4px" }
+                    : normalizedProduct.includes("gas")
+                  ? { color: "#fff", backgroundColor: "#DF6807", borderRadius: "4px" }
+                  : normalizedProduct.includes("water")
+                    ? { color: "#fff", backgroundColor: "#0f5da8", borderRadius: "4px" }
+                    : /power|electric/.test(normalizedProduct)
+                      ? { color: "#fff", backgroundColor: "#172554", borderRadius: "4px" }
+                      : companyStatusColor(product);
+                return (
+                  <span key={product} className="meter-product-count" style={productStyle}>
+                    {ProductIcon ? <ProductIcon className="meter-product-icon" aria-hidden="true" /> : null}
+                    <b>{count}</b><span>{product}</span>
+                  </span>
+                );
+              }) : <span className="muted">No meter products available.</span>}
             </div>
           </article>
           <article className="panel meter-trend-card">
             <div className="meter-trend-heading">
               <span>Meter Demand by Company</span>
-              <small>Share of demand from dated meters</small>
+              {/* <small>Share of demand from dated meters</small> */}
             </div>
             <MeterTrendChart meters={meters.data?.data ?? []} />
           </article>
@@ -3856,46 +3883,45 @@ function MeterTrendChart({ meters }: { meters: MeterRow[] }) {
   const dates = points.map((point) => point.date).sort();
   const firstDate = dates[0];
   const lastDate = dates[dates.length - 1];
-  const width = 420;
+  const width = 520;
   const height = 280;
-  const centerX = 210;
-  const centerY = 135;
-  const radius = 100;
+  const margin = { top: 34, right: 18, bottom: 22, left: 54 };
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+  const maximumDemand = Math.max(...companies.map(([, demand]) => demand));
+  const slotWidth = chartWidth / companies.length;
+  const barWidth = Math.max(8, Math.min(42, slotWidth * 0.62));
   const palette = ["#0f5da8", "#0ab39c", "#f06548", "#405189", "#f7b84b", "#8b5cf6", "#ec4899", "#0891b2"];
-  let angle = -Math.PI / 2;
+  const yTicks = Array.from({ length: 4 }, (_, index) => maximumDemand * index / 3);
 
   return (
-    <div className="meter-trend-chart-wrap meter-pie-chart-wrap">
-      <svg className="meter-trend-chart meter-pie-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Pie chart of meter demand by company">
-        {companies.map(([company, demand], companyIndex) => {
-          const sliceAngle = demand / totalDemand * Math.PI * 2;
-          const startAngle = angle;
-          const endAngle = angle + sliceAngle;
-          angle = endAngle;
-          const startX = centerX + Math.cos(startAngle) * radius;
-          const startY = centerY + Math.sin(startAngle) * radius;
-          const endX = centerX + Math.cos(endAngle) * radius;
-          const endY = centerY + Math.sin(endAngle) * radius;
-          const largeArc = sliceAngle > Math.PI ? 1 : 0;
-          const path = companies.length === 1 ? undefined : `M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY} Z`;
-          const percentage = demand / totalDemand * 100;
-          const labelAngle = startAngle + sliceAngle / 2;
-          const labelX = centerX + Math.cos(labelAngle) * radius * 0.65;
-          const labelY = centerY + Math.sin(labelAngle) * radius * 0.65;
-          const color = palette[companyIndex % palette.length];
+    <div className="meter-trend-chart-wrap meter-bar-chart-wrap">
+      <svg className="meter-trend-chart meter-bar-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Bar chart of meter demand by company">
+        {yTicks.map((tick) => {
+          const y = margin.top + chartHeight - tick / maximumDemand * chartHeight;
           return (
-            <g key={company}>
-              {path ? <path d={path} fill={color} stroke="#fff" strokeWidth="2" /> : <circle cx={centerX} cy={centerY} r={radius} fill={color} />}
-              {percentage >= 5 ? <text x={labelX} y={labelY + 4} textAnchor="middle" className="meter-pie-label">{percentage.toFixed(0)}%</text> : null}
-              <title>{`${company} — Demand: ${demand.toLocaleString()} (${percentage.toFixed(1)}%) — ${formatDate(firstDate)} to ${formatDate(lastDate)}`}</title>
+            <g key={tick}>
+              <line x1={margin.left} x2={width - margin.right} y1={y} y2={y} className="meter-trend-grid-line" />
+              <text x={margin.left - 8} y={y + 4} textAnchor="end" className="meter-trend-axis-label">{Number(tick.toFixed(1)).toLocaleString()}</text>
             </g>
           );
         })}
-        <circle cx={centerX} cy={centerY} r="48" fill="#fff" />
-        <text x={centerX} y={centerY - 4} textAnchor="middle" className="meter-pie-total-label">Total Demand</text>
-        <text x={centerX} y={centerY + 18} textAnchor="middle" className="meter-pie-total-value">{totalDemand.toLocaleString()}</text>
+        {companies.map(([company, demand], companyIndex) => {
+          const barHeight = demand / maximumDemand * chartHeight;
+          const x = margin.left + companyIndex * slotWidth + (slotWidth - barWidth) / 2;
+          const y = margin.top + chartHeight - barHeight;
+          const color = palette[companyIndex % palette.length];
+          return (
+            <g key={company}>
+              <rect className="meter-bar" style={{ animationDelay: `${companyIndex * 90}ms` }} x={x} y={y} width={barWidth} height={barHeight} rx="4" fill={color}>
+                <title>{`${company} — Demand: ${demand.toLocaleString()} — ${formatDate(firstDate)} to ${formatDate(lastDate)}`}</title>
+              </rect>
+              <text x={x + barWidth / 2} y={Math.max(14, y - 6)} textAnchor="middle" className="meter-bar-value" style={{ animationDelay: `${300 + companyIndex * 90}ms` }}>{demand.toLocaleString()}</text>
+            </g>
+          );
+        })}
       </svg>
-      <div className="meter-pie-date-range">{formatDate(firstDate)} – {formatDate(lastDate)}</div>
+      <div className="meter-pie-date-range">Total demand: {totalDemand.toLocaleString()} · {formatDate(firstDate)} – {formatDate(lastDate)}</div>
     </div>
   );
 }
