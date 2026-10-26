@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { Eye, Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../auth/authStore";
 
@@ -14,6 +15,7 @@ interface MembersPageProps {
   canAdd?: boolean;
   compact?: boolean;
   onExpand?: () => void;
+  statusFilter?: "active" | "inactive";
 }
 
 interface MemberRow {
@@ -78,15 +80,18 @@ function emptyMemberForm(): MemberForm {
 export function MembersPage(props: MembersPageProps) {
   const user = useAuthStore((state) => state.user);
   const canAdd = props.canAdd ?? (user?.role === "superadmin" || user?.role === "admin");
+  const [searchParams] = useSearchParams();
+  const requestedStatus = searchParams.get("memberStatus")?.toLowerCase();
+  const statusFilter = requestedStatus === "active" || requestedStatus === "inactive" ? requestedStatus : undefined;
 
   return (
     <section className="page">
-      <MembersPanel {...props} canAdd={canAdd} />
+      <MembersPanel {...props} canAdd={canAdd} statusFilter={statusFilter} />
     </section>
   );
 }
 
-export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = false, compact = false, onExpand }: MembersPageProps) {
+export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = false, compact = false, onExpand, statusFilter }: MembersPageProps) {
   const user = useAuthStore((state) => state.user);
   const canAssignMemberType = user?.role === "superadmin" || user?.role === "admin";
   const canCreateAdmin = user?.role === "superadmin";
@@ -109,9 +114,12 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
     retry: false
   });
 
-  const visibleRows = companyIds?.length && companyIds.length > 1
+  const companyScopedRows = companyIds?.length && companyIds.length > 1
     ? (members.data?.data ?? []).filter((member) => companyIds.includes(String(member.companyId)))
     : members.data?.data ?? [];
+  const visibleRows = statusFilter
+    ? companyScopedRows.filter((member) => statusFilter === "active" ? Boolean(member.isActive) : !member.isActive)
+    : companyScopedRows;
   const rows = visibleRows.map((member, index) => ({
     ...memberRow(member, index),
     companyName: companyLabels?.[String(member.companyId)] ?? member.companyName
@@ -254,7 +262,7 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
     <>
       <section className={compact ? "account-data-panel" : "panel companies-panel"}>
         <div className={compact ? "account-data-title" : "panel-title-row"}>
-          <h2>Members</h2>
+          <h2>Members{statusFilter ? ` — ${statusFilter === "active" ? "Active" : "Inactive"}` : ""}</h2>
           <div className={compact ? "account-data-actions member-title-actions" : "panel-title-actions member-title-actions"}>
             {onExpand && rows.length > 0 ? (
               <Button variant="outlined" size={compact ? "small" : "medium"} onClick={onExpand}>Open Member List</Button>

@@ -770,6 +770,480 @@ nav a:hover {
   pointer-events: none;
 }
 
+.kpi-grid article.contracts-kpi {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(68px, 0.65fr) minmax(130px, 1.35fr);
+  align-items: center;
+  gap: 0.65rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.contracts-kpi::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 23px;
+  height: 44px;
+  background: url("/elemnt-04.svg") left top / 23px 44px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.contract-kpi-statuses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.dashboard-contract-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  min-width: 0;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+  color: #fff;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-contract-status span {
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-contract-status b { font-size: 0.85rem; }
+.dashboard-contract-status.active { background: #0ab39c; }
+.dashboard-contract-status.inactive { background: #f06548; }
+.dashboard-contract-status.ending-soon { background: #f7b84b; color: #3f2b00; }
+.dashboard-contract-status.ended { background: #ef1e1e; }
+
+.dashboard-contract-status:hover,
+.dashboard-contract-status:focus-visible {
+  filter: brightness(0.92);
+  outline: 2px solid rgba(15, 23, 42, 0.22);
+  outline-offset: 1px;
+}
+
+.kpi-grid article.meters-kpi {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(72px, 0.75fr) minmax(100px, 1.25fr);
+  align-items: center;
+  gap: 0.65rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.meters-kpi::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.meter-kpi-statuses {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.dashboard-meter-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  color: #fff !important;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-meter-status span { color: inherit; }
+.dashboard-meter-status b { font-size: 0.9rem; }
+.dashboard-meter-status.active { background: #0ab39c; }
+.dashboard-meter-status.inactive { background: #f06548; }
+
+.dashboard-meter-status:hover,
+.dashboard-meter-status:focus-visible {
+  filter: brightness(0.92);
+  outline: 2px solid rgba(15, 23, 42, 0.22);
+  outline-offset: 1px;
+}
+
+.meter-page-cards {
+  display: grid;
+  grid-template-columns: minmax(440px, 1fr) minmax(380px, 0.9fr) minmax(300px, 0.75fr) minmax(520px, 1.25fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+}
+
+.meter-summary-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(130px, 0.4fr) minmax(300px, 1.6fr);
+  align-items: center;
+  gap: 1.25rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.meter-summary-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.meter-summary-total {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.35rem;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meter-summary-total span {
+  color: #627188;
+  font-weight: 700;
+}
+
+.meter-summary-total strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #172b4d;
+  font-size: 1.8rem;
+}
+
+.meter-page-summary-statuses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.meter-type-statuses {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.meter-type-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.32rem 0.55rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.meter-type-status b { font-size: 0.88rem; }
+
+.meter-type-status:hover,
+.meter-type-status:focus-visible,
+.meter-type-status.selected {
+  outline: 3px solid rgba(15, 93, 168, 0.25);
+  outline-offset: 2px;
+}
+
+.meter-summary-total:hover,
+.meter-summary-total:focus-visible,
+.meter-summary-total.selected,
+.meter-page-summary-statuses .dashboard-meter-status.selected {
+  outline: 3px solid rgba(15, 93, 168, 0.25);
+  outline-offset: 2px;
+}
+
+.recent-meter-card {
+  position: relative;
+  display: grid;
+  gap: 0.55rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.recent-meter-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.recent-meter-title {
+  color: #627188;
+  font-weight: 700;
+}
+
+.recent-meter-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.recent-meter-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 0.8fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  border: 0;
+  padding: 0.3rem 0;
+  background: transparent;
+  color: #0f5da8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-meter-list-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 0.8fr) auto;
+  gap: 1rem;
+  color: #7b8798;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recent-meter-list-header span:last-child { text-align: right; }
+
+.recent-meter-list button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-meter-list time {
+  color: #7b8798;
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.recent-meter-list small {
+  overflow: hidden;
+  color: #7b8798;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-meter-list button:hover,
+.recent-meter-list button:focus {
+  color: #0a4277;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.meter-product-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.meter-product-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 47px;
+  background: url("/elemnt-02.svg") left top / 40px 47px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.meter-product-title {
+  color: #627188;
+  font-weight: 700;
+}
+
+.meter-product-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.4rem;
+}
+
+.meter-product-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.meter-product-count b { font-size: 0.9rem; }
+
+.meter-trend-card {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.meter-trend-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.meter-trend-heading > span {
+  color: #24364b;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.meter-trend-heading small {
+  color: #7b8798;
+  font-size: 0.75rem;
+}
+
+.meter-trend-chart-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.meter-trend-chart {
+  display: block;
+  width: 100%;
+  min-width: 360px;
+  height: auto;
+}
+
+.meter-pie-chart-wrap {
+  text-align: center;
+}
+
+.meter-pie-chart {
+  max-height: 280px;
+  margin: 0 auto;
+}
+
+.meter-pie-label {
+  fill: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.25);
+  stroke-width: 2px;
+}
+
+.meter-pie-total-label {
+  fill: #718096;
+  font-size: 11px;
+}
+
+.meter-pie-total-value {
+  fill: #24364b;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.meter-pie-date-range {
+  margin-top: -0.25rem;
+  color: #7b8798;
+  font-size: 0.72rem;
+}
+
+.meter-trend-grid-line {
+  stroke: #e7edf4;
+  stroke-width: 1;
+}
+
+.meter-trend-axis-label {
+  fill: #718096;
+  font-size: 11px;
+}
+
+.meter-trend-empty { margin: 1rem 0; }
+
+.kpi-grid article.members-kpi {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(72px, 0.75fr) minmax(100px, 1.25fr);
+  align-items: center;
+  gap: 0.65rem;
+  overflow: hidden;
+  padding-left: 2rem;
+}
+
+.members-kpi::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 22px;
+  height: 44px;
+  background: url("/elemnt-03.svg") left top / 22px 44px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.member-kpi-statuses {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.dashboard-member-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-member-status span { color: inherit; }
+.dashboard-member-status b { font-size: 0.9rem; }
+.dashboard-member-status.active { background: #0ab39c; }
+.dashboard-member-status.inactive { background: #f06548; }
+
+.dashboard-member-status:hover,
+.dashboard-member-status:focus-visible {
+  filter: brightness(0.92);
+  outline: 2px solid rgba(15, 23, 42, 0.22);
+  outline-offset: 1px;
+}
+
 .company-page-cards {
   display: grid;
   grid-template-columns: minmax(270px, 0.9fr) minmax(300px, 1fr) minmax(340px, 1.15fr);
@@ -942,6 +1416,101 @@ nav a:hover {
 
 .dashboard-ending-contract-card {
   margin-bottom: 1rem;
+}
+
+.contracts-page-ending-card {
+  margin-top: 1rem;
+}
+
+.contracts-page-ending-card .ending-contract-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.contract-ending-alert {
+  margin-bottom: 1rem;
+}
+
+.contract-summary-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(120px, 0.35fr) minmax(480px, 1.65fr);
+  align-items: center;
+  gap: 1.25rem;
+  overflow: hidden;
+  margin-top: 1rem;
+  padding-left: 2rem;
+}
+
+.contract-summary-card::before {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 23px;
+  height: 44px;
+  background: url("/elemnt-04.svg") left top / 23px 44px no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.contract-summary-heading {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.35rem;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.contract-summary-heading > span {
+  color: #627188;
+  font-weight: 700;
+}
+
+.contract-summary-heading strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #172b4d;
+  font-size: 1.8rem;
+}
+
+.contract-summary-statuses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.contract-summary-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 5px;
+  padding: 0.55rem 0.7rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.contract-summary-status b {
+  font-size: 1rem;
+}
+
+.contract-summary-status.active { background: #0ab39c; }
+.contract-summary-status.inactive { background: #f06548; }
+.contract-summary-status.ending-soon { background: #f7b84b; color: #3f2b00; }
+.contract-summary-status.ended { background: #ef1e1e; }
+
+.contract-summary-heading:hover,
+.contract-summary-heading:focus-visible,
+.contract-summary-heading.selected,
+.contract-summary-status:hover,
+.contract-summary-status:focus-visible,
+.contract-summary-status.selected {
+  outline: 3px solid rgba(15, 93, 168, 0.25);
+  outline-offset: 2px;
 }
 
 .dashboard-ending-contract-card .ending-contract-list {
@@ -2847,13 +3416,23 @@ nav a:hover {
   .dashboard-ending-contract-card .ending-contract-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .contracts-page-ending-card .ending-contract-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 840px) {
   .kpi-grid,
   .content-grid,
-  .company-page-cards {
+  .company-page-cards,
+  .contract-summary-card,
+  .meter-summary-card {
     grid-template-columns: 1fr;
+  }
+
+  .contract-summary-statuses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ending-contract-card {
@@ -2861,6 +3440,10 @@ nav a:hover {
   }
 
   .dashboard-ending-contract-card .ending-contract-list {
+    grid-template-columns: 1fr;
+  }
+
+  .contracts-page-ending-card .ending-contract-list {
     grid-template-columns: 1fr;
   }
 

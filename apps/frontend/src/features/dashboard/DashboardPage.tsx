@@ -26,6 +26,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [companyViewParams, setCompanyViewParams] = useSearchParams();
   const requestedCompanyId = companyViewParams.get("companyId");
   const requestedCompanyStatus = companyViewParams.get("status");
+  const requestedContractFilter = companyViewParams.get("filter");
+  const requestedMeterStatus = companyViewParams.get("meterStatus");
   const user = useAuthStore((state) => state.user);
   const isCompaniesView = view === "companies";
   const isContractsView = view === "contracts";
@@ -86,6 +88,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [companyUploadNotice, setCompanyUploadNotice] = useState<{ message: string; severity: "success" | "warning" } | null>(null);
   const [selectedCompanies, setSelectedCompanies] = useState<TblCompanyRow[]>([]);
   const [isUpdatingCompanyStatus, setIsUpdatingCompanyStatus] = useState(false);
+  const [isContractEndAlertDismissed, setIsContractEndAlertDismissed] = useState(false);
   const [companyGridKey, setCompanyGridKey] = useState(0);
 
   useEffect(() => {
@@ -101,6 +104,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [savingContract, setSavingContract] = useState(false);
   const [isContractSubmitConfirmOpen, setIsContractSubmitConfirmOpen] = useState(false);
   const [selectedContracts, setSelectedContracts] = useState<ContractRow[]>([]);
+  const [contractSummaryFilter, setContractSummaryFilter] = useState<"" | "active" | "inactive" | "endingSoon" | "ended">("");
   const [isUpdatingContractStatus, setIsUpdatingContractStatus] = useState(false);
   const [contractGridKey, setContractGridKey] = useState(0);
   const [togglingContractId, setTogglingContractId] = useState<ContractRow["id"] | null>(null);
@@ -122,6 +126,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [savingMeter, setSavingMeter] = useState(false);
   const [togglingMeterId, setTogglingMeterId] = useState<MeterRow["id"] | null>(null);
   const [selectedMeters, setSelectedMeters] = useState<MeterRow[]>([]);
+  const [meterSummaryFilter, setMeterSummaryFilter] = useState<"" | "active" | "inactive">("");
+  const [meterTypeFilter, setMeterTypeFilter] = useState("");
   const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
   const [meterGridKey, setMeterGridKey] = useState(0);
   const [isMeterColumnMenuOpen, setIsMeterColumnMenuOpen] = useState(true);
@@ -186,6 +192,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
       .find((status) => status.toLowerCase() === normalizedStatus);
     if (matchingStatus) setCompanyStatusFilter(matchingStatus);
   }, [isCompaniesView, requestedCompanyStatus]);
+  useEffect(() => {
+    if (!isContractsView) return;
+    const normalizedFilter = requestedContractFilter?.trim();
+    const matchingFilter = (["active", "inactive", "endingSoon", "ended"] as const)
+      .find((filter) => filter.toLowerCase() === normalizedFilter?.toLowerCase());
+    setContractSummaryFilter(matchingFilter ?? "");
+    setSelectedContracts([]);
+  }, [isContractsView, requestedContractFilter]);
+  useEffect(() => {
+    if (!isMetersView) return;
+    const normalizedStatus = requestedMeterStatus?.trim().toLowerCase();
+    setMeterSummaryFilter(normalizedStatus === "active" || normalizedStatus === "inactive" ? normalizedStatus : "");
+    setMeterTypeFilter("");
+    setSelectedMeters([]);
+  }, [isMetersView, requestedMeterStatus]);
   const contracts = useQuery({
     queryKey: ["contracts", isContractsView || isCompaniesView ? "all" : viewedCompany?.id, user?.id],
     queryFn: async () => (
@@ -217,7 +238,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   });
   const members = useQuery({
     queryKey: ["members", "dashboard", user?.id],
-    queryFn: async () => (await api.get("/reports/members")).data as { total: number },
+    queryFn: async () => (await api.get("/reports/members")).data as { total: number; data: Array<{ isActive?: boolean | number | null }> },
     enabled: hasAdminDashboard && isDashboardView,
     retry: false
   });
@@ -297,22 +318,66 @@ export function DashboardPage({ view }: DashboardPageProps) {
       return Number(right.id) - Number(left.id);
     })
     .slice(0, 4), [companies.data?.data]);
-  const contractsNearEndDate = useMemo(() => {
+  const contractsEndingSoon = useMemo(() => [...(contracts.data?.data ?? [])]
+    .filter((contract) => isContractEndingSoon(contract))
+    .sort((left, right) => new Date(String(left.endDate)).getTime() - new Date(String(right.endDate)).getTime()), [contracts.data?.data]);
+  const contractsNearEndDate = useMemo(() => contractsEndingSoon.slice(0, 4), [contractsEndingSoon]);
+  const contractStatusCounts = useMemo(() => {
     const today = new Date();
-    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const thirdMonthEnd = new Date(today.getFullYear(), today.getMonth() + 3, 1);
-    return [...(contracts.data?.data ?? [])]
-      .filter((contract) => {
-        const endDate = contract.endDate ? new Date(contract.endDate) : null;
-        return contract.isActive !== false
-          && endDate
-          && !Number.isNaN(endDate.getTime())
-          && endDate >= currentMonthStart
-          && endDate < thirdMonthEnd;
-      })
-      .sort((left, right) => new Date(String(left.endDate)).getTime() - new Date(String(right.endDate)).getTime())
-      .slice(0, 4);
+    today.setHours(0, 0, 0, 0);
+    return (contracts.data?.data ?? []).reduce((counts, contract) => {
+      if (contract.isActive) counts.active += 1;
+      else counts.inactive += 1;
+      if (isContractEndingSoon(contract, today)) counts.endingSoon += 1;
+      if (isContractEnded(contract, today)) counts.ended += 1;
+      return counts;
+    }, { active: 0, inactive: 0, endingSoon: 0, ended: 0 });
   }, [contracts.data?.data]);
+  const visibleContracts = useMemo(() => (contracts.data?.data ?? []).filter((contract) => {
+    if (!contractSummaryFilter) return true;
+    if (contractSummaryFilter === "active") return Boolean(contract.isActive);
+    if (contractSummaryFilter === "inactive") return !contract.isActive;
+    if (contractSummaryFilter === "endingSoon") return isContractEndingSoon(contract);
+    return isContractEnded(contract);
+  }), [contracts.data?.data, contractSummaryFilter]);
+  const meterStatusCounts = useMemo(() => (meters.data?.data ?? []).reduce((counts, meter) => {
+    if (meter.isActive) counts.active += 1;
+    else counts.inactive += 1;
+    return counts;
+  }, { active: 0, inactive: 0 }), [meters.data?.data]);
+  const meterTypeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const meter of meters.data?.data ?? []) {
+      const status = meter.status?.trim() || "Not Set";
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right));
+  }, [meters.data?.data]);
+  const meterProductCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const meter of meters.data?.data ?? []) {
+      const product = meter.product?.trim() || "Not Set";
+      counts.set(product, (counts.get(product) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right));
+  }, [meters.data?.data]);
+  const visibleMeters = useMemo(() => (meters.data?.data ?? []).filter((meter) => {
+    if (meterSummaryFilter && (meterSummaryFilter === "active" ? !meter.isActive : meter.isActive)) return false;
+    if (meterTypeFilter && (meter.status?.trim() || "Not Set").toLowerCase() !== meterTypeFilter.toLowerCase()) return false;
+    return true;
+  }), [meters.data?.data, meterSummaryFilter, meterTypeFilter]);
+  const recentlyAddedMeters = useMemo(() => [...(meters.data?.data ?? [])]
+    .sort((left, right) => {
+      const dateDifference = Date.parse(right.createdAt ?? "") - Date.parse(left.createdAt ?? "");
+      if (Number.isFinite(dateDifference) && dateDifference !== 0) return dateDifference;
+      return Number(right.id) - Number(left.id);
+    })
+    .slice(0, 4), [meters.data?.data]);
+  const memberStatusCounts = useMemo(() => (members.data?.data ?? []).reduce((counts, member) => {
+    if (member.isActive) counts.active += 1;
+    else counts.inactive += 1;
+    return counts;
+  }, { active: 0, inactive: 0 }), [members.data?.data]);
   const viewedCompanyIds = useMemo(() => {
     if (!viewedCompany) return [];
     const ids = new Set([String(viewedCompany.id)]);
@@ -487,7 +552,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
     },
   ];
   const contractColumns: GridColumn<ContractRow>[] = [
-
+    {
+      field: "months",
+      headerName: "Months",
+      width: 100,
+      renderCell: ({ row }) => calculateContractRowMonths(row.startDate, row.endDate) ?? "-"
+    },
     { field: "contractId", headerName: "Contract ID", width: 140 },
     {
       field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
@@ -784,6 +854,29 @@ export function DashboardPage({ view }: DashboardPageProps) {
       const next = new URLSearchParams(current);
       if (nextStatus) next.set("status", nextStatus.toLowerCase());
       else next.delete("status");
+      return next;
+    }, { replace: true });
+  }
+
+  function applyMeterSummaryFilter(status: "" | "active" | "inactive") {
+    setMeterSummaryFilter(status);
+    setMeterTypeFilter("");
+    setSelectedMeters([]);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      if (status) next.set("meterStatus", status);
+      else next.delete("meterStatus");
+      return next;
+    }, { replace: true });
+  }
+
+  function applyMeterTypeFilter(status: string) {
+    setMeterTypeFilter((current) => current.toLowerCase() === status.toLowerCase() ? "" : status);
+    setMeterSummaryFilter("");
+    setSelectedMeters([]);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("meterStatus");
       return next;
     }, { replace: true });
   }
@@ -1694,6 +1787,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
 
   return (
     <section className="page">
+      {isDashboardView && hasAdminDashboard && contractsEndingSoon.length > 0 && !isContractEndAlertDismissed ? (
+        <Alert severity="warning" onClose={() => setIsContractEndAlertDismissed(true)} className="contract-ending-alert">
+          {contractsEndingSoon.length} active contract{contractsEndingSoon.length === 1 ? "" : "s"} end this month or within the following two months.
+        </Alert>
+      ) : null}
       {isDashboardView && contractsNearEndDate.length ? (
         <article className="panel ending-contract-card dashboard-ending-contract-card">
           <span className="ending-contract-title">Contracts ending this month and next 2 months</span>
@@ -1741,21 +1839,41 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </article>
         ) : null}
         {hasCompanyDashboard ? (
-          <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
-            <span>Contracts</span>
-            <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
+          <article className="clickable-kpi contracts-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
+            <div className="contract-kpi-total">
+              <span>Total Contracts</span>
+              <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
+            </div>
+            <div className="contract-kpi-statuses" aria-label="Contract status totals">
+              <button type="button" className="dashboard-contract-status active" onClick={(event) => { event.stopPropagation(); navigate("/contracts?filter=active"); }}><b>{contracts.isLoading ? "..." : contractStatusCounts.active}</b><span>Active</span></button>
+              <button type="button" className="dashboard-contract-status inactive" onClick={(event) => { event.stopPropagation(); navigate("/contracts?filter=inactive"); }}><b>{contracts.isLoading ? "..." : contractStatusCounts.inactive}</b><span>Inactive</span></button>
+              <button type="button" className="dashboard-contract-status ending-soon" onClick={(event) => { event.stopPropagation(); navigate("/contracts?filter=endingSoon"); }}><b>{contracts.isLoading ? "..." : contractStatusCounts.endingSoon}</b><span>Ending Soon</span></button>
+              <button type="button" className="dashboard-contract-status ended" onClick={(event) => { event.stopPropagation(); navigate("/contracts?filter=ended"); }}><b>{contracts.isLoading ? "..." : contractStatusCounts.ended}</b><span>Ended</span></button>
+            </div>
           </article>
         ) : null}
         {hasCompanyDashboard ? (
-          <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
-            <span>Meters</span>
-            <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
+          <article className="clickable-kpi meters-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
+            <div className="meter-kpi-total">
+              <span>Total Meters</span>
+              <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
+            </div>
+            <div className="meter-kpi-statuses" aria-label="Meter status totals">
+              <button type="button" className="dashboard-meter-status active" onClick={(event) => { event.stopPropagation(); navigate("/meters?meterStatus=active"); }}><b>{meters.isLoading ? "..." : meterStatusCounts.active}</b><span>Active</span></button>
+              <button type="button" className="dashboard-meter-status inactive" onClick={(event) => { event.stopPropagation(); navigate("/meters?meterStatus=inactive"); }}><b>{meters.isLoading ? "..." : meterStatusCounts.inactive}</b><span>Inactive</span></button>
+            </div>
           </article>
         ) : null}
         {hasAdminDashboard ? (
-          <article className="clickable-kpi" role="button" tabIndex={0} onClick={() => navigate("/members")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/members"); }}>
-            <span>Members</span>
-            <strong>{members.isLoading ? "..." : members.data?.total ?? 0}</strong>
+          <article className="clickable-kpi members-kpi" role="button" tabIndex={0} onClick={() => navigate("/members")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/members"); }}>
+            <div className="member-kpi-total">
+              <span>Total Members</span>
+              <strong>{members.isLoading ? "..." : members.data?.total ?? 0}</strong>
+            </div>
+            <div className="member-kpi-statuses" aria-label="Member status totals">
+              <button type="button" className="dashboard-member-status active" onClick={(event) => { event.stopPropagation(); navigate("/members?memberStatus=active"); }}><b>{members.isLoading ? "..." : memberStatusCounts.active}</b><span>Active</span></button>
+              <button type="button" className="dashboard-member-status inactive" onClick={(event) => { event.stopPropagation(); navigate("/members?memberStatus=inactive"); }}><b>{members.isLoading ? "..." : memberStatusCounts.inactive}</b><span>Inactive</span></button>
+            </div>
           </article>
         ) : null}
       </div>
@@ -1889,6 +2007,45 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </section>
       ) : null}
 
+      {isContractsView && contractsNearEndDate.length ? (
+        <article className="panel ending-contract-card contracts-page-ending-card">
+          <span className="ending-contract-title">Contracts ending this month and next 2 months</span>
+          <div className="ending-contract-list">
+            {contractsNearEndDate.map((contract) => (
+              <button key={contract.id} type="button" onClick={() => void viewContract(contract)}>
+                <span className="ending-contract-company" title={contract.companyName ?? "Company"}>{contract.companyName ?? "Company"}</span>
+                <span className="ending-contract-id">#{contract.contractId ?? contract.id}</span>
+                <span className="ending-contract-dates">
+                  <time dateTime={contract.startDate ?? undefined}>{formatDate(contract.startDate)}</time>
+                  <span aria-hidden="true">→</span>
+                  <time dateTime={contract.endDate ?? undefined}>{formatDate(contract.endDate)}</time>
+                </span>
+              </button>
+            ))}
+          </div>
+        </article>
+      ) : null}
+
+      {isContractsView ? (
+        <article className="panel contract-summary-card">
+          <button
+            type="button"
+            className={`contract-summary-heading${contractSummaryFilter === "" ? " selected" : ""}`}
+            onClick={() => { setContractSummaryFilter(""); setSelectedContracts([]); }}
+            aria-pressed={contractSummaryFilter === ""}
+          >
+            <span>Contracts</span>
+            <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
+          </button>
+          <div className="contract-summary-statuses" aria-label="Contract status totals">
+            <button type="button" className={`contract-summary-status active${contractSummaryFilter === "active" ? " selected" : ""}`} onClick={() => { setContractSummaryFilter("active"); setSelectedContracts([]); }} aria-pressed={contractSummaryFilter === "active"}><span>Active</span><b>{contracts.isLoading ? "..." : contractStatusCounts.active}</b></button>
+            <button type="button" className={`contract-summary-status inactive${contractSummaryFilter === "inactive" ? " selected" : ""}`} onClick={() => { setContractSummaryFilter("inactive"); setSelectedContracts([]); }} aria-pressed={contractSummaryFilter === "inactive"}><span>Inactive</span><b>{contracts.isLoading ? "..." : contractStatusCounts.inactive}</b></button>
+            <button type="button" className={`contract-summary-status ending-soon${contractSummaryFilter === "endingSoon" ? " selected" : ""}`} onClick={() => { setContractSummaryFilter("endingSoon"); setSelectedContracts([]); }} aria-pressed={contractSummaryFilter === "endingSoon"}><span>Ending Soon</span><b>{contracts.isLoading ? "..." : contractStatusCounts.endingSoon}</b></button>
+            <button type="button" className={`contract-summary-status ended${contractSummaryFilter === "ended" ? " selected" : ""}`} onClick={() => { setContractSummaryFilter("ended"); setSelectedContracts([]); }} aria-pressed={contractSummaryFilter === "ended"}><span>Ended</span><b>{contracts.isLoading ? "..." : contractStatusCounts.ended}</b></button>
+          </div>
+        </article>
+      ) : null}
+
       {isContractsView ? (
         <section className="panel companies-panel">
           <div className="panel-title-row">
@@ -1907,15 +2064,87 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {contractError ? <p className="error">{contractError}</p> : null}
           {contracts.isError ? <p className="error">Unable to load contracts.</p> : null}
           {contracts.isLoading ? <p className="muted">Loading contracts...</p> : null}
-          <IntiliGrid key={contractGridKey} checkboxSelection columns={contractColumns} rows={contracts.data?.data ?? []} onRowClick={viewContract} onSelectionChange={(_ids, rows) => setSelectedContracts(rows)} />
+          <IntiliGrid
+            key={`${contractGridKey}-${contractSummaryFilter || "all"}`}
+            checkboxSelection
+            columns={contractColumns}
+            rows={visibleContracts}
+            getRowBackgroundColor={(contract) => isContractEndingSoon(contract) ? "#fee2e2" : undefined}
+            onRowClick={viewContract}
+            onSelectionChange={(_ids, rows) => setSelectedContracts(rows)}
+          />
         </section>
+      ) : null}
+
+      {isMetersView ? (
+        <div className="meter-page-cards">
+          <article className="panel meter-summary-card">
+            <button type="button" className={`meter-summary-total${meterSummaryFilter === "" ? " selected" : ""}`} onClick={() => applyMeterSummaryFilter("")} aria-pressed={meterSummaryFilter === ""}>
+              <span>Total Meters</span>
+              <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
+            </button>
+            <div className="meter-page-summary-statuses" aria-label="Meter status totals">
+              <div className="meter-type-statuses" aria-label="Meter Status column totals">
+                {meterTypeCounts.map(([status, count]) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className={`meter-type-status${meterTypeFilter.toLowerCase() === status.toLowerCase() ? " selected" : ""}`}
+                    style={companyStatusColor(status)}
+                    onClick={() => applyMeterTypeFilter(status)}
+                    aria-pressed={meterTypeFilter.toLowerCase() === status.toLowerCase()}
+                  >
+                    <b>{count}</b><span>{status}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </article>
+          <article className="panel recent-meter-card">
+            <span className="recent-meter-title">Recently added meters</span>
+            <div className="recent-meter-list">
+              <div className="recent-meter-list-header" aria-hidden="true">
+                <span>Meter</span><span>Product</span><span>Added</span>
+              </div>
+              {meters.isLoading ? <span className="muted">Loading...</span> : recentlyAddedMeters.length ? recentlyAddedMeters.map((meter) => {
+                const meterName = meter.meter ?? meter.utilityAccountName ?? meter.accountNumber ?? `Meter ${meter.id}`;
+                return (
+                  <Tooltip key={meter.id} title={meterName} placement="top" arrow>
+                    <button type="button" onClick={() => viewMeter(meter)}>
+                      <span>{meterName}</span>
+                      <small>{meter.product?.trim() || "Product not set"}</small>
+                      <time dateTime={meter.createdAt}>{meter.createdAt ? formatDate(meter.createdAt) : "—"}</time>
+                    </button>
+                  </Tooltip>
+                );
+              }) : <span className="muted">No meters added.</span>}
+            </div>
+          </article>
+          <article className="panel meter-product-card">
+            <span className="meter-product-title">Meters by product</span>
+            <div className="meter-product-list" aria-label="Meter product totals">
+              {meters.isLoading ? <span className="muted">Loading...</span> : meterProductCounts.length ? meterProductCounts.map(([product, count]) => (
+                <span key={product} className="meter-product-count" style={companyStatusColor(product)}>
+                  <b>{count}</b><span>{product}</span>
+                </span>
+              )) : <span className="muted">No meter products available.</span>}
+            </div>
+          </article>
+          <article className="panel meter-trend-card">
+            <div className="meter-trend-heading">
+              <span>Meter Demand by Company</span>
+              <small>Share of demand from dated meters</small>
+            </div>
+            <MeterTrendChart meters={meters.data?.data ?? []} />
+          </article>
+        </div>
       ) : null}
 
       {isMetersView ? (
         <section className="panel companies-panel meters-page-panel">
           <div className="panel-title-row">
             <div className="meter-title-block">
-              <h2>Meters</h2>
+              <h2>Meters{meterTypeFilter ? ` — ${meterTypeFilter}` : meterSummaryFilter ? ` — ${meterSummaryFilter === "active" ? "Active" : "Inactive"}` : ""}</h2>
               <Tooltip title={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}>
                 <IconButton
                   size="small"
@@ -1998,11 +2227,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
             ) : null}
             <div className="meter-grid-area">
               <IntiliGrid
-                key={meterGridKey}
+                key={`${meterGridKey}-${meterSummaryFilter || "all"}-${meterTypeFilter || "all-statuses"}`}
                 initialPageSize={50}
                 checkboxSelection
                 columns={visibleMeterColumns}
-                rows={meters.data?.data ?? []}
+                rows={visibleMeters}
                 onRowClick={viewMeter}
                 onSelectionChange={(_ids, rows) => setSelectedMeters(rows)}
               />
@@ -3577,6 +3806,98 @@ function calculateContractMonths(startValue: string, endValue: string) {
   const end = new Date(`${endValue}T00:00:00`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
   return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
+}
+
+function calculateContractRowMonths(startValue: string | null | undefined, endValue: string | null | undefined) {
+  if (!startValue || !endValue) return null;
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+  return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
+}
+
+function isContractEndingSoon(contract: ContractRow, currentDate = new Date()) {
+  if (contract.isActive === false || !contract.endDate) return false;
+  const endDate = new Date(contract.endDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+  const today = new Date(currentDate);
+  today.setHours(0, 0, 0, 0);
+  const thirdMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 3, 1);
+  return endDate >= today && endDate < thirdMonthEnd;
+}
+
+function isContractEnded(contract: ContractRow, currentDate = new Date()) {
+  if (!contract.endDate) return false;
+  const endDate = new Date(contract.endDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+  const today = new Date(currentDate);
+  today.setHours(0, 0, 0, 0);
+  return endDate < today;
+}
+
+function MeterTrendChart({ meters }: { meters: MeterRow[] }) {
+  const points = meters.flatMap((meter) => {
+    const timestamp = meter.createdAt ? Date.parse(meter.createdAt) : Number.NaN;
+    const demand = Number(String(meter.demand ?? "").replace(/,/g, ""));
+    if (!Number.isFinite(timestamp) || !Number.isFinite(demand)) return [];
+    return [{
+      company: meter.companyName?.trim() || "Company not set",
+      date: new Date(timestamp).toISOString().slice(0, 10),
+      demand
+    }];
+  });
+  if (!points.length) return <p className="muted meter-trend-empty">No dated meter demand data is available.</p>;
+
+  const demandByCompany = new Map<string, number>();
+  for (const point of points) demandByCompany.set(point.company, (demandByCompany.get(point.company) ?? 0) + point.demand);
+  const companies = Array.from(demandByCompany.entries()).sort((left, right) => right[1] - left[1]);
+  const totalDemand = companies.reduce((total, [, demand]) => total + demand, 0);
+  if (totalDemand <= 0) return <p className="muted meter-trend-empty">No positive meter demand data is available.</p>;
+  const dates = points.map((point) => point.date).sort();
+  const firstDate = dates[0];
+  const lastDate = dates[dates.length - 1];
+  const width = 420;
+  const height = 280;
+  const centerX = 210;
+  const centerY = 135;
+  const radius = 100;
+  const palette = ["#0f5da8", "#0ab39c", "#f06548", "#405189", "#f7b84b", "#8b5cf6", "#ec4899", "#0891b2"];
+  let angle = -Math.PI / 2;
+
+  return (
+    <div className="meter-trend-chart-wrap meter-pie-chart-wrap">
+      <svg className="meter-trend-chart meter-pie-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Pie chart of meter demand by company">
+        {companies.map(([company, demand], companyIndex) => {
+          const sliceAngle = demand / totalDemand * Math.PI * 2;
+          const startAngle = angle;
+          const endAngle = angle + sliceAngle;
+          angle = endAngle;
+          const startX = centerX + Math.cos(startAngle) * radius;
+          const startY = centerY + Math.sin(startAngle) * radius;
+          const endX = centerX + Math.cos(endAngle) * radius;
+          const endY = centerY + Math.sin(endAngle) * radius;
+          const largeArc = sliceAngle > Math.PI ? 1 : 0;
+          const path = companies.length === 1 ? undefined : `M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY} Z`;
+          const percentage = demand / totalDemand * 100;
+          const labelAngle = startAngle + sliceAngle / 2;
+          const labelX = centerX + Math.cos(labelAngle) * radius * 0.65;
+          const labelY = centerY + Math.sin(labelAngle) * radius * 0.65;
+          const color = palette[companyIndex % palette.length];
+          return (
+            <g key={company}>
+              {path ? <path d={path} fill={color} stroke="#fff" strokeWidth="2" /> : <circle cx={centerX} cy={centerY} r={radius} fill={color} />}
+              {percentage >= 5 ? <text x={labelX} y={labelY + 4} textAnchor="middle" className="meter-pie-label">{percentage.toFixed(0)}%</text> : null}
+              <title>{`${company} — Demand: ${demand.toLocaleString()} (${percentage.toFixed(1)}%) — ${formatDate(firstDate)} to ${formatDate(lastDate)}`}</title>
+            </g>
+          );
+        })}
+        <circle cx={centerX} cy={centerY} r="48" fill="#fff" />
+        <text x={centerX} y={centerY - 4} textAnchor="middle" className="meter-pie-total-label">Total Demand</text>
+        <text x={centerX} y={centerY + 18} textAnchor="middle" className="meter-pie-total-value">{totalDemand.toLocaleString()}</text>
+      </svg>
+      <div className="meter-pie-date-range">{formatDate(firstDate)} – {formatDate(lastDate)}</div>
+    </div>
+  );
 }
 
 function calculateMeterLoadProfile(demandValue: string, annualUsageValue: string) {
