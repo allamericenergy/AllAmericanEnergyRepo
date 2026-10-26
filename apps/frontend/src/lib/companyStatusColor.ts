@@ -6,8 +6,8 @@ export function companyStatusColor(status: string | null | undefined) {
   if (name === "sold") return { color: "#fff", backgroundColor: "#405189", borderRadius: "4px" };
   if (name === "closed") return { color: "#fff", backgroundColor: "#ff1919", borderRadius: "4px" };
   if (name === "drop requested") return { color: "#fff", backgroundColor: "#0f5da8", borderRadius: "4px" };
-  if (name === "no contract") return { color: "#fff", backgroundColor: "#223A22", borderRadius: "4px" };
-  if (name === "under contract") return { color: "#fff", backgroundColor: "#354C0A", borderRadius: "4px" };
+  if (name === "no contract") return { color: "#fff", backgroundColor: "#289730", borderRadius: "4px" };
+  if (name === "under contract") return { color: "#fff", backgroundColor: "#AEB914", borderRadius: "4px" };
   if (/^(approved|completed|complete|won)$/.test(name)) return { color: "#166534", backgroundColor: "#dcfce7" };
   if (/^(rejected|cancelled|canceled|lost)$/.test(name)) return { color: "#991b1b", backgroundColor: "#fee2e2" };
   if (/^(pending|on hold|in review|awaiting approval)$/.test(name)) return { color: "#92400e", backgroundColor: "#fef3c7" };

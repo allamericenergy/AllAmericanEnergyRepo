@@ -3883,43 +3883,40 @@ function MeterTrendChart({ meters }: { meters: MeterRow[] }) {
   const dates = points.map((point) => point.date).sort();
   const firstDate = dates[0];
   const lastDate = dates[dates.length - 1];
-  const width = 520;
-  const height = 280;
-  const margin = { top: 34, right: 18, bottom: 22, left: 54 };
-  const chartWidth = width - margin.left - margin.right;
-  const chartHeight = height - margin.top - margin.bottom;
-  const maximumDemand = Math.max(...companies.map(([, demand]) => demand));
-  const slotWidth = chartWidth / companies.length;
-  const barWidth = Math.max(8, Math.min(42, slotWidth * 0.62));
   const palette = ["#0f5da8", "#0ab39c", "#f06548", "#405189", "#f7b84b", "#8b5cf6", "#ec4899", "#0891b2"];
-  const yTicks = Array.from({ length: 4 }, (_, index) => maximumDemand * index / 3);
+  const centerX = 130;
+  const centerY = 98;
+  const radius = 78;
+  let cumulativeDemand = 0;
+  const pointAtAngle = (angle: number) => {
+    const radians = angle * Math.PI / 180;
+    return { x: centerX + radius * Math.cos(radians), y: centerY + radius * Math.sin(radians) };
+  };
 
   return (
-    <div className="meter-trend-chart-wrap meter-bar-chart-wrap">
-      <svg className="meter-trend-chart meter-bar-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Bar chart of meter demand by company">
-        {yTicks.map((tick) => {
-          const y = margin.top + chartHeight - tick / maximumDemand * chartHeight;
-          return (
-            <g key={tick}>
-              <line x1={margin.left} x2={width - margin.right} y1={y} y2={y} className="meter-trend-grid-line" />
-              <text x={margin.left - 8} y={y + 4} textAnchor="end" className="meter-trend-axis-label">{Number(tick.toFixed(1)).toLocaleString()}</text>
-            </g>
-          );
-        })}
+    <div className="meter-trend-chart-wrap meter-pie-chart-wrap">
+      <svg className="meter-trend-chart meter-pie-chart" viewBox="0 0 260 196" role="img" aria-label="Pie chart of meter demand by company">
         {companies.map(([company, demand], companyIndex) => {
-          const barHeight = demand / maximumDemand * chartHeight;
-          const x = margin.left + companyIndex * slotWidth + (slotWidth - barWidth) / 2;
-          const y = margin.top + chartHeight - barHeight;
+          const startAngle = cumulativeDemand / totalDemand * 360 - 90;
+          cumulativeDemand += demand;
+          const endAngle = cumulativeDemand / totalDemand * 360 - 90;
+          const start = pointAtAngle(startAngle);
+          const end = pointAtAngle(endAngle >= startAngle + 360 ? endAngle - 0.001 : endAngle);
+          const largeArc = endAngle - startAngle > 180 ? 1 : 0;
           const color = palette[companyIndex % palette.length];
           return (
-            <g key={company}>
-              <rect className="meter-bar" style={{ animationDelay: `${companyIndex * 90}ms` }} x={x} y={y} width={barWidth} height={barHeight} rx="4" fill={color}>
-                <title>{`${company} — Demand: ${demand.toLocaleString()} — ${formatDate(firstDate)} to ${formatDate(lastDate)}`}</title>
-              </rect>
-              <text x={x + barWidth / 2} y={Math.max(14, y - 6)} textAnchor="middle" className="meter-bar-value" style={{ animationDelay: `${300 + companyIndex * 90}ms` }}>{demand.toLocaleString()}</text>
-            </g>
+            <path
+              key={company}
+              className="meter-pie-slice"
+              style={{ animationDelay: `${companyIndex * 80}ms` }}
+              d={`M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`}
+              fill={color}
+            >
+              <title>{`${company} — Demand: ${demand.toLocaleString()} (${(demand / totalDemand * 100).toFixed(1)}%) — ${formatDate(firstDate)} to ${formatDate(lastDate)}`}</title>
+            </path>
           );
         })}
+        <circle cx={centerX} cy={centerY} r="2.5" fill="#fff" />
       </svg>
       <div className="meter-pie-date-range">Total demand: {totalDemand.toLocaleString()} · {formatDate(firstDate)} – {formatDate(lastDate)}</div>
     </div>
