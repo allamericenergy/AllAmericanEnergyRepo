@@ -1841,7 +1841,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         {hasCompanyDashboard ? (
           <article className="clickable-kpi contracts-kpi" role="button" tabIndex={0} onClick={() => navigate("/contracts")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/contracts"); }}>
             <div className="contract-kpi-total">
-              <span>Total Contracts</span>
+              <span>Contracts</span>
               <strong>{contracts.isLoading ? "..." : contracts.data?.total ?? 0}</strong>
             </div>
             <div className="contract-kpi-statuses" aria-label="Contract status totals">
@@ -1855,7 +1855,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         {hasCompanyDashboard ? (
           <article className="clickable-kpi meters-kpi" role="button" tabIndex={0} onClick={() => navigate("/meters")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/meters"); }}>
             <div className="meter-kpi-total">
-              <span>Total Meters</span>
+              <span>Meters</span>
               <strong>{meters.isLoading ? "..." : meters.data?.total ?? 0}</strong>
             </div>
             <div className="meter-kpi-statuses" aria-label="Meter status totals">
@@ -1867,7 +1867,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         {hasAdminDashboard ? (
           <article className="clickable-kpi members-kpi" role="button" tabIndex={0} onClick={() => navigate("/members")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/members"); }}>
             <div className="member-kpi-total">
-              <span>Total Members</span>
+              <span>Members</span>
               <strong>{members.isLoading ? "..." : members.data?.total ?? 0}</strong>
             </div>
             <div className="member-kpi-statuses" aria-label="Member status totals">
