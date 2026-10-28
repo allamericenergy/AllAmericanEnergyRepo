@@ -8,7 +8,7 @@ import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { api } from "../../lib/api";
 import { createMasterAccountTemplate, parseMasterAccountUpload, parseMasterAccountUploadDetailed } from "./masterAccountNumberSpreadsheet";
 
-interface MasterAccountNumberRow {
+export interface MasterAccountNumberRow {
   id: number;
   utilityId: number;
   utilityName: string | null;

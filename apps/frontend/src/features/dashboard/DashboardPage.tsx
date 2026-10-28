@@ -400,6 +400,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
       return [String(id), `${marker} · ${company?.companyName ?? "Company"}`];
     })
   ), [companies.data?.data, viewedCompany?.id, viewedCompanyIds]);
+  const viewedCompanyMeters = useMemo(() => (meters.data?.data ?? [])
+    .filter((meter) => viewedCompanyIds.includes(String(meter.companyId)))
+    .map((meter) => ({ ...meter, companyName: companyLabels[String(meter.companyId)] ?? meter.companyName ?? viewedCompany?.companyName ?? "" })),
+  [meters.data?.data, viewedCompanyIds, companyLabels, viewedCompany?.companyName]);
   const viewedContractMeters = useQuery({
     queryKey: ["viewed-contract-meters", viewedContract?.id, user?.id],
     queryFn: ({ signal }) => loadAllMeters<MeterRow>({ contractId: viewedContract!.id }, signal),
@@ -2579,7 +2583,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   <MeterListPanel
                     onRowClick={viewMeter}
                     columns={meterColumns}
-                    meters={(meters.data?.data ?? []).filter((meter) => viewedCompanyIds.includes(String(meter.companyId))).map((meter) => ({ ...meter, companyName: companyLabels[String(meter.companyId)] ?? meter.companyName ?? viewedCompany.companyName ?? "" }))}
+                    meters={viewedCompanyMeters}
                     isLoading={meters.isLoading}
                     isError={meters.isError}
                     error={meterError}
@@ -2640,7 +2644,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </CompanyListWindow>
       ) : null}
 
-      {viewedCompany && meters.data?.data.length && !isCompanyMeterListDismissed ? (
+      {viewedCompany && !isCompanyMeterListDismissed ? (
       <CompanyListWindow
         listName="Meter"
         key={viewedCompany.id}
@@ -2655,7 +2659,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <MeterListPanel
             onRowClick={viewMeter}
             columns={meterColumns}
-            meters={meters.data?.data ?? []}
+            meters={viewedCompanyMeters}
             isLoading={meters.isLoading}
             isError={meters.isError}
             error={meterError}

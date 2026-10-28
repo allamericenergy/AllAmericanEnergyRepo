@@ -98,10 +98,10 @@ export function ExtractPdfDialog({ open, onClose }: { open: boolean; onClose: ()
   }
 
   const results = uploads.filter((item) => item.result);
-  const rows: FieldRow[] = results.flatMap((item) => Object.entries({ ...item.result!.bill, readDemand: item.result!.bill?.readDemand ?? null }).map(([field, value]) => ({
+  const rows: FieldRow[] = results.flatMap((item) => Object.entries({ billType: item.result!.bill?.billType ?? null, temperature: item.result!.bill?.temperature ?? null, ...item.result!.bill, readDemand: item.result!.bill?.readDemand ?? null }).map(([field, value]) => ({
     id: `${item.id}-${field}`, fileName: item.file.name, field: fieldLabel(field),
-    value: field === "readDemand" && value == null
-      ? (item.result!.extraction.issues.some((issue) => issue.field === "readDemand") ? "Needs review" : "Not found in PDF")
+    value: ["readDemand", "billType", "temperature"].includes(field) && value == null
+      ? (item.result!.extraction.issues.some((issue) => issue.field === field) ? "Needs review" : "Not found in PDF")
       : displayValue(value),
     review: item.result!.extraction.issues.filter((issue) => issue.field === field || issue.field.startsWith(`${field}.`)).map((issue) => issue.message).join(" ")
   })));

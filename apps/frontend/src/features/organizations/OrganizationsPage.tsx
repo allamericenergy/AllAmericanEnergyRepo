@@ -1,4 +1,4 @@
-import { MasterAccountNumberPanel } from "./MasterAccountNumberPanel";
+import { MasterAccountNumberPanel, type MasterAccountNumberRow } from "./MasterAccountNumberPanel";
 import { AccountReportPage } from "./AccountReportPage";
 import { ExtractPdfDialog } from "./ExtractPdfDialog";
 import {
@@ -862,6 +862,15 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   });
 
   const editableColumns = records.data?.columns.filter((column) => column.editable) ?? [];
+  const masterAccountSettings = useQuery({
+    queryKey: ["master-account-numbers"],
+    queryFn: async () => (await api.get("/reports/master-account-numbers")).data as { data: MasterAccountNumberRow[] },
+    enabled: endpoint === "utilities",
+    retry: false
+  });
+  const masterAccountsByUtility = useMemo(() => new Map(
+    (masterAccountSettings.data?.data ?? []).map((setting) => [String(setting.utilityId), setting.masterAccountNumber])
+  ), [masterAccountSettings.data]);
   const utilityColumn = endpoint === "rates"
     ? editableColumns.find((column) => column.name.toLowerCase() === "utilityid")
     : undefined;
@@ -885,9 +894,12 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     const key = records.data?.primaryKey;
     return (records.data?.data ?? []).map((row, index) => ({
       ...row,
+      ...(endpoint === "utilities" ? {
+        masterAccountNumber: masterAccountsByUtility.get(String(key ? row[key] : "")) ?? null
+      } : {}),
       id: (key ? row[key] : undefined) as string | number ?? `${endpoint}-${index}`
     }));
-  }, [endpoint, records.data]);
+  }, [endpoint, records.data, masterAccountsByUtility]);
 
   const columns = useMemo<GridColumn<RateRow>[]>(() => {
     const dataColumns = (records.data?.columns ?? []).map((column): GridColumn<RateRow> => {
@@ -908,6 +920,14 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           : formatRateValue(value, column.dataType)
       };
     });
+    if (endpoint === "utilities") {
+      dataColumns.push({
+        field: "masterAccountNumber",
+        headerName: "MasterAccount Number",
+        minWidth: 220,
+        valueFormatter: (value) => String(value ?? "-")
+      });
+    }
     return [
       ...dataColumns,
       {
@@ -1121,6 +1141,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         {endpoint === "rates" ? <p className="muted rate-upload-help">Use the first row for headers matching the Rate fields. Maximum 1,000 rows per upload.</p> : null}
         {error ? <p className="error">{error}</p> : null}
         {records.isError ? <p className="error">{apiError(records.error) ?? `Unable to load ${tableName} records.`}</p> : null}
+        {endpoint === "utilities" && masterAccountSettings.isError ? <p className="error">Unable to load MasterAccount Number settings.</p> : null}
         <IntiliGrid columns={columns} rows={rows} />
       </section>
 
