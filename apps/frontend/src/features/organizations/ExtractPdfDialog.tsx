@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { isAxiosError } from "axios";
 import { Upload } from "lucide-react";
@@ -13,13 +13,7 @@ interface ExtractionResult {
   warnings: string[];
   lines: Array<{ pageNumber: number; lineNumber: number; text: string }>;
 }
-interface FieldRow { id: string; fileName: string; field: string; value: string; review: string }
-const columns: GridColumn<FieldRow>[] = [
-  { field: "fileName", headerName: "PDF File", minWidth: 240, flex: 1 },
-  { field: "field", headerName: "Bill Field", minWidth: 200, flex: 1 },
-  { field: "value", headerName: "Extracted Value", minWidth: 280, flex: 2 },
-  { field: "review", headerName: "Review Notes", minWidth: 320, flex: 2 }
-];
+type BillTableRow = Record<string, string> & { id: string; fileName: string; reviewNotes: string };
 const lineColumns: GridColumn<ExtractionResult["lines"][number] & { id: string; fileName: string }>[] = [
   { field: "fileName", headerName: "PDF File", minWidth: 240, flex: 1 },
   { field: "pageNumber", headerName: "Page", width: 90 },
@@ -32,9 +26,26 @@ function fieldLabel(value: string): string {
 function displayValue(value: unknown): string {
   if (value === null || value === undefined) return "null";
   if (typeof value === "object") {
-    return Object.entries(value).map(([key, part]) => `${fieldLabel(key)}: ${displayValue(part)}`).join(" Â· ");
+    return Object.entries(value).map(([key, part]) => `${fieldLabel(key)}: ${displayValue(part)}`).join(" · ");
   }
   return String(value);
+}
+function displayBillValue(field: string, value: unknown): string {
+  if (field === "temperature" && value && typeof value === "object") {
+    const temperature = value as { month?: unknown; value?: unknown; unit?: unknown };
+    const month = String(temperature.month ?? "Latest");
+    const numericValue = temperature.value == null ? "" : String(temperature.value);
+    const unit = temperature.unit == null ? "°" : String(temperature.unit);
+    return `${month}: ${numericValue}${unit}`;
+  }
+  if (field === "temperatureHistory" && Array.isArray(value)) {
+    return value.map((item) => {
+      const entry = item as { month?: unknown; value?: unknown; unit?: unknown };
+      const reading = entry.value == null ? "Needs review" : `${String(entry.value)}${entry.unit == null ? "°" : String(entry.unit)}`;
+      return `${String(entry.month ?? "-")}: ${reading}`;
+    }).join(" · ");
+  }
+  return displayValue(value);
 }
 
 interface PdfUpload {
@@ -98,13 +109,37 @@ export function ExtractPdfDialog({ open, onClose }: { open: boolean; onClose: ()
   }
 
   const results = uploads.filter((item) => item.result);
-  const rows: FieldRow[] = results.flatMap((item) => Object.entries({ billType: item.result!.bill?.billType ?? null, temperature: item.result!.bill?.temperature ?? null, ...item.result!.bill, readDemand: item.result!.bill?.readDemand ?? null }).map(([field, value]) => ({
-    id: `${item.id}-${field}`, fileName: item.file.name, field: fieldLabel(field),
-    value: ["readDemand", "billType", "temperature"].includes(field) && value == null
-      ? (item.result!.extraction.issues.some((issue) => issue.field === field) ? "Needs review" : "Not found in PDF")
-      : displayValue(value),
-    review: item.result!.extraction.issues.filter((issue) => issue.field === field || issue.field.startsWith(`${field}.`)).map((issue) => issue.message).join(" ")
-  })));
+  const billFields = useMemo(() => {
+    const preferred = ["billType", "temperature", "temperatureHistory", "days"];
+    const found = new Set(results.flatMap((item) => Object.keys(item.result!.bill)));
+    preferred.forEach((field) => found.add(field));
+    return [...preferred, ...[...found].filter((field) => !preferred.includes(field)).sort((a, b) => fieldLabel(a).localeCompare(fieldLabel(b)))];
+  }, [results]);
+  const billColumns = useMemo<GridColumn<BillTableRow>[]>(() => [
+    { field: "fileName", headerName: "PDF File", minWidth: 240, pinned: "left" },
+    ...billFields.map((field): GridColumn<BillTableRow> => ({
+      field,
+      headerName: fieldLabel(field),
+      minWidth: field === "temperatureHistory" ? 720
+        : ["serviceAddress", "serviceProvidedTo", "servicePeriod", "temperature"].includes(field) ? 220 : 150
+    })),
+    { field: "reviewNotes", headerName: "Review Notes", minWidth: 320 }
+  ], [billFields]);
+  const billRows: BillTableRow[] = results.map((item) => {
+    const result = item.result!;
+    const row: BillTableRow = {
+      id: item.id,
+      fileName: item.file.name,
+      reviewNotes: result.extraction.issues.map((issue) => `${fieldLabel(issue.field)}: ${issue.message}`).join(" · ")
+    };
+    for (const field of billFields) {
+      const value = result.bill[field];
+      row[field] = value === null || value === undefined
+        ? (result.extraction.issues.some((issue) => issue.field === field || issue.field.startsWith(`${field}.`)) ? "Needs review" : "Not found in PDF")
+        : displayBillValue(field, value);
+    }
+    return row;
+  });
   const finished = uploads.filter((item) => ["Complete", "Needs review", "Failed"].includes(item.status)).length;
 
   return <Dialog open={open} onClose={close} fullWidth maxWidth="xl" aria-labelledby="extract-pdf-title">
@@ -138,7 +173,7 @@ export function ExtractPdfDialog({ open, onClose }: { open: boolean; onClose: ()
         <Alert severity={uploads.some((item) => item.status === "Needs review" || item.status === "Failed") ? "warning" : "success"} sx={{ mt: 2 }}>
           {results.length} PDF(s) extracted. Review each file’s values and review notes below.
         </Alert>
-        <div style={{ height: 400, marginTop: 16 }}><IntiliGrid columns={columns} rows={rows} /></div>
+        <div style={{ height: 400, marginTop: 16 }}><IntiliGrid columns={billColumns} rows={billRows} /></div>
         <details style={{ marginTop: 16 }}>
           <summary>View extracted text by file, page and line</summary>
           <div style={{ height: 350, marginTop: 12 }}>

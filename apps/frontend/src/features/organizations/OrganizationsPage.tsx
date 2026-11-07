@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Hash, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
+import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
@@ -170,7 +170,7 @@ export function OrganizationsPage() {
         <button type="button" className={section === "organizations" ? "active" : ""} onClick={() => selectSection("organizations")}>
           <Building2 size={18} /> Organizations
         </button>
-        {legacySections.map((item) => {
+        {legacySections.filter((item) => item.key !== "rates").map((item) => {
           const Icon = item.icon;
           return (
             <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
@@ -178,7 +178,7 @@ export function OrganizationsPage() {
             </button>
           );
         })}
-        {locationSections.map((item) => {
+        {locationSections.filter((item) => item.key === "states").map((item) => {
           const Icon = item.icon;
           return (
             <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
@@ -186,12 +186,6 @@ export function OrganizationsPage() {
             </button>
           );
         })}
-        <button type="button" className={section === "master-account-numbers" ? "active" : ""} onClick={() => selectSection("master-account-numbers")}><Hash size={18} /> MasterAccount Number</button>
-        {meterValueSections.map((item) => (
-          <button type="button" key={item.key} className={section === item.key ? "active" : ""} onClick={() => selectSection(item.key)}>
-            <Hash size={18} /> {item.label}
-          </button>
-        ))}
         <button type="button" className={section === "notes" ? "active" : ""} onClick={() => selectSection("notes")}>
           <StickyNote size={18} /> Notes
         </button>
@@ -501,6 +495,8 @@ function OrganizationNotesPanel({ companyId, onViewAll }: { companyId: string | 
 interface LocationRow {
   id: string | number;
   actions?: never;
+  cities?: never;
+  zipCodes?: never;
   name?: string;
   code?: string;
   capital?: string;
@@ -524,6 +520,8 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const singularName = kind === "states" ? "State" : kind === "cities" ? "City" : "ZIP Code";
   const pluralName = kind === "states" ? "States" : kind === "cities" ? "Cities" : "ZIP Codes";
   const [formOpen, setFormOpen] = useState(false);
+  const [stateCityFormOpen, setStateCityFormOpen] = useState(false);
+  const [stateZipFormOpen, setStateZipFormOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -535,6 +533,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const [stateForm, setStateForm] = useState({ name: "", code: "", capital: "" });
   const [cityForm, setCityForm] = useState({ stateId: "", name: "", isCapital: false });
   const [zipForm, setZipForm] = useState({ stateId: "", cityId: "", code: "", isActive: true });
+  const [selectedCityByState, setSelectedCityByState] = useState<Record<string, string>>({});
 
   const records = useQuery({
     queryKey: ["organization-locations", kind],
@@ -553,13 +552,91 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
     enabled: kind === "zip-codes" && Boolean(zipForm.stateId),
     retry: false
   });
+  const relatedCities = useQuery({
+    queryKey: ["organization-locations", "state-related-cities"],
+    queryFn: async () => (await api.get("/reports/location-cities", { params: { take: 2000 } })).data as LocationResponse,
+    enabled: kind === "states",
+    retry: false
+  });
+  const relatedZips = useQuery({
+    queryKey: ["organization-locations", "state-related-zips"],
+    queryFn: async () => (await api.get("/reports/location-zip-codes", { params: { take: 2000 } })).data as LocationResponse,
+    enabled: kind === "states",
+    retry: false
+  });
+  const citiesByState = useMemo(() => {
+    const grouped = new Map<string, LocationRow[]>();
+    (relatedCities.data?.data ?? []).forEach((city) => {
+      const key = String(city.stateId ?? "");
+      grouped.set(key, [...(grouped.get(key) ?? []), city]);
+    });
+    return grouped;
+  }, [relatedCities.data]);
+  const zipsByCity = useMemo(() => {
+    const grouped = new Map<string, LocationRow[]>();
+    (relatedZips.data?.data ?? []).forEach((zip) => {
+      const key = String(zip.cityId ?? "");
+      grouped.set(key, [...(grouped.get(key) ?? []), zip]);
+    });
+    return grouped;
+  }, [relatedZips.data]);
 
   const columns = useMemo<GridColumn<LocationRow>[]>(() => {
     if (kind === "states") {
       return [
         { field: "name", headerName: "State", minWidth: 200, flex: 1 },
         { field: "code", headerName: "Code", width: 110 },
-        { field: "capital", headerName: "Capital", minWidth: 200, flex: 1 }
+        { field: "capital", headerName: "Capital", minWidth: 200, flex: 1 },
+        {
+          field: "cities", headerName: "Cities", minWidth: 220, sortable: false,
+          renderCell: ({ row }) => {
+            const cities = citiesByState.get(String(row.id)) ?? [];
+            const selectedCityId = selectedCityByState[String(row.id)] ?? "";
+            return <TextField select size="small" value={selectedCityId} onChange={(event) => {
+              if (event.target.value === "__add_city__") return;
+              setSelectedCityByState((current) => ({ ...current, [String(row.id)]: event.target.value }));
+            }} onClick={(event) => event.stopPropagation()} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 190 }}>
+              <MenuItem value="" disabled>{relatedCities.isLoading ? "Loading cities..." : cities.length ? `${cities.length} ${cities.length === 1 ? "city" : "cities"}` : "No cities"}</MenuItem>
+              {cities.map((city) => <MenuItem key={city.id} value={String(city.id)}>{city.name}</MenuItem>)}
+              <MenuItem value="__add_city__" onClick={(event) => {
+                event.stopPropagation();
+                setCityForm({ stateId: String(row.id), name: "", isCapital: false });
+                setError("");
+                setNotice("");
+                setStateCityFormOpen(true);
+              }}><Plus size={16} />&nbsp; Add New City</MenuItem>
+            </TextField>;
+          }
+        },
+        {
+          field: "zipCodes", headerName: "ZIP Codes", minWidth: 220, sortable: false,
+          renderCell: ({ row }) => {
+            const selectedCityId = selectedCityByState[String(row.id)] ?? "";
+            const zips = selectedCityId ? zipsByCity.get(selectedCityId) ?? [] : [];
+            return <TextField select size="small" value="" onChange={() => undefined} onClick={(event) => event.stopPropagation()} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 190 }}>
+              <MenuItem value="" disabled>{relatedZips.isLoading ? "Loading ZIP codes..." : !selectedCityId ? "Select a city first" : zips.length ? `${zips.length} ZIP code${zips.length === 1 ? "" : "s"}` : "No ZIP codes"}</MenuItem>
+              {zips.map((zip) => <MenuItem key={zip.id} value={String(zip.id)}>{zip.code}</MenuItem>)}
+              <MenuItem value="__add_zip__" onClick={(event) => {
+                event.stopPropagation();
+                setZipForm({ stateId: String(row.id), cityId: selectedCityId, code: "", isActive: true });
+                setError("");
+                setNotice("");
+                setStateZipFormOpen(true);
+              }}><Plus size={16} />&nbsp; Add New ZIP Code</MenuItem>
+            </TextField>;
+          }
+        },
+        {
+          field: "actions", headerName: "Actions", width: 120, sortable: false,
+          renderCell: ({ row }) => <div onClick={(event) => event.stopPropagation()}>
+            <Tooltip title="Edit state"><IconButton size="small" aria-label={`Edit ${row.name}`} onClick={() => {
+              setEditing(row);
+              setStateForm({ name: row.name ?? "", code: row.code ?? "", capital: row.capital ?? "" });
+              setError(""); setNotice(""); setFormOpen(true);
+            }}><Pencil size={17} /></IconButton></Tooltip>
+            <Tooltip title="Delete state"><IconButton size="small" color="error" aria-label={`Delete ${row.name}`} onClick={() => { setError(""); setNotice(""); setDeleting(row); }}><Trash2 size={17} /></IconButton></Tooltip>
+          </div>
+        }
       ];
     }
     if (kind === "cities") {
@@ -592,7 +669,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
       { field: "state", headerName: "State Code", width: 130 },
       { field: "isActive", headerName: "Active", width: 110, valueFormatter: (value) => value ? "Yes" : "No" }
     ];
-  }, [kind]);
+  }, [citiesByState, kind, relatedCities.isLoading, relatedZips.isLoading, selectedCityByState, zipsByCity]);
 
   function openCreate() {
     setEditing(null);
@@ -607,13 +684,13 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   async function saveRecord() {
     setSaving(true);
     setError("");
-    try {
+    try { 
       const payload = kind === "states"
         ? stateForm
         : kind === "cities"
           ? { ...cityForm, stateId: Number(cityForm.stateId) }
           : { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive };
-      if (editing && kind === "cities") await api.put(`/reports/location-cities/${editing.id}`, payload);
+      if (editing && (kind === "states" || kind === "cities")) await api.put(`/reports/location-${kind}/${editing.id}`, payload);
       else await api.post(`/reports/location-${kind}`, payload);
       await records.refetch();
       if (kind === "states") await states.refetch();
@@ -626,17 +703,53 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
     }
   }
 
-  async function deleteCity() {
+  async function saveStateCity() {
+    if (!cityForm.stateId || !cityForm.name.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api.post("/reports/location-cities", { ...cityForm, stateId: Number(cityForm.stateId) });
+      await relatedCities.refetch();
+      setSelectedCityByState((current) => ({ ...current, [cityForm.stateId]: "" }));
+      setStateCityFormOpen(false);
+      setNotice("City added successfully.");
+    } catch (saveError) {
+      setError(apiError(saveError) ?? "Unable to save the city.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveStateZip() {
+    if (!zipForm.cityId || !zipForm.code.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api.post("/reports/location-zip-codes", { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive });
+      await relatedZips.refetch();
+      setStateZipFormOpen(false);
+      setNotice("ZIP Code added successfully.");
+    } catch (saveError) {
+      setError(apiError(saveError) ?? "Unable to save the ZIP code.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteLocation() {
     if (!deleting || saving) return;
     setSaving(true);
     setError("");
     try {
-      await api.delete(`/reports/location-cities/${deleting.id}`);
+      await api.delete(`/reports/location-${kind}/${deleting.id}`);
       await records.refetch();
+      if (kind === "states") {
+        await Promise.all([relatedCities.refetch(), relatedZips.refetch()]);
+      }
       setDeleting(null);
-      setNotice("City deleted successfully.");
+      setNotice(`${singularName} deleted successfully.`);
     } catch (deleteError) {
-      setError(apiError(deleteError) ?? "Unable to delete the city.");
+      setError(apiError(deleteError) ?? `Unable to delete the ${singularName.toLowerCase()}.`);
     } finally {
       setSaving(false);
     }
@@ -772,15 +885,59 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(deleting)} onClose={() => !saving && setDeleting(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Delete City?</DialogTitle>
+      <Dialog open={stateCityFormOpen} onClose={() => !saving && setStateCityFormOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Add New City</DialogTitle>
         <DialogContent>
-          <p>Delete {deleting?.name} and all its related ZIP codes? This action cannot be undone.</p>
+          {error ? <p className="error">{error}</p> : null}
+          <div className="company-form-grid">
+            <TextField
+              label="State"
+              value={records.data?.data.find((state) => String(state.id) === cityForm.stateId)?.name ?? ""}
+              disabled
+            />
+            <TextField required label="City" value={cityForm.name} onChange={(event) => setCityForm((current) => ({ ...current, name: event.target.value }))} />
+            <FormControlLabel control={<Checkbox checked={cityForm.isCapital} onChange={(event) => setCityForm((current) => ({ ...current, isCapital: event.target.checked }))} />} label="Capital city" />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStateCityFormOpen(false)} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveStateCity()} disabled={saving || !cityForm.name.trim()}>{saving ? "Saving..." : "Save City"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={stateZipFormOpen} onClose={() => !saving && setStateZipFormOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Add New ZIP Code</DialogTitle>
+        <DialogContent>
+          {error ? <p className="error">{error}</p> : null}
+          <div className="company-form-grid">
+            <TextField
+              label="State"
+              value={records.data?.data.find((state) => String(state.id) === zipForm.stateId)?.name ?? ""}
+              disabled
+            />
+            <TextField select required label="City" value={zipForm.cityId} onChange={(event) => setZipForm((current) => ({ ...current, cityId: event.target.value }))}>
+              <MenuItem value="">Select city</MenuItem>
+              {(citiesByState.get(zipForm.stateId) ?? []).map((city) => <MenuItem key={city.id} value={String(city.id)}>{city.name}</MenuItem>)}
+            </TextField>
+            <TextField required label="ZIP Code" value={zipForm.code} onChange={(event) => setZipForm((current) => ({ ...current, code: event.target.value.slice(0, 10) }))} />
+            <FormControlLabel control={<Checkbox checked={zipForm.isActive} onChange={(event) => setZipForm((current) => ({ ...current, isActive: event.target.checked }))} />} label="Active" />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStateZipFormOpen(false)} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveStateZip()} disabled={saving || !zipForm.cityId || !zipForm.code.trim()}>{saving ? "Saving..." : "Save ZIP Code"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(deleting)} onClose={() => !saving && setDeleting(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Delete {singularName}?</DialogTitle>
+        <DialogContent>
+          <p>Delete {deleting?.name}{kind === "states" ? " and all its related cities and ZIP codes" : " and all its related ZIP codes"}? This action cannot be undone.</p>
           {error ? <p className="error" role="alert">{error}</p> : null}
         </DialogContent>
         <DialogActions>
           <Button disabled={saving} onClick={() => setDeleting(null)}>Cancel</Button>
-          <Button color="error" variant="contained" disabled={saving} onClick={() => void deleteCity()}>{saving ? "Deleting..." : "Delete"}</Button>
+          <Button color="error" variant="contained" disabled={saving} onClick={() => void deleteLocation()}>{saving ? "Deleting..." : "Delete"}</Button>
         </DialogActions>
       </Dialog>
 
@@ -834,6 +991,9 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const [editing, setEditing] = useState<RateRow | null>(null);
   const [deleting, setDeleting] = useState<RateRow | null>(null);
   const [form, setForm] = useState<RateForm>({});
+  const [utilityRateFormOpen, setUtilityRateFormOpen] = useState(false);
+  const [utilityRateForm, setUtilityRateForm] = useState<RateForm>({});
+  const [utilityMasterAccountNumber, setUtilityMasterAccountNumber] = useState<MasterAccountNumberRow["masterAccountNumber"]>("Account Number");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState("");
@@ -858,6 +1018,13 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     queryKey: ["organization-table", "utilities", "rate-options"],
     queryFn: async () => (await api.get("/reports/utilities")).data as RatesResponse,
     enabled: endpoint === "rates",
+    retry: false
+  });
+
+  const utilityRates = useQuery({
+    queryKey: ["organization-table", "rates", "utility-rate-options"],
+    queryFn: async () => (await api.get("/reports/rates")).data as RatesResponse,
+    enabled: endpoint === "utilities",
     retry: false
   });
 
@@ -890,6 +1057,27 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       name: String(row[nameColumn.name] ?? "")
     })).filter((option) => option.id && option.name);
   }, [utilities.data]);
+  const utilityRatesByUtility = useMemo(() => {
+    const response = utilityRates.data;
+    const ratesByUtility = new Map<string, Array<{ id: string; name: string }>>();
+    if (!response) return ratesByUtility;
+    const utilityIdColumn = response.columns.find((column) => column.name.toLowerCase() === "utilityid");
+    const rateColumn = response.columns.find((column) => column.name.toLowerCase() === "rate")
+      ?? response.columns.find((column) => column.name.toLowerCase() === "name")
+      ?? response.columns.find((column) => column.name !== response.primaryKey && column.name !== utilityIdColumn?.name && ["varchar", "nvarchar", "text", "ntext"].includes(column.dataType));
+    if (!utilityIdColumn || !rateColumn) return ratesByUtility;
+    response.data.forEach((rate, index) => {
+      const utilityId = String(rate[utilityIdColumn.name] ?? "");
+      const name = String(rate[rateColumn.name] ?? "").trim();
+      if (!utilityId || !name) return;
+      const rates = ratesByUtility.get(utilityId) ?? [];
+      rates.push({ id: String(response.primaryKey ? rate[response.primaryKey] : index), name });
+      ratesByUtility.set(utilityId, rates);
+    });
+    return ratesByUtility;
+  }, [utilityRates.data]);
+  const utilityRateEditableColumns = utilityRates.data?.columns.filter((column) => column.editable) ?? [];
+  const utilityRateUtilityColumn = utilityRateEditableColumns.find((column) => column.name.toLowerCase() === "utilityid");
   const rows = useMemo(() => {
     const key = records.data?.primaryKey;
     return (records.data?.data ?? []).map((row, index) => ({
@@ -922,6 +1110,40 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     });
     if (endpoint === "utilities") {
       dataColumns.push({
+        field: "utilityRates",
+        headerName: "Rate",
+        minWidth: 220,
+        sortable: false,
+        renderCell: ({ row }) => {
+          const rates = utilityRatesByUtility.get(String(row.id)) ?? [];
+          return (
+            <TextField
+              select
+              size="small"
+              value=""
+              onChange={() => undefined}
+              onClick={(event) => event.stopPropagation()}
+              slotProps={{ select: { displayEmpty: true } }}
+              sx={{ minWidth: 190 }}
+            >
+              <MenuItem value="" disabled>{utilityRates.isLoading ? "Loading rates..." : rates.length ? `${rates.length} rate${rates.length === 1 ? "" : "s"}` : "No rates"}</MenuItem>
+              {rates.map((rate) => <MenuItem key={rate.id} value={rate.id}>{rate.name}</MenuItem>)}
+              <MenuItem value="__add_rate__" onClick={(event) => {
+                event.stopPropagation();
+                const rateForm = formFromColumns(utilityRateEditableColumns);
+                if (utilityRateUtilityColumn) rateForm[utilityRateUtilityColumn.name] = String(row.id);
+                setUtilityRateForm(rateForm);
+                setError("");
+                setNotice("");
+                setUtilityRateFormOpen(true);
+              }}>
+                <Plus size={16} />&nbsp; Add New Rate
+              </MenuItem>
+            </TextField>
+          );
+        }
+      });
+      dataColumns.push({
         field: "masterAccountNumber",
         headerName: "MasterAccount Number",
         minWidth: 220,
@@ -948,13 +1170,14 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         )
       }
     ];
-  }, [endpoint, records.data, singularName, utilityOptions]);
+  }, [endpoint, records.data, singularName, utilityOptions, utilityRateEditableColumns, utilityRateUtilityColumn, utilityRates.isLoading, utilityRatesByUtility]);
 
   function openCreate() {
     setEditing(null);
     setError("");
     setNotice("");
     setForm(formFromColumns(editableColumns));
+    setUtilityMasterAccountNumber("Account Number");
     setFormOpen(true);
   }
 
@@ -963,6 +1186,11 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     setError("");
     setNotice("");
     setForm(formFromColumns(editableColumns, row));
+    const primaryKey = records.data?.primaryKey;
+    const setting = primaryKey
+      ? masterAccountSettings.data?.data.find((item) => String(item.utilityId) === String(row[primaryKey]))
+      : undefined;
+    setUtilityMasterAccountNumber(setting?.masterAccountNumber ?? "Account Number");
     setFormOpen(true);
   }
 
@@ -972,10 +1200,25 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     setNotice("");
     try {
       const wasEditing = Boolean(editing && records.data?.primaryKey);
+      let savedUtilityId: string | number | undefined;
       if (editing && records.data?.primaryKey) {
         await api.patch(`/reports/${endpoint}/${encodeURIComponent(String(editing[records.data.primaryKey]))}`, form);
+        savedUtilityId = editing[records.data.primaryKey] as string | number | undefined;
       } else {
-        await api.post(`/reports/${endpoint}`, form);
+        const response = await api.post(`/reports/${endpoint}`, form);
+        savedUtilityId = records.data?.primaryKey
+          ? response.data?.data?.[records.data.primaryKey] as string | number | undefined
+          : undefined;
+      }
+      if (endpoint === "utilities" && savedUtilityId != null) {
+        const existingSetting = masterAccountSettings.data?.data.find((item) => String(item.utilityId) === String(savedUtilityId));
+        await api.put("/reports/master-account-numbers", {
+          utilityId: Number(savedUtilityId),
+          accountNumber: existingSetting?.accountNumber ?? true,
+          serviceRefPodId: existingSetting?.serviceRefPodId ?? true,
+          masterAccountNumber: utilityMasterAccountNumber
+        });
+        await masterAccountSettings.refetch();
       }
       await records.refetch();
       setFormOpen(false);
@@ -983,6 +1226,22 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       await refreshStatusQueries();
     } catch (saveError) {
       setError(apiError(saveError) ?? `Unable to save the ${singularName.toLowerCase()}.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveUtilityRate() {
+    if (!utilityRateUtilityColumn) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api.post("/reports/rates", utilityRateForm);
+      await utilityRates.refetch();
+      setUtilityRateFormOpen(false);
+      setNotice("Rate added successfully.");
+    } catch (saveError) {
+      setError(apiError(saveError) ?? "Unable to save the rate.");
     } finally {
       setSaving(false);
     }
@@ -1142,6 +1401,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         {error ? <p className="error">{error}</p> : null}
         {records.isError ? <p className="error">{apiError(records.error) ?? `Unable to load ${tableName} records.`}</p> : null}
         {endpoint === "utilities" && masterAccountSettings.isError ? <p className="error">Unable to load MasterAccount Number settings.</p> : null}
+        {endpoint === "utilities" && utilityRates.isError ? <p className="error">Unable to load utility rates.</p> : null}
         <IntiliGrid columns={columns} rows={rows} />
       </section>
 
@@ -1167,7 +1427,32 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
               </TextField>
             ) : null}
             {endpoint === "rates" && !utilityColumn ? <p className="error">Utility relationship is not configured for rates.</p> : null}
-            {editableColumns.filter((column) => column.name !== utilityColumn?.name).map((column) => column.dataType === "bit" ? (
+            {endpoint === "utilities" && editableColumns.find((column) => column.name.toLowerCase() === "utility") ? (() => {
+              const column = editableColumns.find((item) => item.name.toLowerCase() === "utility")!;
+              return (
+                <TextField
+                  key={column.name}
+                  label={displayName(column.name)}
+                  required={!column.nullable && !column.hasDefault}
+                  value={form[column.name] ?? ""}
+                  onChange={(event) => setForm((current) => ({ ...current, [column.name]: event.target.value }))}
+                />
+              );
+            })() : null}
+            {endpoint === "utilities" ? (
+              <TextField
+                select
+                required
+                label="Master Account Number"
+                value={utilityMasterAccountNumber}
+                onChange={(event) => setUtilityMasterAccountNumber(event.target.value as MasterAccountNumberRow["masterAccountNumber"])}
+              >
+                <MenuItem value="Account Number">Account Number</MenuItem>
+                <MenuItem value="Service Ref/POD ID">Service Ref/POD ID</MenuItem>
+                <MenuItem value="BOTH">BOTH</MenuItem>
+              </TextField>
+            ) : null}
+            {editableColumns.filter((column) => column.name !== utilityColumn?.name && !(endpoint === "utilities" && column.name.toLowerCase() === "utility")).map((column) => column.dataType === "bit" ? (
               <FormControlLabel
                 key={column.name}
                 control={<Checkbox checked={Boolean(form[column.name])} onChange={(event) => setForm((current) => ({ ...current, [column.name]: event.target.checked }))} />}
@@ -1191,6 +1476,45 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           <Button variant="contained" onClick={() => void saveRecord()} disabled={saving || !formValid}>
             {saving ? "Saving..." : editing ? `Update ${singularName}` : `Save ${singularName}`}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={utilityRateFormOpen} onClose={() => !saving && setUtilityRateFormOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Add New Rate</DialogTitle>
+        <DialogContent>
+          {error ? <p className="error">{error}</p> : null}
+          <div className="company-form-grid">
+            <TextField
+              label="Utility"
+              value={(rows.find((row) => String(row.id) === String(utilityRateUtilityColumn ? utilityRateForm[utilityRateUtilityColumn.name] : "")) as RateRow | undefined)?.["Utility"] ?? ""}
+              disabled
+            />
+            {utilityRateEditableColumns.filter((column) => column.name !== utilityRateUtilityColumn?.name).map((column) => column.dataType === "bit" ? (
+              <FormControlLabel
+                key={column.name}
+                control={<Checkbox checked={Boolean(utilityRateForm[column.name])} onChange={(event) => setUtilityRateForm((current) => ({ ...current, [column.name]: event.target.checked }))} />}
+                label={displayName(column.name)}
+              />
+            ) : (
+              <TextField
+                key={column.name}
+                label={displayName(column.name)}
+                required={!column.nullable && !column.hasDefault}
+                type={inputType(column.dataType)}
+                value={utilityRateForm[column.name] ?? ""}
+                onChange={(event) => setUtilityRateForm((current) => ({ ...current, [column.name]: event.target.value }))}
+                slotProps={inputType(column.dataType) === "number" ? { htmlInput: { step: "any" } } : undefined}
+              />
+            ))}
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUtilityRateFormOpen(false)} disabled={saving}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => void saveUtilityRate()}
+            disabled={saving || !utilityRateUtilityColumn || utilityRateEditableColumns.some((column) => !column.nullable && !column.hasDefault && utilityRateForm[column.name] === "")}
+          >{saving ? "Saving..." : "Save Rate"}</Button>
         </DialogActions>
       </Dialog>
 

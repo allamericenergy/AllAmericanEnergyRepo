@@ -1139,6 +1139,36 @@ nav a:hover {
   stroke-width: 2.4;
 }
 
+.meter-company-cell {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.meter-company-product-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.meter-company-product-icon svg {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.4;
+}
+
+.meter-company-product-icon.electric { background: #172554; }
+.meter-company-product-icon.gas { background: #df6807; }
+.meter-company-product-icon.gas-power { background: #c52b6b; }
+.meter-company-product-icon.water { background: #0f5da8; }
+.meter-company-product-icon.sewer { background: #4f5f70; }
+
 .meter-trend-card {
   position: relative;
   display: grid;
@@ -1944,11 +1974,13 @@ nav a:hover {
 .organization-page {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
+  align-items: stretch;
   gap: 1rem;
 }
 
 .organization-side-menu {
-  align-self: start;
+  align-self: stretch;
+  align-content: start;
   display: grid;
   gap: 0.4rem;
   margin-top: 1rem;
@@ -1981,7 +2013,14 @@ nav a:hover {
 }
 
 .organization-page-content {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.organization-page-content > .panel {
+  flex: 1;
+  height: auto;
 }
 
 .utility-value-size-panel {

@@ -634,8 +634,25 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterColumns: GridColumn<MeterRow>[] = [
 
     {
+      field: "parentCompanyName", headerName: "Parent Company", minWidth: 220, flex: 1,
+      renderCell: ({ row, value }) => <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); if (row.parentCompanyId != null) { setViewedContract(null); setViewedMeter(null); navigate(`/companies?companyId=${encodeURIComponent(String(row.parentCompanyId))}`); } }} disabled={row.parentCompanyId == null}>{String(value ?? "")}</button>
+    },
+    {
       field: "companyName", headerName: "Company", minWidth: 220, flex: 1,
-      renderCell: ({ row, value }) => <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); if (row.companyId != null) { setViewedContract(null); setViewedMeter(null); navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`); } }} disabled={row.companyId == null}>{String(value ?? "")}</button>
+      renderCell: ({ row, value }) => {
+        const productIcon = meterProductIcon(row.product);
+        const ProductIcon = productIcon?.Icon;
+        return <span className="meter-company-cell">
+          {productIcon && ProductIcon ? (
+            <Tooltip title={row.product?.trim() || "Product"} arrow>
+              <span className={`meter-company-product-icon ${productIcon.className}`} aria-label={row.product?.trim() || "Product"}>
+                <ProductIcon aria-hidden="true" />
+              </span>
+            </Tooltip>
+          ) : null}
+          <button type="button" className="grid-link-button" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); if (row.companyId != null) { setViewedContract(null); setViewedMeter(null); navigate(`/companies?companyId=${encodeURIComponent(String(row.companyId))}`); } }} disabled={row.companyId == null}>{String(value ?? "")}</button>
+        </span>;
+      }
     },
     { field: "utilityAccountName", headerName: "Utility Account Name", minWidth: 220 },
     {
@@ -4316,6 +4333,8 @@ interface MeterRow {
   id: string | number;
   companyId?: string | number | null;
   companyName?: string | null;
+  parentCompanyId?: string | number | null;
+  parentCompanyName?: string | null;
   utilityAccountName?: string | null;
   masterAccountNumber?: boolean | number | null;
   masterAccountNumberType?: "Account Number" | "Service Ref/POD ID" | "BOTH" | null;
@@ -4351,4 +4370,16 @@ interface MeterRow {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+function meterProductIcon(product: string | null | undefined) {
+  const normalizedProduct = product?.trim().toLowerCase() ?? "";
+  if (normalizedProduct.includes("gas") && /power|electric/.test(normalizedProduct)) {
+    return { Icon: Zap, className: "gas-power" };
+  }
+  if (normalizedProduct.includes("sewer")) return { Icon: Waves, className: "sewer" };
+  if (normalizedProduct.includes("gas")) return { Icon: Flame, className: "gas" };
+  if (normalizedProduct.includes("water")) return { Icon: Droplet, className: "water" };
+  if (/power|electric/.test(normalizedProduct)) return { Icon: Zap, className: "electric" };
+  return null;
 }
