@@ -105,16 +105,26 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [createdLoginEmail, setCreatedLoginEmail] = useState("");
+  const [createMode, setCreateMode] = useState<"new" | "existing">("new");
+  const [existingMemberId, setExistingMemberId] = useState("");
   const [form, setForm] = useState<MemberForm>(emptyMemberForm());
   const members = useQuery({
-    queryKey: ["members", companyId ?? "all", user?.id],
+    queryKey: ["members", companyId ?? "all", companyIds?.map(String).join(",") ?? "", user?.id],
     queryFn: async () => (
-      await api.get("/reports/members", { params: { companyId: companyIds?.length === 1 ? companyIds[0] : undefined } })
+      await api.get("/reports/members", { params: { companyId: companyId ?? (companyIds?.length === 1 ? companyIds[0] : undefined) } })
     ).data as { total: number; data: MemberRow[] },
     retry: false
   });
+  const existingMembers = useQuery({
+    queryKey: ["members", "association-options", user?.id],
+    queryFn: async () => (await api.get("/reports/members")).data as { total: number; data: MemberRow[] },
+    enabled: Boolean(companyId && formOpen && formMode === "create"),
+    retry: false
+  });
 
-  const companyScopedRows = companyIds?.length && companyIds.length > 1
+  // A company-scoped response also contains members inherited from parent
+  // companies. Keep those rows instead of filtering them back out by ID.
+  const companyScopedRows = !companyId && companyIds?.length && companyIds.length > 1
     ? (members.data?.data ?? []).filter((member) => companyIds.includes(String(member.companyId)))
     : members.data?.data ?? [];
   const visibleRows = statusFilter
@@ -124,6 +134,11 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
     ...memberRow(member, index),
     companyName: companyLabels?.[String(member.companyId)] ?? member.companyName
   }));
+  const associatedMemberIds = new Set(rows.map((member) => String(member.id)));
+  const availableExistingMembers = (existingMembers.data?.data ?? [])
+    .filter((member) => !associatedMemberIds.has(String(member.id)))
+    .map(memberRow)
+    .sort((left, right) => (left.fullName ?? "").localeCompare(right.fullName ?? ""));
   const columns: GridColumn<MemberRow>[] = [
     ...memberColumns,
     ...(user?.role === "superadmin" ? [{ field: "password", headerName: "Temporary Password", minWidth: 220, renderCell: ({ row }) => row.password || "Not available" } satisfies GridColumn<MemberRow>] : []),
@@ -155,6 +170,8 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
     setError("");
     setCreatedLoginEmail("");
     setFormMode("create");
+    setCreateMode("new");
+    setExistingMemberId("");
     setEditingMember(null);
     setForm(emptyMemberForm());
     setFormOpen(true);
@@ -181,6 +198,37 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
 
   async function saveMember() {
     setError("");
+    if (formMode === "create" && companyId && createMode === "existing") {
+      const existingMember = availableExistingMembers.find((member) => String(member.id) === existingMemberId);
+      if (!existingMember) {
+        setError("Select an existing member to associate with this company.");
+        return;
+      }
+      setIsSaving(true);
+      try {
+        await api.patch(`/reports/members/${encodeURIComponent(String(existingMember.id))}`, {
+          firstName: existingMember.firstName ?? "",
+          lastName: existingMember.lastName ?? "",
+          email: existingMember.email ?? "",
+          phone: existingMember.phone ?? "",
+          companyId: Number(companyId),
+          company: "",
+          department: existingMember.department ?? "",
+          designation: existingMember.designation ?? "",
+          notes: existingMember.notes ?? "",
+          password: ""
+        });
+        await refreshMembers();
+        await existingMembers.refetch();
+        setFormOpen(false);
+        setExistingMemberId("");
+      } catch (saveError) {
+        setError(memberError(saveError) ?? "Unable to associate the selected member with this company.");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
     if (!isOrganizationEmail(form.email)) {
       setError("Email must use the @allamerican.energy domain.");
       return;
@@ -290,6 +338,40 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
         <DialogTitle>{formMode === "edit" ? "Edit Member" : "Add New Member"}</DialogTitle>
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
+          {formMode === "create" && companyId ? (
+            <TextField
+              select
+              fullWidth
+              margin="normal"
+              label="Add member"
+              value={createMode}
+              onChange={(event) => {
+                setCreateMode(event.target.value as "new" | "existing");
+                setError("");
+              }}
+            >
+              <MenuItem value="new">Create a new member</MenuItem>
+              <MenuItem value="existing">Associate an existing member</MenuItem>
+            </TextField>
+          ) : null}
+          {formMode === "create" && companyId && createMode === "existing" ? (
+            <TextField
+              select
+              fullWidth
+              margin="normal"
+              label="Existing member"
+              value={existingMemberId}
+              disabled={existingMembers.isLoading}
+              helperText={existingMembers.isLoading ? "Loading existing members..." : availableExistingMembers.length ? "Selecting a member will move their company association to this company." : "No unassociated members are available."}
+              onChange={(event) => setExistingMemberId(event.target.value)}
+            >
+              {availableExistingMembers.map((member) => (
+                <MenuItem key={member.id} value={String(member.id)}>
+                  {member.fullName} ({member.email ?? member.loginEmail ?? "No email"}){member.companyName ? ` — ${member.companyName}` : ""}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : (
           <div className="company-form-grid">
             <TextField label="First name" required value={form.firstName} onChange={(event) => updateMember("firstName", event.target.value)} />
             <TextField label="Last name" required value={form.lastName} onChange={(event) => updateMember("lastName", event.target.value)} />
@@ -315,10 +397,11 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
             <TextField label={formMode === "edit" ? "New password" : "Password"} type="password" required={formMode === "create"} value={form.password} helperText={formMode === "edit" ? "Leave blank to keep the current password; minimum 12 characters when changed." : "Minimum 12 characters."} onChange={(event) => updateMember("password", event.target.value)} />
             <RichTextEditor label="Notes" value={form.notes} onChange={(value) => updateMember("notes", value)} />
           </div>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFormOpen(false)} disabled={isSaving}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveMember()} disabled={isSaving || !formValid}>{isSaving ? "Saving..." : formMode === "edit" ? "Update Member" : "Save Member"}</Button>
+          <Button variant="contained" onClick={() => void saveMember()} disabled={isSaving || (formMode === "create" && companyId && createMode === "existing" ? !existingMemberId : !formValid)}>{isSaving ? "Saving..." : formMode === "edit" ? "Update Member" : createMode === "existing" ? "Associate Member" : "Save Member"}</Button>
         </DialogActions>
       </Dialog>
 

@@ -522,6 +522,9 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const [formOpen, setFormOpen] = useState(false);
   const [stateCityFormOpen, setStateCityFormOpen] = useState(false);
   const [stateZipFormOpen, setStateZipFormOpen] = useState(false);
+  const [stateCityEditing, setStateCityEditing] = useState<LocationRow | null>(null);
+  const [stateZipEditing, setStateZipEditing] = useState<LocationRow | null>(null);
+  const [relatedDeleting, setRelatedDeleting] = useState<{ kind: "city" | "zip"; row: LocationRow } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -534,6 +537,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const [cityForm, setCityForm] = useState({ stateId: "", name: "", isCapital: false });
   const [zipForm, setZipForm] = useState({ stateId: "", cityId: "", code: "", isActive: true });
   const [selectedCityByState, setSelectedCityByState] = useState<Record<string, string>>({});
+  const [selectedZipByCity, setSelectedZipByCity] = useState<Record<string, string>>({});
 
   const records = useQuery({
     queryKey: ["organization-locations", kind],
@@ -597,10 +601,24 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
               setSelectedCityByState((current) => ({ ...current, [String(row.id)]: event.target.value }));
             }} onClick={(event) => event.stopPropagation()} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 190 }}>
               <MenuItem value="" disabled>{relatedCities.isLoading ? "Loading cities..." : cities.length ? `${cities.length} ${cities.length === 1 ? "city" : "cities"}` : "No cities"}</MenuItem>
-              {cities.map((city) => <MenuItem key={city.id} value={String(city.id)}>{city.name}</MenuItem>)}
+              {cities.map((city) => <MenuItem key={city.id} value={String(city.id)}>
+                <span className="location-dropdown-item-label">{city.name}</span>
+                <span className="location-dropdown-item-actions">
+                  <IconButton size="small" aria-label={`Edit ${city.name}`} onClick={(event) => {
+                    event.preventDefault(); event.stopPropagation();
+                    setStateCityEditing(city);
+                    setCityForm({ stateId: String(row.id), name: city.name ?? "", isCapital: Boolean(city.isCapital) });
+                    setError(""); setNotice(""); setStateCityFormOpen(true);
+                  }}><Pencil size={15} /></IconButton>
+                  <IconButton size="small" color="error" aria-label={`Delete ${city.name}`} onClick={(event) => {
+                    event.preventDefault(); event.stopPropagation(); setRelatedDeleting({ kind: "city", row: city });
+                  }}><Trash2 size={15} /></IconButton>
+                </span>
+              </MenuItem>)}
               <MenuItem value="__add_city__" onClick={(event) => {
                 event.stopPropagation();
                 setCityForm({ stateId: String(row.id), name: "", isCapital: false });
+                setStateCityEditing(null);
                 setError("");
                 setNotice("");
                 setStateCityFormOpen(true);
@@ -613,12 +631,30 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
           renderCell: ({ row }) => {
             const selectedCityId = selectedCityByState[String(row.id)] ?? "";
             const zips = selectedCityId ? zipsByCity.get(selectedCityId) ?? [] : [];
-            return <TextField select size="small" value="" onChange={() => undefined} onClick={(event) => event.stopPropagation()} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 190 }}>
+            const selectedZipId = selectedCityId ? selectedZipByCity[selectedCityId] ?? "" : "";
+            return <TextField select size="small" value={selectedZipId} onChange={(event) => {
+              if (!selectedCityId || event.target.value === "__add_zip__") return;
+              setSelectedZipByCity((current) => ({ ...current, [selectedCityId]: event.target.value }));
+            }} onClick={(event) => event.stopPropagation()} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 190 }}>
               <MenuItem value="" disabled>{relatedZips.isLoading ? "Loading ZIP codes..." : !selectedCityId ? "Select a city first" : zips.length ? `${zips.length} ZIP code${zips.length === 1 ? "" : "s"}` : "No ZIP codes"}</MenuItem>
-              {zips.map((zip) => <MenuItem key={zip.id} value={String(zip.id)}>{zip.code}</MenuItem>)}
+              {zips.map((zip) => <MenuItem key={zip.id} value={String(zip.id)}>
+                <span className="location-dropdown-item-label">{zip.code}</span>
+                <span className="location-dropdown-item-actions">
+                  <IconButton size="small" aria-label={`Edit ZIP ${zip.code}`} onClick={(event) => {
+                    event.preventDefault(); event.stopPropagation();
+                    setStateZipEditing(zip);
+                    setZipForm({ stateId: String(row.id), cityId: String(zip.cityId ?? selectedCityId), code: zip.code ?? "", isActive: Boolean(zip.isActive) });
+                    setError(""); setNotice(""); setStateZipFormOpen(true);
+                  }}><Pencil size={15} /></IconButton>
+                  <IconButton size="small" color="error" aria-label={`Delete ZIP ${zip.code}`} onClick={(event) => {
+                    event.preventDefault(); event.stopPropagation(); setRelatedDeleting({ kind: "zip", row: zip });
+                  }}><Trash2 size={15} /></IconButton>
+                </span>
+              </MenuItem>)}
               <MenuItem value="__add_zip__" onClick={(event) => {
                 event.stopPropagation();
                 setZipForm({ stateId: String(row.id), cityId: selectedCityId, code: "", isActive: true });
+                setStateZipEditing(null);
                 setError("");
                 setNotice("");
                 setStateZipFormOpen(true);
@@ -669,7 +705,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
       { field: "state", headerName: "State Code", width: 130 },
       { field: "isActive", headerName: "Active", width: 110, valueFormatter: (value) => value ? "Yes" : "No" }
     ];
-  }, [citiesByState, kind, relatedCities.isLoading, relatedZips.isLoading, selectedCityByState, zipsByCity]);
+  }, [citiesByState, kind, relatedCities.isLoading, relatedZips.isLoading, selectedCityByState, selectedZipByCity, zipsByCity]);
 
   function openCreate() {
     setEditing(null);
@@ -708,11 +744,14 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
     setSaving(true);
     setError("");
     try {
-      await api.post("/reports/location-cities", { ...cityForm, stateId: Number(cityForm.stateId) });
+      const payload = { ...cityForm, stateId: Number(cityForm.stateId) };
+      if (stateCityEditing) await api.put(`/reports/location-cities/${stateCityEditing.id}`, payload);
+      else await api.post("/reports/location-cities", payload);
       await relatedCities.refetch();
-      setSelectedCityByState((current) => ({ ...current, [cityForm.stateId]: "" }));
+      if (!stateCityEditing) setSelectedCityByState((current) => ({ ...current, [cityForm.stateId]: "" }));
       setStateCityFormOpen(false);
-      setNotice("City added successfully.");
+      setStateCityEditing(null);
+      setNotice(`City ${stateCityEditing ? "updated" : "added"} successfully.`);
     } catch (saveError) {
       setError(apiError(saveError) ?? "Unable to save the city.");
     } finally {
@@ -725,12 +764,39 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
     setSaving(true);
     setError("");
     try {
-      await api.post("/reports/location-zip-codes", { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive });
+      const payload = { cityId: Number(zipForm.cityId), code: zipForm.code, isActive: zipForm.isActive };
+      if (stateZipEditing) await api.put(`/reports/location-zip-codes/${stateZipEditing.id}`, payload);
+      else await api.post("/reports/location-zip-codes", payload);
       await relatedZips.refetch();
       setStateZipFormOpen(false);
-      setNotice("ZIP Code added successfully.");
+      setStateZipEditing(null);
+      setNotice(`ZIP Code ${stateZipEditing ? "updated" : "added"} successfully.`);
     } catch (saveError) {
       setError(apiError(saveError) ?? "Unable to save the ZIP code.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteRelatedLocation() {
+    if (!relatedDeleting || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const isCity = relatedDeleting.kind === "city";
+      await api.delete(`/reports/location-${isCity ? "cities" : "zip-codes"}/${relatedDeleting.row.id}`);
+      if (isCity) {
+        await Promise.all([relatedCities.refetch(), relatedZips.refetch()]);
+        setSelectedCityByState((current) => Object.fromEntries(Object.entries(current).filter(([, cityId]) => cityId !== String(relatedDeleting.row.id))));
+        setSelectedZipByCity((current) => Object.fromEntries(Object.entries(current).filter(([cityId]) => cityId !== String(relatedDeleting.row.id))));
+      } else {
+        await relatedZips.refetch();
+        setSelectedZipByCity((current) => Object.fromEntries(Object.entries(current).filter(([, zipId]) => zipId !== String(relatedDeleting.row.id))));
+      }
+      setRelatedDeleting(null);
+      setNotice(`${isCity ? "City" : "ZIP Code"} deleted successfully.`);
+    } catch (deleteError) {
+      setError(apiError(deleteError) ?? `Unable to delete the ${relatedDeleting.kind === "city" ? "city" : "ZIP code"}.`);
     } finally {
       setSaving(false);
     }
@@ -885,8 +951,8 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={stateCityFormOpen} onClose={() => !saving && setStateCityFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add New City</DialogTitle>
+      <Dialog open={stateCityFormOpen} onClose={() => { if (!saving) { setStateCityFormOpen(false); setStateCityEditing(null); } }} fullWidth maxWidth="sm">
+        <DialogTitle>{stateCityEditing ? "Edit City" : "Add New City"}</DialogTitle>
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
           <div className="company-form-grid">
@@ -900,13 +966,13 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStateCityFormOpen(false)} disabled={saving}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveStateCity()} disabled={saving || !cityForm.name.trim()}>{saving ? "Saving..." : "Save City"}</Button>
+          <Button onClick={() => { setStateCityFormOpen(false); setStateCityEditing(null); }} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveStateCity()} disabled={saving || !cityForm.name.trim()}>{saving ? "Saving..." : stateCityEditing ? "Update City" : "Save City"}</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={stateZipFormOpen} onClose={() => !saving && setStateZipFormOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add New ZIP Code</DialogTitle>
+      <Dialog open={stateZipFormOpen} onClose={() => { if (!saving) { setStateZipFormOpen(false); setStateZipEditing(null); } }} fullWidth maxWidth="sm">
+        <DialogTitle>{stateZipEditing ? "Edit ZIP Code" : "Add New ZIP Code"}</DialogTitle>
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
           <div className="company-form-grid">
@@ -924,8 +990,20 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStateZipFormOpen(false)} disabled={saving}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveStateZip()} disabled={saving || !zipForm.cityId || !zipForm.code.trim()}>{saving ? "Saving..." : "Save ZIP Code"}</Button>
+          <Button onClick={() => { setStateZipFormOpen(false); setStateZipEditing(null); }} disabled={saving}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveStateZip()} disabled={saving || !zipForm.cityId || !zipForm.code.trim()}>{saving ? "Saving..." : stateZipEditing ? "Update ZIP Code" : "Save ZIP Code"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(relatedDeleting)} onClose={() => !saving && setRelatedDeleting(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Delete {relatedDeleting?.kind === "city" ? "City" : "ZIP Code"}?</DialogTitle>
+        <DialogContent>
+          <p>Delete <strong>{relatedDeleting?.kind === "city" ? relatedDeleting.row.name : relatedDeleting?.row.code}</strong>{relatedDeleting?.kind === "city" ? " and all its related ZIP codes" : ""}? This action cannot be undone.</p>
+          {error ? <p className="error">{error}</p> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRelatedDeleting(null)} disabled={saving}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => void deleteRelatedLocation()} disabled={saving}>{saving ? "Deleting..." : "Delete"}</Button>
         </DialogActions>
       </Dialog>
 

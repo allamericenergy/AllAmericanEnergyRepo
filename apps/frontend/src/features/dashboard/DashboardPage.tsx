@@ -35,6 +35,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const isDashboardView = !view || view === "reports";
   const hasAdminDashboard = user?.role === "superadmin" || user?.role === "admin";
   const hasCompanyDashboard = hasAdminDashboard || user?.role === "member";
+  const canManageCompanies = hasAdminDashboard;
   const canManageMembers = hasAdminDashboard;
   const canDeleteCompanies = user?.role === "superadmin";
   const [companiesToDelete, setCompaniesToDelete] = useState<TblCompanyRow[]>([]);
@@ -150,6 +151,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [bulkMeterResult, setBulkMeterResult] = useState<BulkMeterResult | null>(null);
   const [isUploadingMeters, setIsUploadingMeters] = useState(false);
   const [bulkMeterCompanyId, setBulkMeterCompanyId] = useState(0);
+  const billFileInput = useRef<HTMLInputElement>(null);
+  const [isBillUploadPanelOpen, setIsBillUploadPanelOpen] = useState(false);
+  const [billCompanyId, setBillCompanyId] = useState(0);
+  const [billFile, setBillFile] = useState<File | null>(null);
+  const [billUploadError, setBillUploadError] = useState("");
+  const [billUploadNotice, setBillUploadNotice] = useState("");
+  const [billExtractionResult, setBillExtractionResult] = useState<BillExtractionResult | null>(null);
+  const [isUploadingBill, setIsUploadingBill] = useState(false);
+  const [isExtractingBillWithOpenAi, setIsExtractingBillWithOpenAi] = useState(false);
 
   useEffect(() => {
     if (!contractAvailabilityNotice) return;
@@ -515,11 +525,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
               <Eye size={16} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Edit company">
-            <IconButton size="small" aria-label="Edit company" onClick={(event) => { event.stopPropagation(); editCompany(row); }}>
-              <Pencil size={16} />
-            </IconButton>
-          </Tooltip>
+          {canManageCompanies ? (
+            <Tooltip title="Edit company">
+              <IconButton size="small" aria-label="Edit company" onClick={(event) => { event.stopPropagation(); editCompany(row); }}>
+                <Pencil size={16} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
           {canDeleteCompanies ? (
             <Tooltip title="Delete company">
               <IconButton size="small" color="error" aria-label="Delete company" disabled={isDeletingCompanies} onClick={(event) => {
@@ -527,11 +539,13 @@ export function DashboardPage({ view }: DashboardPageProps) {
               }}><Trash2 size={16} /></IconButton>
             </Tooltip>
           ) : null}
-          <Tooltip title={`Add subcompany to ${row.companyName ?? "company"}`}>
-            <IconButton size="small" aria-label="Add subcompany" onClick={(event) => { event.stopPropagation(); openCreateSubcompany(row); }}>
-              <GitBranch size={16} />
-            </IconButton>
-          </Tooltip>
+          {canManageCompanies ? (
+            <Tooltip title={`Add subcompany to ${row.companyName ?? "company"}`}>
+              <IconButton size="small" aria-label="Add subcompany" onClick={(event) => { event.stopPropagation(); openCreateSubcompany(row); }}>
+                <GitBranch size={16} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
           <Tooltip title="Company activity">
             <IconButton size="small" aria-label="Company activity" onClick={(event) => { event.stopPropagation(); navigate(`/companies/${row.id}/activities`); }}>
               <Badge className="company-activity-count" badgeContent={activityUnreadCounts.data?.byCompany[String(row.id)] ?? 0} color="error" max={99}>
@@ -539,18 +553,20 @@ export function DashboardPage({ view }: DashboardPageProps) {
               </Badge>
             </IconButton>
           </Tooltip>
-          <Tooltip title={row.isActive ? "Already active" : "Activate company"}>
-            <span>
-              <IconButton
-                size="small"
-                aria-label="Activate company"
-                disabled={Boolean(row.isActive) || activatingCompanyId === row.id}
-                onClick={(event) => { event.stopPropagation(); void activateCompany(row); }}
-              >
-                <Power size={16} />
-              </IconButton>
-            </span>
-          </Tooltip>
+          {canManageCompanies ? (
+            <Tooltip title={row.isActive ? "Already active" : "Activate company"}>
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="Activate company"
+                  disabled={Boolean(row.isActive) || activatingCompanyId === row.id}
+                  onClick={(event) => { event.stopPropagation(); void activateCompany(row); }}
+                >
+                  <Power size={16} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : null}
         </span>
       )
     },
@@ -813,6 +829,70 @@ export function DashboardPage({ view }: DashboardPageProps) {
       }));
     };
     reader.readAsDataURL(file);
+  }
+
+  function selectBillFile(file: File | null) {
+    setBillUploadError("");
+    setBillUploadNotice("");
+    setBillExtractionResult(null);
+    if (!file) return setBillFile(null);
+    if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
+      setBillFile(null);
+      setBillUploadError("Only PDF bill files are accepted.");
+      if (billFileInput.current) billFileInput.current.value = "";
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setBillFile(null);
+      setBillUploadError("Bill file must be 15 MB or smaller.");
+      return;
+    }
+    setBillFile(file);
+  }
+
+  async function uploadMemberBill() {
+    if (!billCompanyId || !billFile || isUploadingBill || isExtractingBillWithOpenAi) return;
+    setBillUploadError("");
+    setBillUploadNotice("");
+    setIsUploadingBill(true);
+    try {
+      const ocrForm = new FormData();
+      ocrForm.append("pdf", billFile, billFile.name);
+      const ocrResponse = await api.post<BillExtractionResult>("/pdf/extract-azure", ocrForm);
+      setBillExtractionResult(ocrResponse.data);
+
+      const contentBase64 = await fileToBase64(billFile);
+      await api.post("/reports/member-bills", {
+        companyId: billCompanyId,
+        file: { name: billFile.name, contentType: billFile.type || "application/octet-stream", contentBase64 }
+      });
+      setBillUploadNotice(`${billFile.name} was processed and uploaded to the company's SharePoint Bills folder.`);
+      setBillFile(null);
+      if (billFileInput.current) billFileInput.current.value = "";
+    } catch (error) {
+      setBillUploadError(billProcessingError(error) ?? "Unable to process or upload the bill.");
+    } finally {
+      setIsUploadingBill(false);
+    }
+  }
+
+  async function extractBillWithOpenAi() {
+    if (!billFile || isExtractingBillWithOpenAi || isUploadingBill) return;
+    setBillUploadError("");
+    setBillUploadNotice("");
+    setBillExtractionResult(null);
+    setIsExtractingBillWithOpenAi(true);
+    try {
+      const form = new FormData();
+      form.append("pdf", billFile, billFile.name);
+      const response = await api.post<BillExtractionResult>("/pdf/extract-openai", form);
+      setBillExtractionResult(response.data);
+      setBillUploadNotice(`${billFile.name} was processed with Azure OpenAI. Review the extracted data below.`);
+    } catch (error) {
+      setBillUploadError(billProcessingError(error) ?? "Unable to extract the bill with Azure OpenAI.");
+    } finally {
+      setIsExtractingBillWithOpenAi(false);
+    }
   }
 
   function updateMeterForm<K extends keyof MeterForm>(field: K, value: MeterForm[K]) {
@@ -1885,6 +1965,24 @@ export function DashboardPage({ view }: DashboardPageProps) {
             </div>
           </article>
         ) : null}
+        {user?.role === "member" ? (
+          <article
+            className="clickable-kpi upload-bills-kpi"
+            role="button"
+            tabIndex={0}
+            aria-expanded={isBillUploadPanelOpen}
+            aria-controls="member-bill-upload-panel"
+            onClick={() => setIsBillUploadPanelOpen(true)}
+            onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setIsBillUploadPanelOpen(true); }}
+          >
+            <FileText size={36} aria-hidden="true" />
+            <div>
+              <span>Upload Bills</span>
+              <strong>Upload</strong>
+              <small>Select a company and files</small>
+            </div>
+          </article>
+        ) : null}
         {hasAdminDashboard ? (
           <article className="clickable-kpi members-kpi" role="button" tabIndex={0} onClick={() => navigate("/members")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate("/members"); }}>
             <div className="member-kpi-total">
@@ -1898,6 +1996,101 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </article>
         ) : null}
       </div>
+      ) : null}
+
+      {isDashboardView && user?.role === "member" && isBillUploadPanelOpen ? (
+        <section id="member-bill-upload-panel" className="panel member-bill-upload-panel">
+          <div className="member-bill-upload-heading">
+            <div>
+              <h2>Upload Bills</h2>
+              <p className="muted">Choose an associated company and upload bills to its SharePoint Bills folder.</p>
+            </div>
+            <div className="member-bill-upload-heading-actions">
+              <TextField
+                select
+                size="small"
+                label="Associated company"
+                value={billCompanyId || ""}
+                onChange={(event) => {
+                  setBillCompanyId(Number(event.target.value));
+                  setBillUploadError("");
+                  setBillUploadNotice("");
+                  setBillExtractionResult(null);
+                }}
+                sx={{ minWidth: 260 }}
+              >
+                {(companies.data?.data ?? []).map((company) => (
+                  <MenuItem key={company.id} value={Number(company.id)}>{company.companyName ?? `Company ${company.id}`}</MenuItem>
+                ))}
+              </TextField>
+              <Button onClick={() => setIsBillUploadPanelOpen(false)}>Close</Button>
+            </div>
+          </div>
+          <input
+            ref={billFileInput}
+            type="file"
+            accept="application/pdf,.pdf"
+            hidden
+            onChange={(event) => selectBillFile(event.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            className={`member-bill-dropzone${billFile ? " has-file" : ""}`}
+            onClick={() => billFileInput.current?.click()}
+            onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("is-dragging"); }}
+            onDragLeave={(event) => event.currentTarget.classList.remove("is-dragging")}
+            onDrop={(event) => {
+              event.preventDefault();
+              event.currentTarget.classList.remove("is-dragging");
+              selectBillFile(event.dataTransfer.files?.[0] ?? null);
+            }}
+          >
+            <Upload size={28} aria-hidden="true" />
+            <strong>{billFile ? billFile.name : "Click to select a bill or drag and drop it here"}</strong>
+            <span>{billFile ? `${(billFile.size / 1024 / 1024).toFixed(2)} MB` : "PDF only · Maximum file size: 15 MB"}</span>
+          </button>
+          {billUploadError ? <Alert severity="error" onClose={() => setBillUploadError("")}>{billUploadError}</Alert> : null}
+          {billUploadNotice ? <Alert severity="success" onClose={() => setBillUploadNotice("")}>{billUploadNotice}</Alert> : null}
+          {billExtractionResult ? (
+            <section className="member-bill-extraction-result" aria-live="polite">
+              <div className="member-bill-result-heading">
+                <div>
+                  <h3>Extracted Bill Data</h3>
+                  <p className="muted">{billExtractionResult.fileName} · {billExtractionResult.pageCount} page{billExtractionResult.pageCount === 1 ? "" : "s"} · {billExtractionResult.extraction.status.replace(/_/g, " ")}</p>
+                </div>
+                <span className={`status-badge ${billExtractionResult.extraction.status === "complete" ? "active" : "inactive"}`}>
+                  {billExtractionResult.extraction.status === "complete" ? "Complete" : "Review needed"}
+                </span>
+              </div>
+              <dl className="member-bill-result-grid">
+                {Object.entries(billExtractionResult.bill).map(([field, value]) => (
+                  <div key={field}>
+                    <dt>{billFieldLabel(field)}</dt>
+                    <dd>{formatBillValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+              {billExtractionResult.extraction.issues?.length ? (
+                <div className="member-bill-result-issues">
+                  <strong>Review notes</strong>
+                  <ul>{billExtractionResult.extraction.issues.map((issue, index) => <li key={`${issue.field}-${index}`}>{issue.message}</li>)}</ul>
+                </div>
+              ) : null}
+              <details>
+                <summary>Show OCR text</summary>
+                <pre>{billExtractionResult.text || "No text was recognized."}</pre>
+              </details>
+            </section>
+          ) : null}
+          <div className="member-bill-upload-actions">
+            <Button variant="outlined" startIcon={<FileText size={17} />} disabled={!billFile || isUploadingBill || isExtractingBillWithOpenAi} onClick={() => void extractBillWithOpenAi()}>
+              {isExtractingBillWithOpenAi ? "Extracting..." : "Extract with Azure OpenAI"}
+            </Button>
+            <Button variant="contained" startIcon={<Upload size={17} />} disabled={!billCompanyId || !billFile || isUploadingBill || isExtractingBillWithOpenAi} onClick={() => void uploadMemberBill()}>
+              {isUploadingBill ? "Processing..." : "Submit Bill"}
+            </Button>
+          </div>
+        </section>
       ) : null}
 
       {isCompaniesView ? (
@@ -1976,7 +2169,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 aria-label="Search companies"
                 slotProps={{ htmlInput: { "data-testid": "company-search" } }}
               />
-              {selectedCompanies.length ? (
+              {canManageCompanies && selectedCompanies.length ? (
                 <>
                   {canDeleteCompanies ? (
                     <Button variant="outlined" color="error" startIcon={<Trash2 size={16} />} disabled={isDeletingCompanies || selectedCompanies.length > 500} onClick={() => {
@@ -2000,8 +2193,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </TextField>
                 </>
               ) : null}
-              <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => setIsBulkCompanyModalOpen(true)}>Add Multiple Companies</Button>
-              <Button variant="contained" onClick={openCreateCompany}>Add New Company</Button>
+              {canManageCompanies ? (
+                <>
+                  <Button variant="outlined" startIcon={<Upload size={18} />} onClick={() => setIsBulkCompanyModalOpen(true)}>Add Multiple Companies</Button>
+                  <Button variant="contained" onClick={openCreateCompany}>Add New Company</Button>
+                </>
+              ) : null}
             </div>
           </div>
           {companyUploadNotice ? (
@@ -2014,7 +2211,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           {companies.isError ? <p className="error">Unable to load tblCompany records.</p> : null}
           <IntiliGrid
             key={companyGridKey}
-            checkboxSelection
+            checkboxSelection={canManageCompanies}
             treeData
             treeDataColumnField="companyName"
             getTreeDataPath={getCompanyTreeDataPath}
@@ -2462,29 +2659,33 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </p>
                 </div>
                 <div className="company-account-actions">
-                  <Button startIcon={<GitBranch size={17} />} onClick={() => { const parent = viewedCompany; setViewedCompany(null); openCreateSubcompany(parent); }}>
-                    Add Subcompany
-                  </Button>
-                  <TextField
-                    select
-                    size="small"
-                    label={isUpdatingViewedCompanyStatus ? "Updating..." : "Company Status"}
-                    value={viewedCompany.companyStatusId ? Number(viewedCompany.companyStatusId) : ""}
-                    disabled={isUpdatingViewedCompanyStatus || companyStatuses.isLoading || companyStatuses.isError}
-                    error={companyStatuses.isError}
-                    onChange={(event) => void updateViewedCompanyStatus(Number(event.target.value))}
-                    sx={{ minWidth: 180 }}
-                  >
-                    <MenuItem value="" disabled>Select status</MenuItem>
-                    {viewedCompany.companyStatusId && !companyStatuses.data?.data.some((status) => Number(status.id) === Number(viewedCompany.companyStatusId)) ? (
-                      <MenuItem value={Number(viewedCompany.companyStatusId)}>{effectiveCompanyStatus(viewedCompany)}</MenuItem>
-                    ) : null}
-                    {companyStatuses.data?.data.map((status) => (
-                      <MenuItem key={status.id} value={Number(status.id)}>
-                        <span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span>
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  {canManageCompanies ? (
+                    <>
+                      <Button startIcon={<GitBranch size={17} />} onClick={() => { const parent = viewedCompany; setViewedCompany(null); openCreateSubcompany(parent); }}>
+                        Add Subcompany
+                      </Button>
+                      <TextField
+                        select
+                        size="small"
+                        label={isUpdatingViewedCompanyStatus ? "Updating..." : "Company Status"}
+                        value={viewedCompany.companyStatusId ? Number(viewedCompany.companyStatusId) : ""}
+                        disabled={isUpdatingViewedCompanyStatus || companyStatuses.isLoading || companyStatuses.isError}
+                        error={companyStatuses.isError}
+                        onChange={(event) => void updateViewedCompanyStatus(Number(event.target.value))}
+                        sx={{ minWidth: 180 }}
+                      >
+                        <MenuItem value="" disabled>Select status</MenuItem>
+                        {viewedCompany.companyStatusId && !companyStatuses.data?.data.some((status) => Number(status.id) === Number(viewedCompany.companyStatusId)) ? (
+                          <MenuItem value={Number(viewedCompany.companyStatusId)}>{effectiveCompanyStatus(viewedCompany)}</MenuItem>
+                        ) : null}
+                        {companyStatuses.data?.data.map((status) => (
+                          <MenuItem key={status.id} value={Number(status.id)}>
+                            <span className="status-badge" style={companyStatusColor(status.name)}>{status.name}</span>
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </>
+                  ) : null}
                   <Button onClick={() => setViewedCompany(null)}>Close</Button>
                 </div>
               </div>
@@ -2510,7 +2711,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   <section id="company-tray-info" className="account-card" hidden={!companyTray}>
                     <div className="account-card-heading">
                       <h2><Building2 size={16} aria-hidden="true" />Account Information</h2>
-                      <Button size="small" className="account-info-edit" startIcon={<Pencil size={13} />} onClick={() => editCompany(viewedCompany)}>Edit</Button>
+                      {canManageCompanies ? <Button size="small" className="account-info-edit" startIcon={<Pencil size={13} />} onClick={() => editCompany(viewedCompany)}>Edit</Button> : null}
                     </div>
                     <dl className="account-info-list">
                       <dt>Company Status</dt>
@@ -4152,6 +4353,51 @@ function companyApiError(error: unknown) {
   return isAxiosError<{ error?: string; details?: { issues?: { message: string }[] } }>(error)
     ? error.response?.data.details?.issues?.[0]?.message ?? error.response?.data.error
     : undefined;
+}
+
+function billProcessingError(error: unknown) {
+  if (!isAxiosError<{ error?: string | { message?: string }; details?: { issues?: { message: string }[] } }>(error)) return undefined;
+  const apiError = error.response?.data.error;
+  return error.response?.data.details?.issues?.[0]?.message
+    ?? (typeof apiError === "string" ? apiError : apiError?.message);
+}
+
+function billFieldLabel(field: string) {
+  return field.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatBillValue(value: unknown): string {
+  if (value == null || value === "") return "Not found";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.length ? value.map(formatBillValue).join(", ") : "Not found";
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).filter(([, item]) => item != null && item !== "");
+    return entries.length ? entries.map(([key, item]) => `${billFieldLabel(key)}: ${formatBillValue(item)}`).join(" · ") : "Not found";
+  }
+  return String(value);
+}
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Unable to read the selected file."));
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+interface BillExtractionResult {
+  fileName: string;
+  pageCount: number;
+  bill: Record<string, unknown>;
+  extraction: {
+    status: string;
+    issues?: Array<{ field: string; code?: string; message: string }>;
+  };
+  text: string;
 }
 
 interface TblCompanyRow {
