@@ -1128,7 +1128,19 @@ nav a:hover {
   padding: 0.27rem 0.45rem;
   font-size: 0.75rem;
   font-weight: 600;
+  font-family: inherit;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
 }
+
+.meter-product-count:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25); }
+
+.meter-product-count:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+.meter-product-count.selected { border-color: #fff; box-shadow: 0 0 0 2px #0f172a; }
+
+.meter-product-list:has(.meter-product-count.selected) .meter-product-count:not(.selected) { opacity: 0.55; }
 
 .meter-product-count b { font-size: 0.9rem; }
 
@@ -1397,8 +1409,105 @@ nav a:hover {
 }
 
 .member-bill-dropzone.has-file { border-style: solid; }
+.member-bill-dropzone:disabled { cursor: wait; opacity: 0.58; }
 .member-bill-dropzone span { font-size: 0.82rem; }
 .member-bill-upload-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
+
+.member-bill-processing {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 1rem;
+  background: linear-gradient(110deg, #eff6ff, #f8fafc, #eff6ff);
+  background-size: 220% 100%;
+  animation: member-bill-processing-shimmer 2.2s linear infinite;
+}
+
+.member-bill-processing p { margin: 0.25rem 0 0; color: #627188; }
+
+.member-bill-processing-image {
+  position: relative;
+  display: grid;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  color: #2563eb;
+  animation: member-bill-document-float 1.5s ease-in-out infinite;
+}
+
+.member-bill-processing-ring {
+  position: absolute;
+  inset: 3px;
+  border: 3px solid rgba(37, 99, 235, 0.14);
+  border-top-color: #2563eb;
+  border-right-color: #60a5fa;
+  border-radius: 50%;
+  animation: member-bill-ring-spin 1s linear infinite;
+}
+
+.member-bill-processing-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: member-bill-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.member-bill-processing-dot.dot-one { left: 24px; }
+.member-bill-processing-dot.dot-two { left: 35px; animation-delay: 0.16s; }
+.member-bill-processing-dot.dot-three { left: 46px; animation-delay: 0.32s; }
+
+@keyframes member-bill-ring-spin { to { transform: rotate(360deg); } }
+@keyframes member-bill-document-float { 50% { transform: translateY(-3px); } }
+@keyframes member-bill-dot-pulse { 0%, 65%, 100% { opacity: 0.25; transform: scale(0.75); } 35% { opacity: 1; transform: scale(1); } }
+@keyframes member-bill-processing-shimmer { to { background-position: -220% 0; } }
+
+.extract-pdf-grid-wrap { position: relative; height: 240px; margin-top: 16px; }
+.extract-pdf-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(1px);
+}
+.extract-pdf-processing {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+}
+.extract-pdf-scan-line {
+  position: absolute;
+  left: 27px;
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: #60a5fa;
+  box-shadow: 0 0 6px #60a5fa;
+  animation: extract-pdf-scan 1.6s ease-in-out infinite;
+}
+.extract-pdf-row-status { display: inline-flex; align-items: center; gap: 0.4rem; color: #2563eb; }
+@keyframes extract-pdf-scan { 0%, 100% { top: 24px; } 50% { top: 48px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .member-bill-processing,
+  .member-bill-processing-image,
+  .member-bill-processing-ring,
+  .member-bill-processing-dot,
+  .extract-pdf-scan-line { animation: none; }
+}
 
 .member-bill-extraction-result {
   display: grid;
@@ -3800,3 +3909,12 @@ nav a:hover {
 .account-report-table th, .account-report-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #dce3eb; }
 .account-report-table th { background: #0070c0; color: white; white-space: nowrap; }
 .account-report-table td { min-width: 100px; overflow-wrap: anywhere; }
+
+.duplicate-invoice-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.duplicate-invoice-table th, .duplicate-invoice-table td { border: 1px solid #e2e8f0; padding: 0.4rem 0.55rem; text-align: left; vertical-align: top; }
+.duplicate-invoice-table th { background: #f8fafc; font-weight: 600; }
+
+.meter-company-not-found { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.meter-company-option-parent { color: #64748b; }
+
+.contract-date-zone { font-size: 0.75em; font-weight: 600; color: #64748b; margin-left: 0.15rem; }

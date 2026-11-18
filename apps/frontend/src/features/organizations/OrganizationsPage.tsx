@@ -1,6 +1,6 @@
 import { MasterAccountNumberPanel, type MasterAccountNumberRow } from "./MasterAccountNumberPanel";
 import { AccountReportPage } from "./AccountReportPage";
-import { ExtractPdfDialog } from "./ExtractPdfDialog";
+import { ExtractPdfDialog, hasParkedExtraction, type ExtractPdfReturnState } from "./ExtractPdfDialog";
 import {
   Button,
   Checkbox,
@@ -18,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
@@ -124,6 +124,19 @@ export function OrganizationsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["company-documents"] })
   });
   const [extractPdfOpen, setExtractPdfOpen] = useState(false);
+  // Set when the Meters page sends the user back after adding a meter from ExtractPDF.
+  const [extractPdfResume, setExtractPdfResume] = useState<{ meterAdded: boolean } | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const returnState = location.state as ExtractPdfReturnState | null;
+  useEffect(() => {
+    if (!returnState?.resumeExtractPdf) return;
+    // Clear the navigation state so a refresh does not reopen the dialog.
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    if (!hasParkedExtraction()) return;
+    setExtractPdfResume({ meterAdded: Boolean(returnState.meterAdded) });
+    setExtractPdfOpen(true);
+  }, [returnState, location.pathname, location.search, navigate]);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const companyNotesId = searchParams.get("companyId");
@@ -239,7 +252,7 @@ export function OrganizationsPage() {
         ) : null}
       </div>
 
-      <ExtractPdfDialog open={extractPdfOpen} onClose={() => setExtractPdfOpen(false)} />
+      <ExtractPdfDialog open={extractPdfOpen} resume={extractPdfResume} onClose={() => { setExtractPdfOpen(false); setExtractPdfResume(null); }} />
       <Dialog open={Boolean(viewedOrganization)} onClose={() => setViewedOrganization(null)} fullWidth maxWidth="sm">
         <DialogTitle>Organization Details</DialogTitle>
         <DialogContent>

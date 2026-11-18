@@ -3,19 +3,20 @@ import { companyRowBackground, companyStatusColor, effectiveCompanyStatus } from
 import { DeleteRecordButton } from "./DeleteRecordButton";
 import { formatCompanyPhone } from "../../lib/companyPhone";
 import { contractMeterLabel } from "../../lib/contractMeterLabel";
-import { Alert, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
+import { Alert, Autocomplete, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Activity, Building2, Columns3, Droplet, Eye, FileText, Flame, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload, Waves, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
 import { MembersPanel } from "../members/MembersPage";
+import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
 
 interface DashboardPageProps {
   view?: "reports" | "companies" | "contracts" | "meters";
@@ -23,6 +24,7 @@ interface DashboardPageProps {
 
 export function DashboardPage({ view }: DashboardPageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [companyViewParams, setCompanyViewParams] = useSearchParams();
   const requestedCompanyId = companyViewParams.get("companyId");
   const requestedCompanyStatus = companyViewParams.get("status");
@@ -42,6 +44,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [isDeletingCompanies, setIsDeletingCompanies] = useState(false);
   const [deleteCompanyError, setDeleteCompanyError] = useState("");
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  // True while Add New Company was opened from the meter form; the new company is then selected there.
+  const [isCompanyForMeter, setIsCompanyForMeter] = useState(false);
+  const [meterCompanySearch, setMeterCompanySearch] = useState("");
   const [companyFormMode, setCompanyFormMode] = useState<"create" | "edit">("create");
   const [viewedCompany, setViewedCompany] = useState<TblCompanyRow | null>(null);
   const [companyTray, setCompanyTray] = useState(false);
@@ -129,6 +134,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [selectedMeters, setSelectedMeters] = useState<MeterRow[]>([]);
   const [meterSummaryFilter, setMeterSummaryFilter] = useState<"" | "active" | "inactive">("");
   const [meterTypeFilter, setMeterTypeFilter] = useState("");
+  const [meterProductFilter, setMeterProductFilter] = useState("");
   const [isUpdatingMeterStatus, setIsUpdatingMeterStatus] = useState(false);
   const [meterGridKey, setMeterGridKey] = useState(0);
   const [isMeterColumnMenuOpen, setIsMeterColumnMenuOpen] = useState(true);
@@ -160,6 +166,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [billExtractionResult, setBillExtractionResult] = useState<BillExtractionResult | null>(null);
   const [isUploadingBill, setIsUploadingBill] = useState(false);
   const [isExtractingBillWithOpenAi, setIsExtractingBillWithOpenAi] = useState(false);
+  const isBillProcessing = isUploadingBill || isExtractingBillWithOpenAi;
 
   useEffect(() => {
     if (!contractAvailabilityNotice) return;
@@ -374,8 +381,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const visibleMeters = useMemo(() => (meters.data?.data ?? []).filter((meter) => {
     if (meterSummaryFilter && (meterSummaryFilter === "active" ? !meter.isActive : meter.isActive)) return false;
     if (meterTypeFilter && (meter.status?.trim() || "Not Set").toLowerCase() !== meterTypeFilter.toLowerCase()) return false;
+    if (meterProductFilter && (meter.product?.trim() || "Not Set").toLowerCase() !== meterProductFilter.toLowerCase()) return false;
     return true;
-  }), [meters.data?.data, meterSummaryFilter, meterTypeFilter]);
+  }), [meters.data?.data, meterSummaryFilter, meterTypeFilter, meterProductFilter]);
   const recentlyAddedMeters = useMemo(() => [...(meters.data?.data ?? [])]
     .sort((left, right) => {
       const dateDifference = Date.parse(right.createdAt ?? "") - Date.parse(left.createdAt ?? "");
@@ -926,6 +934,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setIsCompanyModalOpen(true);
   }
 
+  function openCreateCompanyForMeter(searchText: string) {
+    openCreateCompany();
+    setNewCompany({ ...emptyCompanyForm(), companyName: searchText.trim() });
+    setIsCompanyForMeter(true);
+  }
+
+  function closeCompanyModal() {
+    setIsCompanyModalOpen(false);
+    setIsCompanyForMeter(false);
+  }
+
   function openCreateSubcompany(parent: TblCompanyRow) {
     setCompanyError("");
     setCompanyFormMode("create");
@@ -962,6 +981,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   function applyMeterSummaryFilter(status: "" | "active" | "inactive") {
     setMeterSummaryFilter(status);
     setMeterTypeFilter("");
+    setMeterProductFilter("");
     setSelectedMeters([]);
     setCompanyViewParams((current) => {
       const next = new URLSearchParams(current);
@@ -974,6 +994,19 @@ export function DashboardPage({ view }: DashboardPageProps) {
   function applyMeterTypeFilter(status: string) {
     setMeterTypeFilter((current) => current.toLowerCase() === status.toLowerCase() ? "" : status);
     setMeterSummaryFilter("");
+    setMeterProductFilter("");
+    setSelectedMeters([]);
+    setCompanyViewParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("meterStatus");
+      return next;
+    }, { replace: true });
+  }
+
+  function applyMeterProductFilter(product: string) {
+    setMeterProductFilter((current) => current.toLowerCase() === product.toLowerCase() ? "" : product);
+    setMeterSummaryFilter("");
+    setMeterTypeFilter("");
     setSelectedMeters([]);
     setCompanyViewParams((current) => {
       const next = new URLSearchParams(current);
@@ -1182,7 +1215,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     return true;
   }
 
-  async function openCreateMeter() {
+  async function openCreateMeter(prefill: Partial<MeterForm> = {}) {
     setMeterAvailabilityNotice("");
     setMeterError("");
     if (!await companyIsAvailableForMeter()) return;
@@ -1190,9 +1223,33 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterError("");
     setMeterFormMode("create");
     setEditingMeterId(null);
-    setMeterForm(emptyMeterForm());
+    setMeterForm({ ...emptyMeterForm(), ...prefill });
+    setMeterCompanySearch("");
     setIsMeterModalOpen(true);
   }
+
+  // ExtractPDF sends users here with the bill's details when no meter matched it.
+  const meterNavigationState = location.state as { addMeter?: ExtractedMeterPrefill; returnToExtractPdf?: string } | null;
+  const requestedMeterPrefill = meterNavigationState?.addMeter;
+  // Where to go once the meter form closes, when it was opened from ExtractPDF.
+  const [meterReturnPath, setMeterReturnPath] = useState<string | null>(null);
+  const meterPrefillLookupsReady = (meterLookups.isSuccess || meterLookups.isError) && (usStates.isSuccess || usStates.isError);
+  useEffect(() => {
+    // Wait for the product and state lists so names can be turned into their ids/codes.
+    if (!isMetersView || !requestedMeterPrefill || !meterPrefillLookupsReady) return;
+    // Clear the navigation state first so a refresh does not reopen the form.
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    setMeterReturnPath(meterNavigationState?.returnToExtractPdf ?? null);
+    const { productName, state, ...fields } = requestedMeterPrefill;
+    const sameText = (left: unknown, right: string) => String(left ?? "").trim().toLowerCase() === right.trim().toLowerCase();
+    const product = productName ? meterLookups.data?.products.find((option) => sameText(option.name, productName)) : undefined;
+    const stateOption = state ? usStates.data?.data.find((option) => sameText(option.code, state) || sameText(option.name, state)) : undefined;
+    void openCreateMeter({
+      ...fields,
+      ...(product ? { productId: Number(product.id) } : {}),
+      state: stateOption?.code ?? state?.trim().toUpperCase() ?? ""
+    });
+  }, [isMetersView, requestedMeterPrefill, meterPrefillLookupsReady]);
 
   async function openBulkMeterUpload() {
     setMeterAvailabilityNotice("");
@@ -1214,12 +1271,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setBulkMeterFileName("");
   }
 
+  /** Sends the user back to ExtractPDF when the meter form was opened from there. */
+  function returnToExtractPdf(meterAdded: boolean) {
+    if (!meterReturnPath) return;
+    const state: ExtractPdfReturnState = { resumeExtractPdf: true, meterAdded };
+    setMeterReturnPath(null);
+    navigate(meterReturnPath, { state });
+  }
+
+  function cancelMeterModal() {
+    closeMeterModal();
+    returnToExtractPdf(false);
+  }
+
   function closeMeterModal() {
     resetMeterDuplicateChecks();
     setIsMeterModalOpen(false);
     setEditingMeterId(null);
     setMeterFormMode("create");
     setMeterForm(emptyMeterForm());
+    setMeterCompanySearch("");
   }
 
   function editMeter(meter: MeterRow) {
@@ -1228,6 +1299,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     setMeterFormMode("edit");
     setEditingMeterId(meter.id);
     setMeterForm(meterToForm(meter));
+    setMeterCompanySearch(companies.data?.data.find((company) => String(company.id) === String(meter.companyId))?.companyName ?? "");
     setIsMeterModalOpen(true);
   }
 
@@ -1344,6 +1416,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       setEditingMeterId(null);
       setMeterFormMode("create");
       closeMeterModal();
+      returnToExtractPdf(true);
     } catch (error) {
       const serverMessage = companyApiError(error);
       setMeterError(serverMessage ?? "Unable to save meter. Check fields and try again.");
@@ -1408,11 +1481,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
         const response = await api.patch<{ data: TblCompanyRow }>(`/reports/tbl-companies/${editingCompanyId}`, payload);
         setViewedCompany((current) => current?.id === editingCompanyId ? response.data.data : current);
       } else {
-        await api.post("/reports/tbl-companies", payload);
+        const response = await api.post<{ data: TblCompanyRow | null }>("/reports/tbl-companies", payload);
+        const createdId = Number(response.data.data?.id);
+        if (isCompanyForMeter && createdId) {
+          updateMeterForm("companyId", createdId);
+          setMeterCompanySearch(response.data.data?.companyName ?? payload.companyName);
+        }
       }
 
       await companies.refetch();
       setIsCompanyModalOpen(false);
+      setIsCompanyForMeter(false);
       setEditingCompanyId(null);
       setCompanyFormMode("create");
       setNewCompany(emptyCompanyForm());
@@ -2010,6 +2089,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 select
                 size="small"
                 label="Associated company"
+                disabled={isBillProcessing}
                 value={billCompanyId || ""}
                 onChange={(event) => {
                   setBillCompanyId(Number(event.target.value));
@@ -2023,7 +2103,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   <MenuItem key={company.id} value={Number(company.id)}>{company.companyName ?? `Company ${company.id}`}</MenuItem>
                 ))}
               </TextField>
-              <Button onClick={() => setIsBillUploadPanelOpen(false)}>Close</Button>
+              <Button disabled={isBillProcessing} onClick={() => setIsBillUploadPanelOpen(false)}>Close</Button>
             </div>
           </div>
           <input
@@ -2036,6 +2116,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <button
             type="button"
             className={`member-bill-dropzone${billFile ? " has-file" : ""}`}
+            disabled={isBillProcessing}
             onClick={() => billFileInput.current?.click()}
             onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("is-dragging"); }}
             onDragLeave={(event) => event.currentTarget.classList.remove("is-dragging")}
@@ -2049,6 +2130,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
             <strong>{billFile ? billFile.name : "Click to select a bill or drag and drop it here"}</strong>
             <span>{billFile ? `${(billFile.size / 1024 / 1024).toFixed(2)} MB` : "PDF only · Maximum file size: 15 MB"}</span>
           </button>
+          {isBillProcessing ? (
+            <div className="member-bill-processing" role="status" aria-live="polite">
+              <div className="member-bill-processing-image" aria-hidden="true">
+                <span className="member-bill-processing-ring" />
+                <FileText size={34} />
+                <span className="member-bill-processing-dot dot-one" />
+                <span className="member-bill-processing-dot dot-two" />
+                <span className="member-bill-processing-dot dot-three" />
+              </div>
+              <div>
+                <strong>{isExtractingBillWithOpenAi ? "Extracting bill with Azure OpenAI" : "Processing and uploading bill"}</strong>
+                <p>{isExtractingBillWithOpenAi ? "Reading the PDF and preparing structured bill data…" : "Running OCR, extracting bill data, and saving the PDF to SharePoint…"}</p>
+              </div>
+            </div>
+          ) : null}
           {billUploadError ? <Alert severity="error" onClose={() => setBillUploadError("")}>{billUploadError}</Alert> : null}
           {billUploadNotice ? <Alert severity="success" onClose={() => setBillUploadNotice("")}>{billUploadNotice}</Alert> : null}
           {billExtractionResult ? (
@@ -2366,11 +2462,20 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     : /power|electric/.test(normalizedProduct)
                       ? { color: "#fff", backgroundColor: "#172554", borderRadius: "4px" }
                       : companyStatusColor(product);
+                const isSelectedProduct = meterProductFilter.toLowerCase() === normalizedProduct;
                 return (
-                  <span key={product} className="meter-product-count" style={productStyle}>
+                  <button
+                    key={product}
+                    type="button"
+                    className={`meter-product-count${isSelectedProduct ? " selected" : ""}`}
+                    style={productStyle}
+                    onClick={() => applyMeterProductFilter(product)}
+                    aria-pressed={isSelectedProduct}
+                    title={isSelectedProduct ? "Show all meters" : `Show ${product} meters`}
+                  >
                     {ProductIcon ? <ProductIcon className="meter-product-icon" aria-hidden="true" /> : null}
                     <b>{count}</b><span>{product}</span>
-                  </span>
+                  </button>
                 );
               }) : <span className="muted">No meter products available.</span>}
             </div>
@@ -2389,7 +2494,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         <section className="panel companies-panel meters-page-panel">
           <div className="panel-title-row">
             <div className="meter-title-block">
-              <h2>Meters{meterTypeFilter ? ` — ${meterTypeFilter}` : meterSummaryFilter ? ` — ${meterSummaryFilter === "active" ? "Active" : "Inactive"}` : ""}</h2>
+              <h2>Meters{meterProductFilter ? ` — ${meterProductFilter}` : meterTypeFilter ? ` — ${meterTypeFilter}` : meterSummaryFilter ? ` — ${meterSummaryFilter === "active" ? "Active" : "Inactive"}` : ""}</h2>
               <Tooltip title={isMeterColumnMenuOpen ? "Hide grid columns menu" : "Show grid columns menu"}>
                 <IconButton
                   size="small"
@@ -2472,7 +2577,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
             ) : null}
             <div className="meter-grid-area">
               <IntiliGrid
-                key={`${meterGridKey}-${meterSummaryFilter || "all"}-${meterTypeFilter || "all-statuses"}`}
+                key={`${meterGridKey}-${meterSummaryFilter || "all"}-${meterTypeFilter || "all-statuses"}-${meterProductFilter || "all-products"}`}
                 initialPageSize={50}
                 checkboxSelection
                 columns={visibleMeterColumns}
@@ -2485,7 +2590,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </section>
       ) : null}
 
-      <Dialog open={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} fullWidth maxWidth="md">
+      <Dialog open={isCompanyModalOpen} onClose={closeCompanyModal} fullWidth maxWidth="md">
         <DialogTitle>
           {companyFormMode === "edit"
             ? "Edit Company"
@@ -2560,7 +2665,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsCompanyModalOpen(false)}>Cancel</Button>
+          <Button onClick={closeCompanyModal}>Cancel</Button>
           <Button variant="contained" onClick={saveCompany} disabled={isSavingCompany || !isCompanyFormValid}>
             {isSavingCompany ? "Saving..." : companyFormMode === "edit" ? "Update Company" : "Save Company"}
           </Button>
@@ -2805,7 +2910,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     isLoading={meters.isLoading}
                     isError={meters.isError}
                     error={meterError}
-                    onAdd={openCreateMeter}
+                    onAdd={() => void openCreateMeter()}
                     onAddMore={openBulkMeterUpload}
                     onExpand={() => setIsCompanyMeterListDismissed(false)}
                   />
@@ -3093,8 +3198,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 </div>
                 <div className="company-account-main">
                   <dl className="contract-view-summary">
-                    <div><dt>Start Date</dt><dd>{formatDate(viewedContract.startDate)}</dd></div>
-                    <div><dt>End Date</dt><dd>{formatDate(viewedContract.endDate)}</dd></div>
+                    <div><dt>Start Date</dt><dd><EasternDate value={viewedContract.startDate} /></dd></div>
+                    <div><dt>End Date</dt><dd><EasternDate value={viewedContract.endDate} /></dd></div>
                     <div><dt>Term</dt><dd>{viewedContract.months != null ? `${viewedContract.months} months` : "-"}</dd></div>
                     <div><dt>Rate</dt><dd>{formatContractAmount(viewedContract.rate)}</dd></div>
                     <div><dt>Fee</dt><dd>{formatContractAmount(viewedContract.fee)}</dd></div>
@@ -3180,7 +3285,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={isMeterModalOpen} onClose={closeMeterModal} fullWidth maxWidth="md">
+      <Dialog open={isMeterModalOpen} onClose={cancelMeterModal} fullWidth maxWidth="md">
         <DialogTitle>{meterFormMode === "edit" ? "Edit Meter" : "Add New Meter"}</DialogTitle>
         <DialogContent>
           {meterError ? <p className="error">{meterError}</p> : null}
@@ -3231,12 +3336,43 @@ export function DashboardPage({ view }: DashboardPageProps) {
               </datalist>
             </div>
             {!viewedCompany ? (
-              <TextField select label="Company" value={meterForm.companyId} onChange={(event) => updateMeterForm("companyId", Number(event.target.value))}>
-                <MenuItem value={0}>Select company</MenuItem>
-                {companies.data?.data.map((company) => (
-                  <MenuItem key={company.id} value={Number(company.id)}>{company.companyName}</MenuItem>
-                ))}
-              </TextField>
+              <Autocomplete
+                options={companies.data?.data ?? []}
+                value={companies.data?.data.find((company) => Number(company.id) === meterForm.companyId) ?? null}
+                onChange={(_event, company) => updateMeterForm("companyId", company ? Number(company.id) : 0)}
+                inputValue={meterCompanySearch}
+                onInputChange={(_event, value) => setMeterCompanySearch(value)}
+                getOptionLabel={(company) => company.companyName ?? ""}
+                isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                renderOption={(props, company) => {
+                  // MUI keys options by label; add the id so companies with the same name stay distinct.
+                  const { key, ...optionProps } = props as typeof props & { key?: string };
+                  return (
+                    <li {...optionProps} key={`${key ?? ""}-${company.id}`}>
+                      <span>{company.companyName}</span>
+                      {company.parentCompanyName ? <small className="meter-company-option-parent">&nbsp;· {company.parentCompanyName}</small> : null}
+                    </li>
+                  );
+                }}
+                loading={companies.isLoading}
+                loadingText="Loading companies..."
+                noOptionsText={(
+                  <div className="meter-company-not-found">
+                    <span>{meterCompanySearch.trim() ? `No company found for "${meterCompanySearch.trim()}".` : "No companies available."}</span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Plus size={16} />}
+                      // Keep the input from blurring before the click registers.
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => openCreateCompanyForMeter(meterCompanySearch)}
+                    >
+                      Add New Company
+                    </Button>
+                  </div>
+                )}
+                renderInput={(params) => <TextField {...params} label="Company" placeholder="Search company" />}
+              />
             ) : null}
             <div className="meter-form-row">
               <MeterSelect
@@ -3306,7 +3442,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeMeterModal} disabled={savingMeter}>Cancel</Button>
+          <Button onClick={cancelMeterModal} disabled={savingMeter}>Cancel</Button>
           <Button variant="contained" onClick={() => void saveMeter()} disabled={savingMeter}>
             {savingMeter ? "Saving..." : meterFormMode === "edit" ? "Update Meter" : "Submit"}
           </Button>
@@ -3956,6 +4092,9 @@ function contractToForm(contract: ContractRow): ContractForm {
   };
 }
 
+/** Bill details ExtractPDF passes to Add New Meter; names are resolved to lookup ids here. */
+type ExtractedMeterPrefill = Partial<Omit<MeterForm, "productId">> & { productName?: string };
+
 interface MeterForm {
   companyId: number;
   utilityAccountName: string;
@@ -4155,9 +4294,51 @@ function calculateMeterLoadProfile(demandValue: string, annualUsageValue: string
   return String(Number((demand + annualUsage).toFixed(6)));
 }
 
+/**
+ * Formats a date as MM/dd/yyyy. SQL `date` values (e.g. contract Start/End)
+ * arrive as UTC midnight; their calendar day is kept as stored instead of being
+ * shifted into the browser's time zone, which would show the previous day in
+ * the Americas.
+ */
 function formatDate(value: unknown) {
   if (!value) return "-";
-  return new Date(String(value)).toLocaleDateString();
+  const text = String(value);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.0+)?Z)?$/.exec(text);
+  if (dateOnly) return `${dateOnly[2]}/${dateOnly[3]}/${dateOnly[1]}`;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return "-";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}/${pad(date.getDate())}/${date.getFullYear()}`;
+}
+
+const CONTRACT_TIME_ZONE = "America/New_York";
+const easternZoneName = new Intl.DateTimeFormat("en-US", { timeZone: CONTRACT_TIME_ZONE, timeZoneName: "short" });
+
+/**
+ * Contract dates are SQL `date` values, sent as UTC midnight. Converting that
+ * instant to New York time would show the previous day, so the calendar date
+ * is kept as stored and labelled with the Eastern zone in effect on that day
+ * (EST in winter, EDT in summer).
+ */
+function formatEasternDate(value: unknown): { date: string; zone: string } | null {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
+  if (!match) return null;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  // Noon UTC is the same calendar day in New York and clear of the 2 AM DST switch.
+  const noon = new Date(Date.UTC(year, month - 1, day, 12));
+  const zone = easternZoneName.formatToParts(noon).find((part) => part.type === "timeZoneName")?.value ?? "ET";
+  return { date: `${match[2]}/${match[3]}/${match[1]}`, zone };
+}
+
+function EasternDate({ value }: { value: unknown }) {
+  const formatted = formatEasternDate(value);
+  if (!formatted) return <>-</>;
+  return (
+    <time dateTime={String(value).slice(0, 10)} title={`${formatted.zone === "EDT" ? "Eastern Daylight Time" : "Eastern Standard Time"} (${CONTRACT_TIME_ZONE})`}>
+      {formatted.date} <span className="contract-date-zone">{formatted.zone}</span>
+    </time>
+  );
 }
 
 interface NewCompanyForm {
