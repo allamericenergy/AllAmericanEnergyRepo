@@ -409,7 +409,8 @@ export class GridRuntime<
         mode:
             | "all"
             | "selected"
-            | "visible" = "visible"
+            | "visible" = "visible",
+        baseName?: string
     ): void {
         const state =
             this.store.getState();
@@ -428,7 +429,8 @@ export class GridRuntime<
 
         exportRowsToCsv(
             rows,
-            state.columns
+            state.columns,
+            buildExportFileName(baseName, mode, "csv")
         );
     }
 
@@ -436,7 +438,8 @@ export class GridRuntime<
         mode:
             | "all"
             | "selected"
-            | "visible" = "visible"
+            | "visible" = "visible",
+        baseName?: string
     ): void {
         const state = this.store.getState();
 
@@ -450,7 +453,8 @@ export class GridRuntime<
 
         exportRowsToXlsx(
             rows,
-            state.columns
+            state.columns,
+            buildExportFileName(baseName, mode, "xlsx")
         );
     }
 
@@ -474,4 +478,26 @@ export class GridRuntime<
         this.history.clear();
     }
 
+}
+
+function buildExportFileName(
+    baseName: string | undefined,
+    mode: "all" | "selected" | "visible",
+    extension: "csv" | "xlsx"
+): string {
+    const safeBase =
+        (baseName ?? "export")
+            .trim()
+            .replace(/[^a-z0-9]+/gi, "-")
+            .replace(/^-+|-+$/g, "")
+            .toLowerCase() || "export";
+    const now = new Date();
+    const date = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+    const suffix = mode === "selected" ? "-selected" : "";
+
+    return `${safeBase}${suffix}-${date}.${extension}`;
 }

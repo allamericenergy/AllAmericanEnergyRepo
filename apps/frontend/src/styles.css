@@ -3918,3 +3918,10 @@ nav a:hover {
 .meter-company-option-parent { color: #64748b; }
 
 .contract-date-zone { font-size: 0.75em; font-weight: 600; color: #64748b; margin-left: 0.15rem; }
+
+/* ExtractPDF: Bill Check matched the Total Invoice Cost. */
+[data-grid-field="billCheck"]:has(.bill-check-ok) { background-color: #bbf7d0; }
+.bill-check-ok { color: #14532d; font-weight: 600; }
+
+.upload-columns-panel { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.upload-columns-actions { display: flex; justify-content: flex-end; }

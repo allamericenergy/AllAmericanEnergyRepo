@@ -21,6 +21,9 @@ export interface GridProps<T extends GridRowModel> {
     /** Number of rows per page on mount. Defaults to 25. */
     initialPageSize?: number;
 
+    /** Base name for CSV/XLSX exports, e.g. "meters" -> meters-2026-11-21.csv. */
+    exportFileName?: string;
+
     checkboxSelection?: boolean;
 
     /** Enables expandable parent-child rows. Paths must be unique and ordered root-to-row. */

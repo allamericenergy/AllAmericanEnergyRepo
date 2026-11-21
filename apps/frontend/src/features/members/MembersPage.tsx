@@ -330,7 +330,7 @@ export function MembersPanel({ companyId, companyIds, companyLabels, canAdd = fa
         {members.isError ? <p className="error">{memberError(members.error) ?? "Unable to load members."}</p> : null}
         {members.isLoading ? <p className="muted">Loading members...</p> : null}
         <div className={compact ? "contract-grid-wrap members-grid-wrap" : "members-grid-wrap"}>
-          <IntiliGrid key={gridKey} checkboxSelection columns={columns} rows={rows} onSelectionChange={(_ids, selectedRows) => setSelectedMembers(selectedRows)} />
+          <IntiliGrid key={gridKey} exportFileName="members" checkboxSelection columns={columns} rows={rows} onSelectionChange={(_ids, selectedRows) => setSelectedMembers(selectedRows)} />
         </div>
       </section>
 

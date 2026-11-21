@@ -1,5 +1,6 @@
 import { MasterAccountNumberPanel, type MasterAccountNumberRow } from "./MasterAccountNumberPanel";
 import { AccountReportPage } from "./AccountReportPage";
+import { UploadColumnsPanel } from "./UploadColumnsPanel";
 import { ExtractPdfDialog, hasParkedExtraction, type ExtractPdfReturnState } from "./ExtractPdfDialog";
 import {
   Button,
@@ -16,7 +17,7 @@ import {
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
+import { Activity, ArrowRightLeft, BriefcaseBusiness, Building2, CircleDollarSign, Columns3, Factory, Map as MapIcon, MapPin, Package, Pencil, Plug, Plus, Signpost, StickyNote, Tags, Trash2, Upload, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
@@ -112,7 +113,7 @@ const meterValueSections = [
 
 type LocationSection = typeof locationSections[number]["key"];
 type MeterValueSection = typeof meterValueSections[number]["key"];
-type OrganizationSection = "account-report" | "master-account-numbers" | "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
+type OrganizationSection = "account-report" | "upload-columns" | "master-account-numbers" | "organizations" | "notes" | LocationSection | MeterValueSection | typeof legacySections[number]["key"];
 
 export function OrganizationsPage() {
   const queryClient = useQueryClient();
@@ -142,6 +143,7 @@ export function OrganizationsPage() {
   const companyNotesId = searchParams.get("companyId");
   const validSections = [
     "account-report",
+    "upload-columns",
     "master-account-numbers",
     "organizations",
     "notes",
@@ -180,6 +182,7 @@ export function OrganizationsPage() {
         <h2>Organization</h2>
         <button type="button" className={section === "account-report" ? "active" : ""} onClick={() => selectSection("account-report")}><CircleDollarSign size={18} /> Account Report</button>
         <button type="button" onClick={() => setExtractPdfOpen(true)}><Upload size={18} /> ExtractPDF</button>
+        <button type="button" className={section === "upload-columns" ? "active" : ""} onClick={() => selectSection("upload-columns")}><Columns3 size={18} /> UploadsColumns</button>
         <button type="button" className={section === "organizations" ? "active" : ""} onClick={() => selectSection("organizations")}>
           <Building2 size={18} /> Organizations
         </button>
@@ -223,8 +226,10 @@ export function OrganizationsPage() {
                 {accountReports.data.failed.length ? <ul>{accountReports.data.failed.map((company) => <li key={company.id}>{company.companyName}: {company.error}</li>)}</ul> : null}
               </div>
             ) : null}
-            <IntiliGrid checkboxSelection columns={organizationColumns} rows={organizations.data?.data ?? []} onRowClick={setViewedOrganization} />
+            <IntiliGrid checkboxSelection exportFileName="companies" columns={organizationColumns} rows={organizations.data?.data ?? []} onRowClick={setViewedOrganization} />
           </section>
+        ) : section === "upload-columns" ? (
+          <UploadColumnsPanel />
         ) : section === "account-report" ? (
           <AccountReportPage />
         ) : section === "master-account-numbers" ? (
@@ -1303,10 +1308,18 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       }
       if (endpoint === "utilities" && savedUtilityId != null) {
         const existingSetting = masterAccountSettings.data?.data.find((item) => String(item.utilityId) === String(savedUtilityId));
+        // An empty or 0 size means the utility does not use that identifier,
+        // so its flag in tblMasterAccountNumber is turned off (0).
+        const sizeIsOff = (columnName: string) => {
+          const key = Object.keys(form).find((name) => name.toLowerCase() === columnName);
+          if (key === undefined) return false;
+          const value = String(form[key] ?? "").trim();
+          return value === "" || Number(value) === 0;
+        };
         await api.put("/reports/master-account-numbers", {
           utilityId: Number(savedUtilityId),
-          accountNumber: existingSetting?.accountNumber ?? true,
-          serviceRefPodId: existingSetting?.serviceRefPodId ?? true,
+          accountNumber: sizeIsOff("accountnumbersize") ? false : existingSetting?.accountNumber ?? true,
+          serviceRefPodId: sizeIsOff("servicerefsize") ? false : existingSetting?.serviceRefPodId ?? true,
           masterAccountNumber: utilityMasterAccountNumber
         });
         await masterAccountSettings.refetch();

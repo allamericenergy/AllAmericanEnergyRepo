@@ -78,4 +78,13 @@ export interface GridColumn<
     valueFormatter?: (
         value: unknown
     ) => string;
+
+    /** Value written to CSV/XLSX exports. Defaults to valueFormatter, then the raw field value. */
+    exportValue?: (
+        row: T,
+        value: unknown
+    ) => unknown;
+
+    /** Leave this column out of CSV/XLSX exports (e.g. action buttons). */
+    excludeFromExport?: boolean;
 }

@@ -4,6 +4,7 @@ import type {
     GridColumn,
     GridRowModel,
 } from "../models";
+import { getExportColumns, getExportValue } from "./exportValue";
 
 export function exportRowsToXlsx<T extends GridRowModel>(
     rows: T[],
@@ -11,14 +12,14 @@ export function exportRowsToXlsx<T extends GridRowModel>(
     fileName = "grid-export.xlsx"
 ): void {
     const visibleColumns =
-        columns.filter((column) => !column.hidden);
+        getExportColumns(columns);
 
     const data = rows.map((row) => {
         const record: Record<string, unknown> = {};
 
         for (const column of visibleColumns) {
             record[column.headerName] =
-                row[column.field];
+                getExportValue(row, column);
         }
 
         return record;

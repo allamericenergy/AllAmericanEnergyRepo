@@ -2,6 +2,7 @@ import type {
     GridColumn,
     GridRowModel,
 } from "../models";
+import { getExportColumns, getExportValue } from "./exportValue";
 
 export function csvCell(value: unknown, preserveLeadingZeros = false): string {
     let text = String(value ?? "");
@@ -19,7 +20,7 @@ export function exportRowsToCsv<T extends GridRowModel>(
     fileName = "grid-export.csv"
 ) {
     const visibleColumns =
-        columns.filter((column) => !column.hidden);
+        getExportColumns(columns);
 
     const headers =
         visibleColumns.map(
@@ -28,7 +29,7 @@ export function exportRowsToCsv<T extends GridRowModel>(
 
     const records = rows.map((row) =>
         visibleColumns.map((column) => {
-            const value = row[column.field];
+            const value = getExportValue(row, column);
 
             return csvCell(value, column.csvPreserveLeadingZeros);
         })

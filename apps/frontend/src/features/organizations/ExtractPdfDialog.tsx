@@ -198,7 +198,13 @@ export function ExtractPdfDialog({ open, onClose, resume }: { open: boolean; onC
         ...requiredFields.map((key): GridColumn<BillRow> => ({
           field: key,
           headerName: fieldLabel(key),
-          minWidth: /address|name|supplier|utility|product/i.test(key) ? 220 : 150
+          minWidth: key === "billCheck" ? 260 : /address|name|supplier|utility|product/i.test(key) ? 220 : 150,
+          // A Bill Check of OK (new charges + balance forward = invoice cost) turns the cell green.
+          ...(key === "billCheck" ? {
+            renderCell: ({ value }) => value === "OK"
+              ? <span className="bill-check-ok" title="Total New Charges + Balance Forward = Total Invoice Cost">OK</span>
+              : String(value ?? "")
+          } : {})
         })),
         { field: "reviewNotes", headerName: "Review Notes", minWidth: 360 }
       ];

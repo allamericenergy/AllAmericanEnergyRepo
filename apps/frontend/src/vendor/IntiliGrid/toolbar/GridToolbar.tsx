@@ -11,7 +11,7 @@ import { useGridStore } from "../store/useGridStore";
 
 export default function GridToolbar<
     T extends GridRowModel
->() {
+>({ exportFileName }: { exportFileName?: string } = {}) {
     const runtime = useGridRuntime<T>();
 
     const quickFilter = useGridStore<T, string>(
@@ -49,14 +49,14 @@ export default function GridToolbar<
             />
             <GridToolbarButton
                 onClick={() =>
-                    runtime.exportCsv("visible")
+                    runtime.exportCsv("visible", exportFileName)
                 }
             >
                 Export CSV
             </GridToolbarButton>
             <GridToolbarButton
                 onClick={() =>
-                    runtime.exportCsv("selected")
+                    runtime.exportCsv("selected", exportFileName)
                 }
             >
                 Export Selected

@@ -270,6 +270,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
     queryFn: async () => (await api.get("/reports/us-states")).data as { data: USStateOption[] },
     retry: false
   });
+  // Cities for the state picked in the Add / Edit Company form.
+  const companyCities = useQuery({
+    queryKey: ["us-cities", newCompany.state],
+    queryFn: async () => (await api.get("/reports/us-cities", { params: { state: newCompany.state } })).data as { data: Array<{ id: string | number; name: string }> },
+    enabled: isCompanyModalOpen && Boolean(newCompany.state),
+    staleTime: 10 * 60 * 1000,
+    retry: false
+  });
+  const companyCityOptions = useMemo(() => {
+    const names = [...new Set((companyCities.data?.data ?? []).map((city) => String(city.name ?? "").trim()).filter(Boolean))];
+    // Keep a saved city that is not in the list so editing an older company does not blank it.
+    const current = newCompany.city.trim();
+    if (current && !names.some((name) => name.toLowerCase() === current.toLowerCase())) names.unshift(current);
+    return names;
+  }, [companyCities.data, newCompany.city]);
   const meterZipMatches = useQuery({
     queryKey: ["meter-zip-details", meterForm.zip],
     queryFn: async () => (await api.get("/reports/zip-code-details", { params: { zip: meterForm.zip.trim() } })).data as { data: ZipDetailOption[] },
@@ -683,13 +698,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
       field: "accountNumber",
       headerName: "Account Number",
       minWidth: 170,
-      renderCell: ({ row, value }) => row.accountNumberSize === 0 ? "NO" : String(value ?? "")
+      renderCell: ({ row, value }) => row.accountNumberSize === 0 ? "NO" : String(value ?? ""),
+      exportValue: (row, value) => row.accountNumberSize === 0 ? "NO" : value
     },
     {
       field: "serviceRefPod",
       headerName: "Service Ref/POD",
       minWidth: 170,
-      renderCell: ({ row, value }) => row.serviceRefSize === 0 ? "NO" : String(value ?? "")
+      renderCell: ({ row, value }) => row.serviceRefSize === 0 ? "NO" : String(value ?? ""),
+      exportValue: (row, value) => row.serviceRefSize === 0 ? "NO" : value
     },
     { field: "nameKey", headerName: "Name Key", minWidth: 140 },
     { field: "meter", headerName: "Meter", minWidth: 140 },
@@ -706,7 +723,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
       field: "loadProfile",
       headerName: "Load Profile",
       minWidth: 150,
-      renderCell: ({ row, value }) => String(row.demand ?? "").trim() ? String(value ?? "") : ""
+      renderCell: ({ row, value }) => String(row.demand ?? "").trim() ? String(value ?? "") : "",
+      exportValue: (row, value) => String(row.demand ?? "").trim() ? value : ""
     },
     { field: "iEnergyBill", headerName: "iEnergyBill", minWidth: 130, valueFormatter: (value) => lookupName(value, meterLookups.data?.iEnergyBills) },
     { field: "energyDashboard", headerName: "EnergyDashboard", minWidth: 170, valueFormatter: (value) => lookupName(value, meterLookups.data?.energyDashboards) },
@@ -719,6 +737,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       field: "isActive",
       headerName: "IsActive",
       width: 120,
+      exportValue: (_row, value) => (value ? "Active" : "Inactive"),
       renderCell: ({ value }) => {
         const isActive = Boolean(value);
         return <span className={`status-badge ${isActive ? "active" : "inactive"}`}>{isActive ? "Active" : "Inactive"}</span>;
@@ -729,6 +748,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       headerName: "Actions",
       width: 150,
       pinned: "right",
+      excludeFromExport: true,
       renderCell: ({ row }) => (
         <span className="grid-action-buttons">
           <Tooltip title="View meter">
@@ -2381,6 +2401,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <IntiliGrid
             key={`${contractGridKey}-${contractSummaryFilter || "all"}`}
             checkboxSelection
+            exportFileName="contracts"
             columns={contractColumns}
             rows={visibleContracts}
             getRowBackgroundColor={(contract) => isContractEndingSoon(contract) ? "#fee2e2" : undefined}
@@ -2580,6 +2601,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                 key={`${meterGridKey}-${meterSummaryFilter || "all"}-${meterTypeFilter || "all-statuses"}-${meterProductFilter || "all-products"}`}
                 initialPageSize={50}
                 checkboxSelection
+                exportFileName="meters"
                 columns={visibleMeterColumns}
                 rows={visibleMeters}
                 onRowClick={viewMeter}
@@ -2637,13 +2659,36 @@ export function DashboardPage({ view }: DashboardPageProps) {
               }}
             />
             <TextField label="Mailing Address" required value={newCompany.mailingAddress} onChange={(event) => updateNewCompany("mailingAddress", event.target.value)} />
-            <TextField label="City" required value={newCompany.city} onChange={(event) => updateNewCompany("city", event.target.value)} />
-            <TextField select label="State" required value={newCompany.state} onChange={(event) => updateNewCompany("state", event.target.value)}>
+            <TextField
+              select
+              label="State"
+              required
+              value={newCompany.state}
+              // A new state means a new city list, so clear the city.
+              onChange={(event) => setNewCompany((current) => ({ ...current, state: event.target.value, city: current.state === event.target.value ? current.city : "" }))}
+            >
               <MenuItem value="">Select state</MenuItem>
               {usStates.data?.data.map((state) => (
                 <MenuItem key={state.id} value={state.code}>{state.name} ({state.code})</MenuItem>
               ))}
             </TextField>
+            <Autocomplete
+              options={companyCityOptions}
+              value={newCompany.city || null}
+              onChange={(_event, value) => updateNewCompany("city", value ?? "")}
+              disabled={!newCompany.state}
+              loading={companyCities.isFetching}
+              noOptionsText={companyCities.isError ? "Unable to load cities" : "No cities found"}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="City"
+                  required
+                  error={companyCities.isError}
+                  helperText={!newCompany.state ? "Select a state first" : companyCities.isFetching ? "Loading cities..." : companyCities.isError ? "Unable to load cities for this state." : undefined}
+                />
+              )}
+            />
             <TextField label="ZIP" required value={newCompany.postalCode} onChange={(event) => updateNewCompany("postalCode", event.target.value)} />
             <TextField label="URL" value={newCompany.url} onChange={(event) => updateNewCompany("url", event.target.value)} />
             <TextField
@@ -3212,7 +3257,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedContractMeters.refetch()}>Retry</Button>}>Unable to load related meters.</Alert>
                     ) : viewedContractMeters.data?.data.length ? (
                       <div className="contract-grid-wrap">
-                        <IntiliGrid key={viewedContract.id} columns={meterColumns} rows={viewedContractMeters.data.data} onRowClick={viewMeter} />
+                        <IntiliGrid key={viewedContract.id} exportFileName="contract-meters" columns={meterColumns} rows={viewedContractMeters.data.data} onRowClick={viewMeter} />
                       </div>
                     ) : (
                       <div className="contract-view-empty"><Activity size={28} aria-hidden="true" /><strong>No linked meters</strong><p>Meters assigned to this contract will appear here.</p></div>
@@ -3545,7 +3590,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     {viewedMeterContracts.isLoading ? <p className="contract-view-message muted" role="status">Loading related contracts...</p> : viewedMeterContracts.isError ? (
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterContracts.refetch()}>Retry</Button>}>Unable to load related contracts.</Alert>
                     ) : viewedMeterContracts.data?.data.length ? (
-                      <div className="contract-grid-wrap"><IntiliGrid key={viewedMeter.id} columns={contractColumns} rows={viewedMeterContracts.data.data} onRowClick={viewContract} /></div>
+                      <div className="contract-grid-wrap"><IntiliGrid key={viewedMeter.id} exportFileName="meter-contracts" columns={contractColumns} rows={viewedMeterContracts.data.data} onRowClick={viewContract} /></div>
                     ) : <div className="contract-view-empty"><FileText size={28} aria-hidden="true" /><strong>No linked contracts</strong><p>Contracts assigned to this meter will appear here.</p></div>}
                   </section>
                 </div>
@@ -3939,7 +3984,7 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, avai
       {isLoading ? <p className="muted contract-panel-message">Loading contracts...</p> : null}
       <div className="contract-grid-wrap">
 
-        <IntiliGrid checkboxSelection columns={columns} rows={contracts} onRowClick={onRowClick} />
+        <IntiliGrid checkboxSelection exportFileName="contracts" columns={columns} rows={contracts} onRowClick={onRowClick} />
 
       </div>
     </section>
@@ -4000,7 +4045,7 @@ function MeterListPanel({ columns, meters, isLoading, isError, error, onAdd, onA
       {isError ? <p className="error contract-panel-message">Unable to load meters.</p> : null}
       {isLoading ? <p className="muted contract-panel-message">Loading meters...</p> : null}
       <div className="contract-grid-wrap">
-        <IntiliGrid checkboxSelection columns={columns} rows={meters} onRowClick={onRowClick} />
+        <IntiliGrid checkboxSelection exportFileName="meters" columns={columns} rows={meters} onRowClick={onRowClick} />
       </div>
     </section>
   );

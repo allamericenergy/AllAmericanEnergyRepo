@@ -195,7 +195,7 @@ export default function Grid<T extends GridRowModel>(
                                         "0 1px 2px rgba(15, 23, 42, 0.06)",
                                 }}
                             >
-                                <GridToolbar<T> />
+                                <GridToolbar<T> exportFileName={props.exportFileName} />
                                 <GridViewport<T> props={props} />
                                 <GridFooter<T> />
                             </Paper>
