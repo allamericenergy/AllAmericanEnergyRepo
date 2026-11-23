@@ -3925,3 +3925,34 @@ nav a:hover {
 
 .upload-columns-panel { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
 .upload-columns-actions { display: flex; justify-content: flex-end; }
+
+/* ExtractPDF: CreateUploads results. */
+.create-uploads-bill { padding: 12px 0; overflow-wrap: anywhere; }
+.create-uploads-bill + .create-uploads-bill { border-top: 1px solid #e2e8f0; }
+.create-uploads-bill h3, .create-uploads-bill p { margin: 0 0 8px; }
+.create-uploads-columns { columns: 220px; column-gap: 32px; margin: 0 0 12px; padding-left: 28px; }
+.create-uploads-columns li { break-inside: avoid; padding: 2px 0; }
+.create-uploads-file { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 12px 0; padding: 12px; border: 1px solid #bfdbfe; border-radius: 8px; }
+.create-uploads-file-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.create-uploads-file-title h3 { margin: 0; }
+.create-uploads-file ul { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+.create-uploads-preview { overflow-x: auto; }
+.create-uploads-preview table { border-collapse: collapse; font-size: 0.85rem; }
+.create-uploads-preview th, .create-uploads-preview td { height: 32px; border: 1px solid #e2e8f0; padding: 4px 8px; text-align: left; white-space: nowrap; }
+.create-uploads-preview th { background: #f8fafc; font-weight: 600; }
+
+/* Loading indicator: bar on the top edge and a large image in the middle of the page.
+   Above dialogs (MUI uses 1300); clicks pass through so work can continue. */
+.global-loading { position: fixed; inset: 0; z-index: 2000; pointer-events: none; }
+.global-loading-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, transparent, #2563eb, #fcbd00, transparent); background-size: 50% 100%; background-repeat: no-repeat; animation: global-loading-slide 1.1s ease-in-out infinite; }
+.global-loading-card { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 220px; max-width: calc(100vw - 32px); padding: 24px 32px; border: 1px solid #bfdbfe; border-radius: 16px; background: rgba(255, 255, 255, 0.96); color: #1e3a8a; text-align: center; box-shadow: 0 16px 48px rgba(15, 23, 42, 0.22); }
+.global-loading-card strong { font-size: 1.1rem; }
+.global-loading-card ul { margin: 0; padding: 0; list-style: none; color: #475569; font-size: 0.95rem; line-height: 1.6; }
+.global-loading-image { position: relative; display: grid; place-items: center; width: 88px; height: 88px; }
+.global-loading-ring { position: absolute; inset: 0; border: 6px solid rgba(37, 99, 235, 0.15); border-top-color: #2563eb; border-right-color: #60a5fa; border-radius: 50%; animation: member-bill-ring-spin 0.9s linear infinite; }
+.global-loading-image svg { color: #f59e0b; fill: #fcbd00; animation: member-bill-dot-pulse 1.2s ease-in-out infinite; }
+@keyframes global-loading-slide { from { background-position: -100% 0; } to { background-position: 200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .global-loading-bar, .global-loading-ring, .global-loading-image svg { animation: none; }
+  .global-loading-bar { background-size: 100% 100%; }
+}

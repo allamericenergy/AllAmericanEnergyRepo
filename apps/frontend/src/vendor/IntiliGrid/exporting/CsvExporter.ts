@@ -4,12 +4,16 @@ import type {
 } from "../models";
 import { getExportColumns, getExportValue } from "./exportValue";
 
-export function csvCell(value: unknown, preserveLeadingZeros = false): string {
+export function csvCell(value: unknown, preserveLeadingZeros = false, asText = false): string {
     let text = String(value ?? "");
     // Only digits are allowed in the Excel text formula; never interpolate
     // arbitrary database content into a formula.
-    if (preserveLeadingZeros && typeof value === "string" && /^0\d+$/.test(value)) {
-        text = `="${value}"`;
+    const isDigits = /^\d+$/.test(text);
+    const forceText =
+        (asText && isDigits && (typeof value === "string" || typeof value === "number")) ||
+        (preserveLeadingZeros && typeof value === "string" && /^0\d+$/.test(value));
+    if (forceText) {
+        text = `="${text}"`;
     }
     return `"${text.replace(/"/g, '""')}"`;
 }
@@ -31,7 +35,7 @@ export function exportRowsToCsv<T extends GridRowModel>(
         visibleColumns.map((column) => {
             const value = getExportValue(row, column);
 
-            return csvCell(value, column.csvPreserveLeadingZeros);
+            return csvCell(value, column.csvPreserveLeadingZeros, column.exportAsText);
         })
     );
 

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./app/App";
+import { GlobalLoadingIndicator } from "./app/GlobalLoadingIndicator";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
+      <GlobalLoadingIndicator />
     </QueryClientProvider>
   </React.StrictMode>
 );

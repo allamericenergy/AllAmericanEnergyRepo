@@ -49,6 +49,9 @@ export interface GridColumn<
     /** Preserve zero-prefixed numeric text when a CSV is opened in Excel. */
     csvPreserveLeadingZeros?: boolean;
 
+    /** Always export digit-only values as text so Excel shows the full number (no 1.2E+11 or rounding). */
+    exportAsText?: boolean;
+
     sortable?: boolean;
 
     sortComparer?: (a: unknown, b: unknown) => number;

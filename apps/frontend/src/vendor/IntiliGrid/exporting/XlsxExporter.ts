@@ -18,8 +18,12 @@ export function exportRowsToXlsx<T extends GridRowModel>(
         const record: Record<string, unknown> = {};
 
         for (const column of visibleColumns) {
+            const value = getExportValue(row, column);
+            // Keep long identifiers as text so Excel doesn't round or use scientific notation.
             record[column.headerName] =
-                getExportValue(row, column);
+                column.exportAsText && typeof value === "number"
+                    ? String(value)
+                    : value;
         }
 
         return record;

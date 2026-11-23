@@ -13,7 +13,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import * as XLSX from "xlsx";
 import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
-import { IntiliGrid, type GridColumn } from "@intiligrid";
+import { IntiliGrid, type GridColumn, type GridSortModel } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
@@ -426,6 +426,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
     }
     return Array.from(ids);
   }, [companies.data?.data, viewedCompany]);
+  // Every subcompany below the viewed company, each listed under its own parent.
+  const viewedSubcompanies = useMemo(() => {
+    const rows = companies.data?.data ?? [];
+    const list: Array<TblCompanyRow & { level: number }> = [];
+    const visited = new Set<string>();
+    const addChildren = (parentId: string, level: number) => {
+      rows.filter((company) => String(company.parentCompanyId ?? "") === parentId && !visited.has(String(company.id)))
+        .sort((left, right) => (left.companyName ?? "").localeCompare(right.companyName ?? ""))
+        .forEach((company) => {
+          visited.add(String(company.id));
+          list.push({ ...company, level });
+          addChildren(String(company.id), level + 1);
+        });
+    };
+    if (viewedCompany) {
+      visited.add(String(viewedCompany.id));
+      addChildren(String(viewedCompany.id), 1);
+    }
+    return list;
+  }, [companies.data?.data, viewedCompany]);
   const companyLabels = useMemo(() => Object.fromEntries(
     viewedCompanyIds.map((id) => {
       const company = (companies.data?.data ?? []).find((item) => String(item.id) === String(id));
@@ -698,6 +718,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       field: "accountNumber",
       headerName: "Account Number",
       minWidth: 170,
+      exportAsText: true,
       renderCell: ({ row, value }) => row.accountNumberSize === 0 ? "NO" : String(value ?? ""),
       exportValue: (row, value) => row.accountNumberSize === 0 ? "NO" : value
     },
@@ -705,11 +726,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
       field: "serviceRefPod",
       headerName: "Service Ref/POD",
       minWidth: 170,
+      exportAsText: true,
       renderCell: ({ row, value }) => row.serviceRefSize === 0 ? "NO" : String(value ?? ""),
       exportValue: (row, value) => row.serviceRefSize === 0 ? "NO" : value
     },
     { field: "nameKey", headerName: "Name Key", minWidth: 140 },
-    { field: "meter", headerName: "Meter", minWidth: 140 },
+    { field: "meter", headerName: "Meter", minWidth: 140, exportAsText: true },
     { field: "serviceAddress", headerName: "Service Address", minWidth: 220 },
     { field: "city", headerName: "City", minWidth: 130 },
     { field: "state", headerName: "State", width: 110 },
@@ -2959,6 +2981,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     onAddMore={openBulkMeterUpload}
                     onExpand={() => setIsCompanyMeterListDismissed(false)}
                   />
+                  <SubcompanyListPanel
+                    subcompanies={viewedSubcompanies}
+                    isLoading={companies.isLoading}
+                    isError={companies.isError}
+                    onRowClick={viewCompany}
+                  />
                   {canManageMembers ? (
                     <MembersPanel companyId={viewedCompany.id} companyIds={viewedCompanyIds} companyLabels={companyLabels} canAdd compact onExpand={() => setIsCompanyMemberListOpen(true)} />
                   ) : null}
@@ -3987,6 +4015,57 @@ function ContractListPanel({ columns, contracts, isLoading, isError, error, avai
         <IntiliGrid checkboxSelection exportFileName="contracts" columns={columns} rows={contracts} onRowClick={onRowClick} />
 
       </div>
+    </section>
+  );
+}
+
+type SubcompanyRow = TblCompanyRow & { level: number };
+
+const subcompanyColumns: GridColumn<SubcompanyRow>[] = [
+  {
+    field: "companyStatus",
+    headerName: "Status",
+    minWidth: 110,
+    renderCell: ({ row }) => {
+      const status = effectiveCompanyStatus(row);
+      return <span className="status-badge" style={companyStatusColor(status)}>{status}</span>;
+    }
+  },
+  {
+    field: "companyName",
+    headerName: "Subcompany",
+    minWidth: 240,
+    flex: 1,
+    // Deeper levels are indented under their own parent.
+    renderCell: ({ row }) => <span style={{ paddingLeft: (row.level - 1) * 16 }}>{row.level > 1 ? "↳ " : ""}{row.companyName ?? "-"}</span>
+  },
+  { field: "customerId", headerName: "Customer ID", width: 140 },
+  { field: "parentCompanyName", headerName: "Parent Company", minWidth: 200 },
+  { field: "city", headerName: "City", width: 140 },
+  { field: "state", headerName: "State", width: 100 },
+  { field: "phoneNumber", headerName: "Phone", width: 150 }
+];
+// No default sort, so each subcompany stays listed under its parent.
+const subcompanyTreeOrder: GridSortModel<SubcompanyRow> = [];
+
+function SubcompanyListPanel({ subcompanies, isLoading, isError, onRowClick }: {
+  subcompanies: SubcompanyRow[];
+  isLoading: boolean;
+  isError: boolean;
+  onRowClick: (company: TblCompanyRow) => void;
+}) {
+  return (
+    <section className="account-data-panel" aria-label="Subcompany List">
+      <div className="account-data-title">
+        <h2>Subcompany List ({subcompanies.length})</h2>
+      </div>
+      {isError ? <p className="error contract-panel-message">Unable to load subcompanies.</p> : null}
+      {isLoading ? <p className="muted contract-panel-message">Loading subcompanies...</p> : null}
+      {!isLoading && !isError && !subcompanies.length ? <p className="muted contract-panel-message">This company has no subcompanies.</p> : (
+        <div className="contract-grid-wrap">
+          <IntiliGrid exportFileName="subcompanies" columns={subcompanyColumns} rows={subcompanies} onRowClick={onRowClick} initialSortModel={subcompanyTreeOrder} />
+        </div>
+      )}
     </section>
   );
 }

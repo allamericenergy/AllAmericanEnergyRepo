@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { isAxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
-import { Database, FileText, Upload } from "lucide-react";
+import { Columns3, Database, FileText, Upload } from "lucide-react";
 import { IntiliGrid, type GridColumn } from "@intiligrid";
 import { api } from "../../lib/api";
+import { CreateUploadsDialog } from "./CreateUploadsDialog";
 
 const MAX_FILE_MB = 15;
 // Claude reads each bill in roughly 20–60 seconds; a few at once keeps large batches moving.
@@ -118,6 +119,7 @@ export function ExtractPdfDialog({ open, onClose, resume }: { open: boolean; onC
   const [pendingMissingMeters, setPendingMissingMeters] = useState<string[]>([]);
   // Bill to offer for insert after returning from Add New Meter.
   const [resumePrompt, setResumePrompt] = useState<{ uploadId: string; meterAdded: boolean } | null>(null);
+  const [createUploadsOpen, setCreateUploadsOpen] = useState(false);
   const navigate = useNavigate();
   const request = useRef<AbortController | null>(null);
 
@@ -429,14 +431,23 @@ export function ExtractPdfDialog({ open, onClose, resume }: { open: boolean; onC
         </details>
       </> : null}
     </DialogContent>
-    <DialogActions>
+    <DialogActions disableSpacing sx={{ flexWrap: "wrap", gap: 1 }}>
       <Button onClick={close} disabled={saving}>{loading ? "Cancel" : "Close"}</Button>
+      <Button variant="outlined" startIcon={<Columns3 size={16} />} disabled={!results.length || loading || saving}
+        onClick={() => setCreateUploadsOpen(true)}>CreateUploads</Button>
       {results.length && !loading ? <Button variant="outlined" color="success" startIcon={saving ? <CircularProgress size={14} /> : <Database size={16} />}
         disabled={!savable.length || saving} onClick={() => void saveToDatabase(savable)}>
         {saving ? "Saving…" : savable.length ? `Submit to DB (${savable.length})` : "Submitted to DB"}
       </Button> : null}
       <Button variant="contained" disabled={!uploads.some((item) => !item.error) || loading || saving} onClick={() => void submit()}>{loading ? "Extracting…" : "Submit"}</Button>
     </DialogActions>
+    {createUploadsOpen ? <CreateUploadsDialog
+      bills={results.map(({ id, file, result }) => ({
+        id, fileName: file.name, accountNumber: result.bill.accountNumber ?? "", serviceRefPod: result.bill.serviceRefPod ?? "",
+        billType: result.billType, values: result.bill, needsReview: result.extraction.status === "needs_review",
+        lowConfidence: result.fields.filter((field) => field.confidence === "low").map((field) => field.key)
+      }))}
+      onClose={() => setCreateUploadsOpen(false)} /> : null}
     {(() => {
       const resumeItem = resumePrompt ? results.find((item) => item.id === resumePrompt.uploadId) : undefined;
       return <Dialog open={Boolean(resumePrompt && resumeItem)} onClose={() => setResumePrompt(null)} maxWidth="sm" fullWidth aria-labelledby="resume-insert-title">
