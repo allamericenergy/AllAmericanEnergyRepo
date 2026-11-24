@@ -3611,7 +3611,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <dt>Service Ref/POD</dt><dd>{viewedMeter.serviceRefSize === 0 ? "NO" : viewedMeter.serviceRefPod ?? "-"}</dd>
                       <dt>Name Key</dt><dd>{viewedMeter.nameKey ?? "-"}</dd>
                       <dt>Type</dt><dd>{viewedMeter.type ?? "-"}</dd>
-                      <dt>Rate</dt><dd>{viewedMeter.rate == null || String(viewedMeter.rate).trim() === "" ? "-" : String(viewedMeter.rate)}</dd>
+                      <dt>Rate</dt><dd>{viewedMeter.rate == null || String(viewedMeter.rate).trim() === "" ? "-" : lookupName(viewedMeter.rate, meterLookups.data?.rates)}</dd>
                     </dl>
                   </section>
                   <section id="meter-tray-service" className="account-card" hidden={!meterTray}>
@@ -4864,7 +4864,8 @@ function shortenFileName(fileName: string, maximumLength = 20) {
 // Meter details already shown in the meter view; compared without case, spaces, underscores or slashes.
 const HIDDEN_METER_INVOICE_COLUMNS = new Set([
   "vendor", "utilityaccountname", "accountnumber", "servicerefpod", "namekey", "meter",
-  "city", "state", "zip", "rate", "utility", "product"
+  "city", "state", "zip", "rate", "utility", "product",
+  "invoiceid", "extractionstatus", "extractionconfidence", "createdon", "aiprocessedon", "documenttitle"
 ]);
 
 interface MeterInvoiceRow {
