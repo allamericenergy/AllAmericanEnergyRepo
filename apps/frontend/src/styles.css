@@ -3976,3 +3976,18 @@ nav a:hover {
   font-weight: 600;
   color: #1f2937;
 }
+
+/* Meter view → Related Invoice List: File column PDF icon. */
+.invoice-file-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  color: #c62828;
+}
+
+.invoice-file-link:hover,
+.invoice-file-link:focus-visible {
+  background-color: rgba(198, 40, 40, 0.1);
+}

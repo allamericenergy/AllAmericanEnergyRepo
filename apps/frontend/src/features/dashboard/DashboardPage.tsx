@@ -504,7 +504,39 @@ export function DashboardPage({ view }: DashboardPageProps) {
     const balanceForwardKey = columnKey("balanceforward");
     const invoiceCostKey = columnKey("totalinvoicecost");
     const billCheckKey = columnKey("billcheck");
-    return Object.keys(rows[0]).filter((key) => key !== "id" && !HIDDEN_METER_INVOICE_COLUMNS.has(key.replace(/[^A-Za-z0-9]/g, "").toLowerCase())).map((key) => {
+    const documentTitleKey = columnKey("documenttitle");
+    const companyId = viewedMeter?.companyId;
+    const productFolder = utilityBillsFolderForProduct(viewedMeterInvoices.data?.product ?? viewedMeter?.product);
+    const fileName = (row: MeterInvoiceRow) => String((documentTitleKey && row[documentTitleKey]) ?? "").trim();
+    const fileColumn: GridColumn<MeterInvoiceRow> = {
+      field: "file",
+      headerName: "File",
+      width: 80,
+      sortable: false,
+      renderCell: ({ row }) => {
+        const name = fileName(row);
+        if (!name || companyId == null) return "-";
+        const params = new URLSearchParams({ fileName: name });
+        if (productFolder) params.set("folder", `UtilityBills/${productFolder}`);
+        return (
+          <Tooltip title={`Open ${name}`}>
+            <a
+              className="invoice-file-link"
+              href={`/companies/${encodeURIComponent(String(companyId))}/documents?${params.toString()}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open document ${name}`}
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <FileText size={18} aria-hidden="true" />
+            </a>
+          </Tooltip>
+        );
+      },
+      exportValue: (row) => fileName(row)
+    };
+    return [fileColumn, ...Object.keys(rows[0]).filter((key) => key !== "id" && !HIDDEN_METER_INVOICE_COLUMNS.has(key.replace(/[^A-Za-z0-9]/g, "").toLowerCase())).map((key) => {
       const sample = rows.find((row) => row[key] != null && row[key] !== "")?.[key];
       const isDate = typeof sample === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(sample);
       const isFlag = typeof sample === "boolean";
@@ -534,8 +566,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
         exportAsText: /account|meter|service_ref|pod/i.test(key),
         ...(isDate ? { valueFormatter: formatDate } : isFlag ? { valueFormatter: (value: unknown) => (value ? "Yes" : "No") } : {})
       } as GridColumn<MeterInvoiceRow>;
-    });
-  }, [viewedMeterInvoices.data]);
+    })];
+  }, [viewedMeterInvoices.data, viewedMeter?.companyId, viewedMeter?.product]);
   const meterInvoiceTableLabel = viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
   function viewMeter(meter: MeterRow) {
     window.focus();
@@ -3819,6 +3851,8 @@ export function CompanyDocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFileId = searchParams.get("fileId") ?? "";
   const selectedFileName = searchParams.get("fileName") ?? "";
+  // Optional folder path ("UtilityBills/Power") to look in before searching every folder.
+  const selectedFolderPath = searchParams.get("folder") ?? "";
   const [showDocuments, setShowDocuments] = useState(!selectedFileId && !selectedFileName);
   useEffect(() => {
     setShowDocuments(!selectedFileId && !selectedFileName);
@@ -3839,9 +3873,11 @@ export function CompanyDocumentsPage() {
 
   useEffect(() => {
     if (selectedFileId || !selectedFileName || !companyDocuments.data?.tree.length) return;
-    const matchingFile = findDocumentByName(companyDocuments.data.tree, selectedFileName);
+    const folder = selectedFolderPath ? findFolderByPath(companyDocuments.data.tree, selectedFolderPath) : null;
+    const matchingFile = (folder?.children && findDocumentByName(folder.children, selectedFileName))
+      ?? findDocumentByName(companyDocuments.data.tree, selectedFileName);
     if (matchingFile) setSearchParams({ fileId: matchingFile.id, fileName: matchingFile.name }, { replace: true });
-  }, [companyDocuments.data, selectedFileId, selectedFileName, setSearchParams]);
+  }, [companyDocuments.data, selectedFileId, selectedFileName, selectedFolderPath, setSearchParams]);
 
   useEffect(() => {
     if (!selectedFile.data) {
@@ -4153,6 +4189,30 @@ interface MeterListPanelProps {
   onAdd: () => void;
   onAddMore: () => void;
   onExpand?: () => void;
+}
+
+/** Folder at a "/"-separated path such as "UtilityBills/Power"; names compare without case or spaces. */
+function findFolderByPath(nodes: DocumentNode[], path: string): DocumentNode | null {
+  const normalize = (name: string) => name.replace(/\s+/g, "").toLowerCase();
+  let current: DocumentNode | null = null;
+  let level = nodes;
+  for (const part of path.split("/").map(normalize).filter(Boolean)) {
+    current = level.find((node) => node.type === "folder" && normalize(node.name) === part) ?? null;
+    if (!current) return null;
+    level = current.children ?? [];
+  }
+  return current;
+}
+
+/** UtilityBills subfolder that holds a product's bills (Electric → Power, Natural Gas → Gas). */
+function utilityBillsFolderForProduct(product: string | null | undefined) {
+  const name = (product ?? "").toLowerCase();
+  if (/solar/.test(name)) return "Solar";
+  if (/power|electric/.test(name)) return "Power";
+  if (/gas/.test(name)) return "Gas";
+  if (/sewer/.test(name)) return "Sewer";
+  if (/water/.test(name)) return "Water";
+  return "";
 }
 
 function findDocumentByName(nodes: DocumentNode[], fileName: string): DocumentNode | null {
