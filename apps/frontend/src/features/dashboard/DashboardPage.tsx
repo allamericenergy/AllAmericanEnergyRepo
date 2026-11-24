@@ -499,7 +499,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterInvoiceColumns = useMemo<GridColumn<MeterInvoiceRow>[]>(() => {
     const rows = viewedMeterInvoices.data?.data ?? [];
     if (!rows.length) return [];
-    return Object.keys(rows[0]).filter((key) => key !== "id").map((key) => {
+    return Object.keys(rows[0]).filter((key) => key !== "id" && !HIDDEN_METER_INVOICE_COLUMNS.has(key.replace(/[^A-Za-z0-9]/g, "").toLowerCase())).map((key) => {
       const sample = rows.find((row) => row[key] != null && row[key] !== "")?.[key];
       const isDate = typeof sample === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(sample);
       const isFlag = typeof sample === "boolean";
@@ -3611,6 +3611,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <dt>Service Ref/POD</dt><dd>{viewedMeter.serviceRefSize === 0 ? "NO" : viewedMeter.serviceRefPod ?? "-"}</dd>
                       <dt>Name Key</dt><dd>{viewedMeter.nameKey ?? "-"}</dd>
                       <dt>Type</dt><dd>{viewedMeter.type ?? "-"}</dd>
+                      <dt>Rate</dt><dd>{viewedMeter.rate == null || String(viewedMeter.rate).trim() === "" ? "-" : String(viewedMeter.rate)}</dd>
                     </dl>
                   </section>
                   <section id="meter-tray-service" className="account-card" hidden={!meterTray}>
@@ -4859,6 +4860,12 @@ function shortenFileName(fileName: string, maximumLength = 20) {
   if (fileName.length <= maximumLength) return fileName;
   return `${fileName.slice(0, maximumLength - 3)}...`;
 }
+
+// Meter details already shown in the meter view; compared without case, spaces, underscores or slashes.
+const HIDDEN_METER_INVOICE_COLUMNS = new Set([
+  "vendor", "utilityaccountname", "accountnumber", "servicerefpod", "namekey", "meter",
+  "city", "state", "zip", "rate", "utility", "product"
+]);
 
 interface MeterInvoiceRow {
   id: string;
