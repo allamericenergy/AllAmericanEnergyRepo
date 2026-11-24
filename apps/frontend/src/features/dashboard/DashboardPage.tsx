@@ -15,6 +15,7 @@ import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn, type GridSortModel } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
+import { UsageBarChart, UsagePieChart, type UsagePoint } from "./UsagePieChart";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
 
@@ -568,7 +569,20 @@ export function DashboardPage({ view }: DashboardPageProps) {
       } as GridColumn<MeterInvoiceRow>;
     })];
   }, [viewedMeterInvoices.data, viewedMeter?.companyId, viewedMeter?.product]);
-  const meterInvoiceTableLabel = viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
+  const meterUsagePoints = useMemo<UsagePoint[]>(() => {
+    const rows = viewedMeterInvoices.data?.data ?? [];
+    if (!rows.length) return [];
+    const columnKey = (name: string) => Object.keys(rows[0]).find((key) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === name);
+    const dateKey = columnKey("statementdate");
+    const usageKey = columnKey("totalusage");
+    if (!dateKey || !usageKey) return [];
+    return rows.flatMap((row) => {
+      const date = String(row[dateKey] ?? "").trim();
+      const usage = Number(String(row[usageKey] ?? "").replace(/[,\s]/g, ""));
+      return date && Number.isFinite(usage) && usage > 0 ? [{ date, usage }] : [];
+    });
+  }, [viewedMeterInvoices.data]);
+  const meterInvoiceTableLabel =viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
   function viewMeter(meter: MeterRow) {
     window.focus();
     setViewedContract(null);
@@ -3704,7 +3718,15 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     {viewedMeterInvoices.isLoading ? <p className="contract-view-message muted" role="status">Loading related invoices...</p> : viewedMeterInvoices.isError ? (
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterInvoices.refetch()}>Retry</Button>}>Unable to load related invoices.</Alert>
                     ) : viewedMeterInvoices.data?.data.length ? (
+                      <>
+                      {meterUsagePoints.length ? (
+                        <div className="usage-charts">
+                          <UsagePieChart key={`usage-pie-${viewedMeter.id}`} points={meterUsagePoints} />
+                          <UsageBarChart key={`usage-bar-${viewedMeter.id}`} points={meterUsagePoints} />
+                        </div>
+                      ) : null}
                       <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} /></div>
+                      </>
                     ) : (
                       <div className="contract-view-empty">
                         <FileText size={28} aria-hidden="true" />
