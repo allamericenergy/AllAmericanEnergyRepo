@@ -69,6 +69,9 @@ interface OrganizationNoteRow {
   updatedAt: string;
 }
 
+/** One rate in a utility's Rate dropdown; row is the tbl_Rate record. */
+interface UtilityRate { id: string; name: string; row: RateRow; utilityId: string }
+
 interface RatesResponse {
   total: number;
   primaryKey: string | null;
@@ -532,6 +535,40 @@ interface LocationResponse {
   data: LocationRow[];
 }
 
+/** Splits pasted text into values, dropping blanks, repeats within the paste and values that already exist (case-insensitive). */
+function parsePastedValues(text: string, existingValues: Array<string | undefined>, separator: RegExp, maxLength: number) {
+  const normalize = (value: string) => value.trim().replace(/\s+/g, " ").slice(0, maxLength);
+  const existingKeys = new Set(existingValues.map((value) => normalize(value ?? "").toLowerCase()));
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  let pastedDuplicates = 0;
+  let existing = 0;
+  for (const raw of text.split(separator)) {
+    const value = normalize(raw);
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (existingKeys.has(key)) existing += 1;
+    else if (seen.has(key)) pastedDuplicates += 1;
+    else { seen.add(key); unique.push(value); }
+  }
+  return { unique, pastedDuplicates, existing };
+}
+
+/** City names may contain spaces, so only newlines, commas, semicolons and tabs separate them. */
+function parsePastedCities(text: string, existingCities: LocationRow[]) {
+  return parsePastedValues(text, existingCities.map((city) => city.name), /[\r\n,;\t]+/, 150);
+}
+
+/** ZIP codes never contain spaces, so any whitespace, comma or semicolon separates them. */
+function parsePastedZips(text: string, existingZips: LocationRow[]) {
+  return parsePastedValues(text, existingZips.map((zip) => zip.code), /[\s,;]+/, 10);
+}
+
+function pastedSummary(parsed: { unique: string[]; pastedDuplicates: number; existing: number }, singular: string, plural: string) {
+  const skipped = parsed.pastedDuplicates + parsed.existing;
+  return `${parsed.unique.length} new ${parsed.unique.length === 1 ? singular : plural} to add${skipped ? ` · ${skipped} duplicate${skipped === 1 ? "" : "s"} will be skipped` : ""}`;
+}
+
 function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const [editing, setEditing] = useState<LocationRow | null>(null);
   const [deleting, setDeleting] = useState<LocationRow | null>(null);
@@ -553,6 +590,8 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   const [uploadRows, setUploadRows] = useState<Array<Record<string, unknown>>>([]);
   const [stateForm, setStateForm] = useState({ name: "", code: "", capital: "" });
   const [cityForm, setCityForm] = useState({ stateId: "", name: "", isCapital: false });
+  const [cityBulkText, setCityBulkText] = useState("");
+  const [zipBulkText, setZipBulkText] = useState("");
   const [zipForm, setZipForm] = useState({ stateId: "", cityId: "", code: "", isActive: true });
   const [selectedCityByState, setSelectedCityByState] = useState<Record<string, string>>({});
   const [selectedZipByCity, setSelectedZipByCity] = useState<Record<string, string>>({});
@@ -636,6 +675,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
               <MenuItem value="__add_city__" onClick={(event) => {
                 event.stopPropagation();
                 setCityForm({ stateId: String(row.id), name: "", isCapital: false });
+                setCityBulkText("");
                 setStateCityEditing(null);
                 setError("");
                 setNotice("");
@@ -672,6 +712,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
               <MenuItem value="__add_zip__" onClick={(event) => {
                 event.stopPropagation();
                 setZipForm({ stateId: String(row.id), cityId: selectedCityId, code: "", isActive: true });
+                setZipBulkText("");
                 setStateZipEditing(null);
                 setError("");
                 setNotice("");
@@ -758,6 +799,7 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
   }
 
   async function saveStateCity() {
+    if (!stateCityEditing) return saveStateCitiesBulk();
     if (!cityForm.stateId || !cityForm.name.trim()) return;
     setSaving(true);
     setError("");
@@ -777,7 +819,70 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
     }
   }
 
+  async function saveStateCitiesBulk() {
+    if (!cityForm.stateId) return;
+    const { unique, pastedDuplicates, existing } = parsePastedCities(cityBulkText, citiesByState.get(cityForm.stateId) ?? []);
+    const skipped = pastedDuplicates + existing;
+    if (!unique.length) {
+      setError(skipped ? "All entered cities already exist for this state. Nothing was added." : "Enter at least one city.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const response = await api.post("/reports/location-cities/bulk", {
+        rows: unique.map((city) => ({ state: cityForm.stateId, city, isCapital: cityForm.isCapital }))
+      });
+      const result = response.data as { imported: number; existing: number };
+      const totalSkipped = skipped + (result.existing ?? 0);
+      await relatedCities.refetch();
+      setSelectedCityByState((current) => ({ ...current, [cityForm.stateId]: "" }));
+      setStateCityFormOpen(false);
+      setCityBulkText("");
+      setNotice(`${result.imported} ${result.imported === 1 ? "city" : "cities"} added.`
+        + (totalSkipped ? ` ${totalSkipped} duplicate${totalSkipped === 1 ? "" : "s"} skipped.` : ""));
+    } catch (saveError) {
+      setError(apiError(saveError) ?? "Unable to save the cities.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveStateZipsBulk() {
+    if (!zipForm.cityId) return;
+    const cityName = (citiesByState.get(zipForm.stateId) ?? []).find((city) => String(city.id) === zipForm.cityId)?.name;
+    if (!cityName) {
+      setError("Select a city first.");
+      return;
+    }
+    const { unique, pastedDuplicates, existing } = parsePastedZips(zipBulkText, zipsByCity.get(zipForm.cityId) ?? []);
+    const skipped = pastedDuplicates + existing;
+    if (!unique.length) {
+      setError(skipped ? "All entered ZIP codes already exist for this city. Nothing was added." : "Enter at least one ZIP code.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const response = await api.post("/reports/location-zip-codes/bulk", {
+        rows: unique.map((zip) => ({ state: zipForm.stateId, city: cityName, zip, isActive: zipForm.isActive }))
+      });
+      const result = response.data as { imported: number; existing: number };
+      const totalSkipped = skipped + (result.existing ?? 0);
+      await relatedZips.refetch();
+      setStateZipFormOpen(false);
+      setZipBulkText("");
+      setNotice(`${result.imported} ZIP code${result.imported === 1 ? "" : "s"} added.`
+        + (totalSkipped ? ` ${totalSkipped} duplicate${totalSkipped === 1 ? "" : "s"} skipped.` : ""));
+    } catch (saveError) {
+      setError(apiError(saveError) ?? "Unable to save the ZIP codes.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveStateZip() {
+    if (!stateZipEditing) return saveStateZipsBulk();
     if (!zipForm.cityId || !zipForm.code.trim()) return;
     setSaving(true);
     setError("");
@@ -979,13 +1084,27 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
               value={records.data?.data.find((state) => String(state.id) === cityForm.stateId)?.name ?? ""}
               disabled
             />
-            <TextField required label="City" value={cityForm.name} onChange={(event) => setCityForm((current) => ({ ...current, name: event.target.value }))} />
+            {stateCityEditing ? (
+              <TextField required label="City" value={cityForm.name} onChange={(event) => setCityForm((current) => ({ ...current, name: event.target.value }))} />
+            ) : (
+              <TextField
+                required
+                multiline
+                minRows={6}
+                maxRows={14}
+                label="Cities"
+                placeholder={"Paste one city per line (commas, semicolons or tabs also work)\nAustin\nDallas\nHouston"}
+                value={cityBulkText}
+                onChange={(event) => setCityBulkText(event.target.value)}
+                helperText={pastedSummary(parsePastedCities(cityBulkText, citiesByState.get(cityForm.stateId) ?? []), "city", "cities")}
+              />
+            )}
             <FormControlLabel control={<Checkbox checked={cityForm.isCapital} onChange={(event) => setCityForm((current) => ({ ...current, isCapital: event.target.checked }))} />} label="Capital city" />
           </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setStateCityFormOpen(false); setStateCityEditing(null); }} disabled={saving}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveStateCity()} disabled={saving || !cityForm.name.trim()}>{saving ? "Saving..." : stateCityEditing ? "Update City" : "Save City"}</Button>
+          <Button variant="contained" onClick={() => void saveStateCity()} disabled={saving || (stateCityEditing ? !cityForm.name.trim() : !cityBulkText.trim())}>{saving ? "Saving..." : stateCityEditing ? "Update City" : "Save Cities"}</Button>
         </DialogActions>
       </Dialog>
 
@@ -1003,13 +1122,27 @@ function LocationTablePanel({ kind }: { kind: LocationSection }) {
               <MenuItem value="">Select city</MenuItem>
               {(citiesByState.get(zipForm.stateId) ?? []).map((city) => <MenuItem key={city.id} value={String(city.id)}>{city.name}</MenuItem>)}
             </TextField>
-            <TextField required label="ZIP Code" value={zipForm.code} onChange={(event) => setZipForm((current) => ({ ...current, code: event.target.value.slice(0, 10) }))} />
+            {stateZipEditing ? (
+              <TextField required label="ZIP Code" value={zipForm.code} onChange={(event) => setZipForm((current) => ({ ...current, code: event.target.value.slice(0, 10) }))} />
+            ) : (
+              <TextField
+                required
+                multiline
+                minRows={6}
+                maxRows={14}
+                label="ZIP Codes"
+                placeholder={"Paste ZIP codes, one per line (spaces, commas or semicolons also work)\n73301\n78701\n78702"}
+                value={zipBulkText}
+                onChange={(event) => setZipBulkText(event.target.value)}
+                helperText={pastedSummary(parsePastedZips(zipBulkText, zipsByCity.get(zipForm.cityId) ?? []), "ZIP code", "ZIP codes")}
+              />
+            )}
             <FormControlLabel control={<Checkbox checked={zipForm.isActive} onChange={(event) => setZipForm((current) => ({ ...current, isActive: event.target.checked }))} />} label="Active" />
           </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setStateZipFormOpen(false); setStateZipEditing(null); }} disabled={saving}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveStateZip()} disabled={saving || !zipForm.cityId || !zipForm.code.trim()}>{saving ? "Saving..." : stateZipEditing ? "Update ZIP Code" : "Save ZIP Code"}</Button>
+          <Button variant="contained" onClick={() => void saveStateZip()} disabled={saving || !zipForm.cityId || (stateZipEditing ? !zipForm.code.trim() : !zipBulkText.trim())}>{saving ? "Saving..." : stateZipEditing ? "Update ZIP Code" : "Save ZIP Codes"}</Button>
         </DialogActions>
       </Dialog>
 
@@ -1089,6 +1222,8 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   const [form, setForm] = useState<RateForm>({});
   const [utilityRateFormOpen, setUtilityRateFormOpen] = useState(false);
   const [utilityRateForm, setUtilityRateForm] = useState<RateForm>({});
+  const [editingRate, setEditingRate] = useState<UtilityRate | null>(null);
+  const [deletingRate, setDeletingRate] = useState<UtilityRate | null>(null);
   const [utilityMasterAccountNumber, setUtilityMasterAccountNumber] = useState<MasterAccountNumberRow["masterAccountNumber"]>("Account Number");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1155,7 +1290,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
   }, [utilities.data]);
   const utilityRatesByUtility = useMemo(() => {
     const response = utilityRates.data;
-    const ratesByUtility = new Map<string, Array<{ id: string; name: string }>>();
+    const ratesByUtility = new Map<string, UtilityRate[]>();
     if (!response) return ratesByUtility;
     const utilityIdColumn = response.columns.find((column) => column.name.toLowerCase() === "utilityid");
     const rateColumn = response.columns.find((column) => column.name.toLowerCase() === "rate")
@@ -1167,13 +1302,21 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       const name = String(rate[rateColumn.name] ?? "").trim();
       if (!utilityId || !name) return;
       const rates = ratesByUtility.get(utilityId) ?? [];
-      rates.push({ id: String(response.primaryKey ? rate[response.primaryKey] : index), name });
+      rates.push({ id: String(response.primaryKey ? rate[response.primaryKey] : index), name, row: rate as RateRow, utilityId });
       ratesByUtility.set(utilityId, rates);
     });
     return ratesByUtility;
   }, [utilityRates.data]);
-  const utilityRateEditableColumns = utilityRates.data?.columns.filter((column) => column.editable) ?? [];
-  const utilityRateUtilityColumn = utilityRateEditableColumns.find((column) => column.name.toLowerCase() === "utilityid");
+  // Memoized so the grid columns below are not rebuilt on every render; a rebuilt
+  // Rate column re-creates its dropdown cells.
+  const utilityRateEditableColumns = useMemo(
+    () => utilityRates.data?.columns.filter((column) => column.editable) ?? [],
+    [utilityRates.data]
+  );
+  const utilityRateUtilityColumn = useMemo(
+    () => utilityRateEditableColumns.find((column) => column.name.toLowerCase() === "utilityid"),
+    [utilityRateEditableColumns]
+  );
   const rows = useMemo(() => {
     const key = records.data?.primaryKey;
     return (records.data?.data ?? []).map((row, index) => ({
@@ -1223,15 +1366,28 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
               sx={{ minWidth: 190 }}
             >
               <MenuItem value="" disabled>{utilityRates.isLoading ? "Loading rates..." : rates.length ? `${rates.length} rate${rates.length === 1 ? "" : "s"}` : "No rates"}</MenuItem>
-              {rates.map((rate) => <MenuItem key={rate.id} value={rate.id}>{rate.name}</MenuItem>)}
+              {rates.map((rate) => (
+                <MenuItem key={rate.id} value={rate.id} className="utility-rate-option">
+                  <span className="utility-rate-name">{rate.name}</span>
+                  {utilityRates.data?.primaryKey ? (
+                    <span className="utility-rate-actions">
+                      <Tooltip title="Edit rate">
+                        <IconButton size="small" aria-label={`Edit rate ${rate.name}`} onClick={() => openUtilityRateForm(String(row.id), rate)}>
+                          <Pencil size={15} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete rate">
+                        <IconButton size="small" color="error" aria-label={`Delete rate ${rate.name}`} onClick={() => { setError(""); setNotice(""); setDeletingRate(rate); }}>
+                          <Trash2 size={15} />
+                        </IconButton>
+                      </Tooltip>
+                    </span>
+                  ) : null}
+                </MenuItem>
+              ))}
               <MenuItem value="__add_rate__" onClick={(event) => {
                 event.stopPropagation();
-                const rateForm = formFromColumns(utilityRateEditableColumns);
-                if (utilityRateUtilityColumn) rateForm[utilityRateUtilityColumn.name] = String(row.id);
-                setUtilityRateForm(rateForm);
-                setError("");
-                setNotice("");
-                setUtilityRateFormOpen(true);
+                openUtilityRateForm(String(row.id));
               }}>
                 <Plus size={16} />&nbsp; Add New Rate
               </MenuItem>
@@ -1266,7 +1422,38 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
         )
       }
     ];
-  }, [endpoint, records.data, singularName, utilityOptions, utilityRateEditableColumns, utilityRateUtilityColumn, utilityRates.isLoading, utilityRatesByUtility]);
+  }, [endpoint, records.data, singularName, utilityOptions, utilityRateEditableColumns, utilityRateUtilityColumn, utilityRates.isLoading, utilityRates.data?.primaryKey, utilityRatesByUtility]);
+
+  /** Opens the rate form for a utility: empty to add a rate, or filled in to edit one. */
+  function openUtilityRateForm(utilityId: string, rate?: UtilityRate) {
+    const rateForm = formFromColumns(utilityRateEditableColumns, rate?.row);
+    if (utilityRateUtilityColumn) rateForm[utilityRateUtilityColumn.name] = rate?.utilityId ?? utilityId;
+    setEditingRate(rate ?? null);
+    setUtilityRateForm(rateForm);
+    setError("");
+    setNotice("");
+    setUtilityRateFormOpen(true);
+  }
+
+  // The Rates section and every utility's rate dropdown share these lists.
+  const refreshRates = () => queryClient.invalidateQueries({ queryKey: ["organization-table", "rates"] });
+
+  async function deleteUtilityRate() {
+    if (!deletingRate) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await api.delete(`/reports/rates/${encodeURIComponent(deletingRate.id)}`);
+      await refreshRates();
+      setNotice(`Rate ${deletingRate.name} deleted successfully.`);
+    } catch (deleteError) {
+      setError(apiError(deleteError) ?? "Unable to delete the rate.");
+    } finally {
+      setDeletingRate(null);
+      setSaving(false);
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -1340,10 +1527,11 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
     setSaving(true);
     setError("");
     try {
-      await api.post("/reports/rates", utilityRateForm);
-      await utilityRates.refetch();
+      if (editingRate) await api.patch(`/reports/rates/${encodeURIComponent(editingRate.id)}`, utilityRateForm);
+      else await api.post("/reports/rates", utilityRateForm);
+      await refreshRates();
       setUtilityRateFormOpen(false);
-      setNotice("Rate added successfully.");
+      setNotice(`Rate ${editingRate ? "updated" : "added"} successfully.`);
     } catch (saveError) {
       setError(apiError(saveError) ?? "Unable to save the rate.");
     } finally {
@@ -1584,7 +1772,7 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
       </Dialog>
 
       <Dialog open={utilityRateFormOpen} onClose={() => !saving && setUtilityRateFormOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Add New Rate</DialogTitle>
+        <DialogTitle>{editingRate ? "Edit Rate" : "Add New Rate"}</DialogTitle>
         <DialogContent>
           {error ? <p className="error">{error}</p> : null}
           <div className="company-form-grid">
@@ -1719,6 +1907,17 @@ function LegacyTablePanel({ endpoint, tableName, singularName, pluralName }: Leg
           <Button variant="contained" onClick={() => void uploadRates()} disabled={uploading || !rateUploadUtilityId || !rateUploadFile}>
             {uploading ? "Uploading..." : "Upload Rates"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(deletingRate)} onClose={() => !saving && setDeletingRate(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Rate?</DialogTitle>
+        <DialogContent>
+          This permanently deletes the rate <strong>{deletingRate?.name}</strong> from {(rows.find((row) => String(row.id) === deletingRate?.utilityId) as RateRow | undefined)?.["Utility"] as string ?? "this utility"}. Meters keep the rate value already saved on them.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeletingRate(null)} disabled={saving}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => void deleteUtilityRate()} disabled={saving}>{saving ? "Deleting..." : "Delete"}</Button>
         </DialogActions>
       </Dialog>
 

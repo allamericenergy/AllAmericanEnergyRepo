@@ -487,6 +487,32 @@ export function DashboardPage({ view }: DashboardPageProps) {
     enabled: Boolean(viewedMeter),
     retry: false
   });
+  const viewedMeterInvoices = useQuery({
+    queryKey: ["viewed-meter-invoices", viewedMeter?.id, user?.id],
+    queryFn: async ({ signal }) => {
+      const response = await api.get<MeterInvoicesResponse>(`/utility-invoices/by-meter/${viewedMeter!.id}`, { signal });
+      return { ...response.data, data: response.data.data.map((row, index): MeterInvoiceRow => ({ ...row, id: String(row.InvoiceID ?? `row-${index}`) })) };
+    },
+    enabled: Boolean(viewedMeter),
+    retry: false
+  });
+  const meterInvoiceColumns = useMemo<GridColumn<MeterInvoiceRow>[]>(() => {
+    const rows = viewedMeterInvoices.data?.data ?? [];
+    if (!rows.length) return [];
+    return Object.keys(rows[0]).filter((key) => key !== "id").map((key) => {
+      const sample = rows.find((row) => row[key] != null && row[key] !== "")?.[key];
+      const isDate = typeof sample === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(sample);
+      const isFlag = typeof sample === "boolean";
+      return {
+        field: key,
+        headerName: key.replace(/_/g, " "),
+        minWidth: Math.min(Math.max(key.length * 9 + 40, 120), 260),
+        exportAsText: /account|meter|service_ref|pod/i.test(key),
+        ...(isDate ? { valueFormatter: formatDate } : isFlag ? { valueFormatter: (value: unknown) => (value ? "Yes" : "No") } : {})
+      } as GridColumn<MeterInvoiceRow>;
+    });
+  }, [viewedMeterInvoices.data]);
+  const meterInvoiceTableLabel = viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
   function viewMeter(meter: MeterRow) {
     window.focus();
     setViewedContract(null);
@@ -3611,7 +3637,29 @@ export function DashboardPage({ view }: DashboardPageProps) {
                     <div><dt>Product</dt><dd>{viewedMeter.product ?? "-"}</dd></div>
                     <div><dt>Annual Usage</dt><dd>{viewedMeter.annualUsage ?? "-"}</dd></div>
                     <div><dt>Related Contracts</dt><dd>{viewedMeterContracts.isLoading ? "…" : viewedMeterContracts.isError ? "-" : viewedMeterContracts.data?.total ?? 0}</dd></div>
+                    <div><dt>Invoices</dt><dd>{viewedMeterInvoices.isLoading ? "…" : viewedMeterInvoices.isError ? "-" : viewedMeterInvoices.data?.total ?? 0}</dd></div>
                   </dl>
+                  <section className="account-data-panel">
+                    <div className="account-data-title"><h2>Related Invoice List</h2></div>
+                    <p className="contract-view-caption">
+                      {meterInvoiceTableLabel ? `${meterInvoiceTableLabel} utility invoices for meter ${viewedMeter.meter ?? ""}` : "Utility invoices for this meter"}
+                    </p>
+                    {viewedMeterInvoices.isLoading ? <p className="contract-view-message muted" role="status">Loading related invoices...</p> : viewedMeterInvoices.isError ? (
+                      <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterInvoices.refetch()}>Retry</Button>}>Unable to load related invoices.</Alert>
+                    ) : viewedMeterInvoices.data?.data.length ? (
+                      <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} /></div>
+                    ) : (
+                      <div className="contract-view-empty">
+                        <FileText size={28} aria-hidden="true" />
+                        <strong>No invoices</strong>
+                        <p>{!viewedMeterInvoices.data?.table
+                          ? `Product "${viewedMeter.product ?? "-"}" has no invoice table (Power, Gas or Water).`
+                          : !viewedMeter.meter?.trim()
+                            ? "This meter has no meter number, so no invoices can be matched."
+                            : `No ${meterInvoiceTableLabel} invoices found for this meter number.`}</p>
+                      </div>
+                    )}
+                  </section>
                   <section className="account-data-panel">
                     <div className="account-data-title"><h2>Related Contract List</h2></div>
                     <p className="contract-view-caption">Contracts linked to this meter</p>
@@ -4810,6 +4858,19 @@ interface ZipDetailOption {
 function shortenFileName(fileName: string, maximumLength = 20) {
   if (fileName.length <= maximumLength) return fileName;
   return `${fileName.slice(0, maximumLength - 3)}...`;
+}
+
+interface MeterInvoiceRow {
+  id: string;
+  [column: string]: unknown;
+}
+
+interface MeterInvoicesResponse {
+  table: string | null;
+  product: string | null;
+  meter: string | null;
+  total: number;
+  data: Array<Record<string, unknown>>;
 }
 
 function formatContractAmount(value: unknown) {

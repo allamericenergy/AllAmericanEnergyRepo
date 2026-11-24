@@ -3956,3 +3956,8 @@ nav a:hover {
   .global-loading-bar, .global-loading-ring, .global-loading-image svg { animation: none; }
   .global-loading-bar { background-size: 100% 100%; }
 }
+
+/* Utilities: each rate in the Rate dropdown has edit and delete buttons. */
+.utility-rate-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 240px; }
+.utility-rate-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.utility-rate-actions { display: inline-flex; flex-shrink: 0; gap: 2px; }
