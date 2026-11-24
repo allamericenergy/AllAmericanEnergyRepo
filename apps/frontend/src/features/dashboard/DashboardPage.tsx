@@ -15,7 +15,7 @@ import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn, type GridSortModel } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
-import { UsageBarChart, UsagePieChart, type UsagePoint } from "./UsagePieChart";
+import { InvoiceCostLineChart, UsageBarChart, UsagePieChart, type UsagePoint } from "./UsagePieChart";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
 
@@ -530,7 +530,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
               onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
             >
-              <FileText size={18} aria-hidden="true" />
+              <PdfIcon />
             </a>
           </Tooltip>
         );
@@ -569,18 +569,26 @@ export function DashboardPage({ view }: DashboardPageProps) {
       } as GridColumn<MeterInvoiceRow>;
     })];
   }, [viewedMeterInvoices.data, viewedMeter?.companyId, viewedMeter?.product]);
-  const meterUsagePoints = useMemo<UsagePoint[]>(() => {
+  // Statement date + one numeric column per invoice, for the meter view charts.
+  const { meterUsagePoints, meterCostPoints } = useMemo(() => {
     const rows = viewedMeterInvoices.data?.data ?? [];
-    if (!rows.length) return [];
+    if (!rows.length) return { meterUsagePoints: [] as UsagePoint[], meterCostPoints: [] as UsagePoint[] };
     const columnKey = (name: string) => Object.keys(rows[0]).find((key) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === name);
     const dateKey = columnKey("statementdate");
-    const usageKey = columnKey("totalusage");
-    if (!dateKey || !usageKey) return [];
-    return rows.flatMap((row) => {
-      const date = String(row[dateKey] ?? "").trim();
-      const usage = Number(String(row[usageKey] ?? "").replace(/[,\s]/g, ""));
-      return date && Number.isFinite(usage) && usage > 0 ? [{ date, usage }] : [];
-    });
+    const pointsFor = (valueKey: string | undefined, positiveOnly: boolean): UsagePoint[] => {
+      if (!dateKey || !valueKey) return [];
+      return rows.flatMap((row) => {
+        const date = String(row[dateKey] ?? "").trim();
+        const raw = row[valueKey];
+        if (raw === null || raw === undefined || String(raw).trim() === "") return [];
+        const value = Number(String(raw).replace(/[$,\s]/g, ""));
+        return date && Number.isFinite(value) && (!positiveOnly || value > 0) ? [{ date, usage: value }] : [];
+      });
+    };
+    return {
+      meterUsagePoints: pointsFor(columnKey("totalusage"), true),
+      meterCostPoints: pointsFor(columnKey("totalinvoicecost"), false)
+    };
   }, [viewedMeterInvoices.data]);
   const meterInvoiceTableLabel =viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
   function viewMeter(meter: MeterRow) {
@@ -3719,10 +3727,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterInvoices.refetch()}>Retry</Button>}>Unable to load related invoices.</Alert>
                     ) : viewedMeterInvoices.data?.data.length ? (
                       <>
-                      {meterUsagePoints.length ? (
+                      {meterUsagePoints.length || meterCostPoints.length ? (
                         <div className="usage-charts">
-                          <UsagePieChart key={`usage-pie-${viewedMeter.id}`} points={meterUsagePoints} />
-                          <UsageBarChart key={`usage-bar-${viewedMeter.id}`} points={meterUsagePoints} />
+                          {meterUsagePoints.length ? <UsagePieChart key={`usage-pie-${viewedMeter.id}`} points={meterUsagePoints} /> : null}
+                          {meterUsagePoints.length ? <UsageBarChart key={`usage-bar-${viewedMeter.id}`} points={meterUsagePoints} /> : null}
+                          {meterCostPoints.length ? <InvoiceCostLineChart key={`cost-line-${viewedMeter.id}`} points={meterCostPoints} /> : null}
                         </div>
                       ) : null}
                       <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} /></div>
@@ -4973,6 +4982,18 @@ const HIDDEN_METER_INVOICE_COLUMNS = new Set([
   "city", "state", "zip", "rate", "utility", "product",
   "invoiceid", "extractionstatus", "extractionconfidence", "createdon", "aiprocessedon", "documenttitle"
 ]);
+
+/** PDF document icon: a page with a folded corner and a red "PDF" label. */
+function PdfIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#ffffff" stroke="#9e9d97" strokeWidth="1.2" />
+      <path d="M14 2v5h5" fill="#e5e4df" stroke="#9e9d97" strokeWidth="1.2" strokeLinejoin="round" />
+      <rect x="1.5" y="11" width="15" height="8" rx="1.5" fill="#d32f2f" />
+      <text x="9" y="17.1" textAnchor="middle" fontSize="6" fontWeight="700" fontFamily="Arial, Helvetica, sans-serif" fill="#ffffff">PDF</text>
+    </svg>
+  );
+}
 
 /** Amount in whole cents, or null when the value is blank or not a number. */
 function amountCents(value: unknown): number | null {

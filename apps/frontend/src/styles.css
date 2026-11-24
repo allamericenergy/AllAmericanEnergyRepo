@@ -3984,7 +3984,7 @@ nav a:hover {
   justify-content: center;
   padding: 2px;
   border-radius: 4px;
-  color: #c62828;
+  color: inherit;
 }
 
 .invoice-file-link:hover,
@@ -4135,4 +4135,24 @@ nav a:hover {
 
 .usage-bar-mark {
   transition: opacity 150ms ease;
+}
+
+/* Meter view → monthly invoice cost line. */
+.usage-line-path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.usage-line-marker {
+  stroke: #fcfcfb;
+  stroke-width: 2;
+  transition: r 120ms ease;
+}
+
+.usage-line-crosshair {
+  stroke: #c3c2b7;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
 }
