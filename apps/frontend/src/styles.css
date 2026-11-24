@@ -3961,3 +3961,18 @@ nav a:hover {
 .utility-rate-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 240px; }
 .utility-rate-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .utility-rate-actions { display: inline-flex; flex-shrink: 0; gap: 2px; }
+
+/* Meter view → Related Invoice List: Bill Check cell turns green when
+   Total New Charges + Balance Forward equals Total Invoice Cost, else orange. */
+[data-grid-field]:has(.bill-check-match) {
+  background-color: #c8f0d2;
+}
+
+[data-grid-field]:has(.bill-check-mismatch) {
+  background-color: #ffd8a8;
+}
+
+.bill-check-cell {
+  font-weight: 600;
+  color: #1f2937;
+}

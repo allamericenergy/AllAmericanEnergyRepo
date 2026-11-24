@@ -499,10 +499,34 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const meterInvoiceColumns = useMemo<GridColumn<MeterInvoiceRow>[]>(() => {
     const rows = viewedMeterInvoices.data?.data ?? [];
     if (!rows.length) return [];
+    const columnKey = (name: string) => Object.keys(rows[0]).find((key) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === name);
+    const newChargesKey = columnKey("totalnewcharges");
+    const balanceForwardKey = columnKey("balanceforward");
+    const invoiceCostKey = columnKey("totalinvoicecost");
+    const billCheckKey = columnKey("billcheck");
     return Object.keys(rows[0]).filter((key) => key !== "id" && !HIDDEN_METER_INVOICE_COLUMNS.has(key.replace(/[^A-Za-z0-9]/g, "").toLowerCase())).map((key) => {
       const sample = rows.find((row) => row[key] != null && row[key] !== "")?.[key];
       const isDate = typeof sample === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(sample);
       const isFlag = typeof sample === "boolean";
+      if (key === billCheckKey) {
+        const check = (row: MeterInvoiceRow) => billCheck(
+          newChargesKey && row[newChargesKey],
+          balanceForwardKey && row[balanceForwardKey],
+          invoiceCostKey && row[invoiceCostKey]
+        );
+        return {
+          field: key,
+          headerName: key.replace(/_/g, " "),
+          minWidth: 130,
+          renderCell: ({ row }) => {
+            const result = check(row);
+            if (!result) return "-";
+            return <span className={`bill-check-cell ${result.matches ? "bill-check-match" : "bill-check-mismatch"}`}
+              title={`Total New Charges + Balance Forward = ${result.text}; Total Invoice Cost = ${result.invoiceText}`}>{result.text}</span>;
+          },
+          exportValue: (row) => check(row)?.text ?? ""
+        } as GridColumn<MeterInvoiceRow>;
+      }
       return {
         field: key,
         headerName: key.replace(/_/g, " "),
@@ -4867,6 +4891,24 @@ const HIDDEN_METER_INVOICE_COLUMNS = new Set([
   "city", "state", "zip", "rate", "utility", "product",
   "invoiceid", "extractionstatus", "extractionconfidence", "createdon", "aiprocessedon", "documenttitle"
 ]);
+
+/** Amount in whole cents, or null when the value is blank or not a number. */
+function amountCents(value: unknown): number | null {
+  if (value === null || value === undefined || value === false || String(value).trim() === "") return null;
+  const number = Number(String(value).replace(/[$,\s]/g, ""));
+  return Number.isFinite(number) ? Math.round(number * 100) : null;
+}
+
+/** Bill check: Total New Charges + Balance Forward, compared with Total Invoice Cost to the cent. */
+function billCheck(newCharges: unknown, balanceForward: unknown, invoiceCost: unknown) {
+  const charges = amountCents(newCharges);
+  const balance = amountCents(balanceForward);
+  const invoice = amountCents(invoiceCost);
+  if (charges === null || balance === null || invoice === null) return null;
+  const sum = charges + balance;
+  const format = (cents: number) => (cents / 100).toFixed(2);
+  return { text: format(sum), invoiceText: format(invoice), matches: sum === invoice };
+}
 
 interface MeterInvoiceRow {
   id: string;
