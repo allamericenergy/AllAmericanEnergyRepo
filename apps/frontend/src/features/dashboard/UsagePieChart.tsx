@@ -99,7 +99,7 @@ interface MonthBar {
 }
 
 /** Usage summed per statement month, every month from first to last shown (gaps stay empty), latest MAX_MONTHS only. */
-function buildMonths(points: UsagePoint[], keepNonPositive = false): MonthBar[] {
+function buildMonths(points: UsagePoint[], keepNonPositive = false, maxMonths = MAX_MONTHS, fixedSpan = false): MonthBar[] {
   const byMonth = new Map<string, { usage: number; statements: number }>();
   for (const point of points) {
     const match = /^(\d{4})-(\d{2})/.exec(point.date);
@@ -113,7 +113,7 @@ function buildMonths(points: UsagePoint[], keepNonPositive = false): MonthBar[] 
   if (!keys.length) return [];
   const [lastYear, lastMonth] = keys[keys.length - 1].split("-").map(Number);
   const [firstYear, firstMonth] = keys[0].split("-").map(Number);
-  const span = Math.min((lastYear - firstYear) * 12 + (lastMonth - firstMonth) + 1, MAX_MONTHS);
+  const span = fixedSpan ? maxMonths : Math.min((lastYear - firstYear) * 12 + (lastMonth - firstMonth) + 1, maxMonths);
   return Array.from({ length: span }, (_, index) => {
     const offset = lastYear * 12 + (lastMonth - 1) - (span - 1 - index);
     const year = Math.floor(offset / 12);
@@ -221,71 +221,101 @@ const currencyFormat = new Intl.NumberFormat("en-US", { style: "currency", curre
 const compactCurrencyFormat = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
 const wholeCurrencyFormat = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-/** Animated line of total invoice cost per statement month. Months with no statement break the line. */
-export function InvoiceCostLineChart({ points, title = "Total Invoice Cost by Month" }: { points: UsagePoint[]; title?: string }) {
-  const months = useMemo(() => buildMonths(points, true), [points]);
+const LINE_MONTHS = 13;
+const LINE_WIDTH = 480;
+const LINE_HEIGHT = 168;
+const LINE_PLOT = { left: 46, right: 12, top: 10, bottom: 30 };
+
+/** Compact animated line of total invoice cost for the 13 months (same month last year through) ending at the latest statement. Months with no statement break the line. */
+export function InvoiceCostLineChart({ points, title = "Total Invoice Cost" }: { points: UsagePoint[]; title?: string }) {
+  const months = useMemo(() => buildMonths(points, true, LINE_MONTHS, true), [points]);
   const progress = useEntranceProgress(months);
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   // useId returns ":r0:"-style ids; strip the colons so url(#id) always resolves.
-  const clipId = `cost-line-${useId().replace(/:/g, "")}`;
+  const baseId = `cost-line-${useId().replace(/:/g, "")}`;
+  const clipId = `${baseId}-clip`;
+  const fillId = `${baseId}-fill`;
 
   const billed = months.filter((month) => month.statements > 0);
   if (!billed.length) return null;
 
-  // Axis always includes 0; it extends below 0 only when a month is a net credit.
+  // Axis always includes 0; it extends below 0 only when a month is a net credit. ~3 ticks keep it quiet.
   const maxValue = Math.max(0, ...billed.map((month) => month.usage));
   const minValue = Math.min(0, ...billed.map((month) => month.usage));
-  const { step } = niceScale(Math.max(maxValue - minValue, 1));
+  const rough = Math.max(maxValue - minValue, 1) / 2;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((factor) => factor * power).find((candidate) => candidate >= rough) ?? rough;
   const top = Math.ceil(maxValue / step) * step || step;
   const bottom = Math.floor(minValue / step) * step;
   const ticks = Array.from({ length: Math.round((top - bottom) / step) + 1 }, (_, index) => bottom + index * step);
   const tickFormat = Math.max(Math.abs(top), Math.abs(bottom)) >= 10_000 ? compactCurrencyFormat : wholeCurrencyFormat;
-  const plotWidth = BAR_WIDTH - PLOT.left - PLOT.right;
-  const plotHeight = BAR_HEIGHT - PLOT.top - PLOT.bottom;
+  const plotWidth = LINE_WIDTH - LINE_PLOT.left - LINE_PLOT.right;
+  const plotHeight = LINE_HEIGHT - LINE_PLOT.top - LINE_PLOT.bottom;
   const band = plotWidth / months.length;
-  const x = (index: number) => PLOT.left + index * band + band / 2;
-  const y = (value: number) => PLOT.top + ((top - value) / (top - bottom)) * plotHeight;
-  const labelEvery = Math.ceil(months.length / 12);
+  const x = (index: number) => LINE_PLOT.left + index * band + band / 2;
+  const y = (value: number) => LINE_PLOT.top + ((top - value) / (top - bottom)) * plotHeight;
+  const zeroY = y(0);
 
-  // One sub-path per run of consecutive billed months.
-  let path = "";
+  // One line + soft area per run of consecutive billed months.
+  const runs: number[][] = [];
   months.forEach((month, index) => {
     if (!month.statements) return;
-    const joined = index > 0 && months[index - 1].statements > 0;
-    path += `${joined ? "L" : "M"} ${x(index)} ${y(month.usage)} `;
+    if (index > 0 && months[index - 1].statements > 0) runs[runs.length - 1].push(index);
+    else runs.push([index]);
   });
+  const linePath = runs.map((run) => run.map((index, at) => `${at ? "L" : "M"} ${x(index)} ${y(months[index].usage)}`).join(" ")).join(" ");
+  const areaPath = runs.filter((run) => run.length > 1).map((run) =>
+    `M ${x(run[0])} ${zeroY} ${run.map((index) => `L ${x(index)} ${y(months[index].usage)}`).join(" ")} L ${x(run[run.length - 1])} ${zeroY} Z`
+  ).join(" ");
+
   const activeIndex = months.findIndex((month) => month.key === hovered);
   const active = activeIndex >= 0 ? months[activeIndex] : null;
+  const latest = billed[billed.length - 1];
+  const total = billed.reduce((sum, month) => sum + month.usage, 0);
+  const first = months[0];
+  const last = months[months.length - 1];
+  const range = `${MONTH_NAMES[first.month]} ${first.year} – ${MONTH_NAMES[last.month]} ${last.year}`;
 
   return (
-    <figure className="usage-chart usage-bar usage-line" aria-label={title}>
-      <figcaption className="usage-pie-title">{title}</figcaption>
+    <figure className="usage-chart usage-line-card" aria-label={`${title}, ${range}`}>
+      <figcaption className="usage-line-header">
+        <span className="usage-line-title">{title}<span className="usage-line-range">{range}</span></span>
+        <span className="usage-line-stats">
+          <span><small>Latest</small>{currencyFormat.format(latest.usage)}</span>
+          <span><small>13-mo total</small>{wholeCurrencyFormat.format(total)}</span>
+        </span>
+      </figcaption>
       <div ref={wrapRef} className="usage-pie-plot usage-bar-plot" onMouseLeave={() => { setHovered(null); setTooltip(null); }}>
-        <svg viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT}`} width="100%" role="img"
-          aria-label={`${title}: ${billed.map((month) => `${month.label} ${currencyFormat.format(month.usage)}`).join(", ")}`}>
+        <svg viewBox={`0 0 ${LINE_WIDTH} ${LINE_HEIGHT}`} width="100%" role="img"
+          aria-label={`${title}, ${range}: ${billed.map((month) => `${month.label} ${currencyFormat.format(month.usage)}`).join(", ")}`}>
           <defs>
             {/* Draws the line in from left to right. */}
             <clipPath id={clipId}>
-              <rect x={0} y={0} width={PLOT.left + plotWidth * progress + 6} height={BAR_HEIGHT} />
+              <rect x={0} y={0} width={LINE_PLOT.left + plotWidth * progress + 6} height={LINE_HEIGHT} />
             </clipPath>
+            <linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={BAR_COLOR} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={BAR_COLOR} stopOpacity={0} />
+            </linearGradient>
           </defs>
           {ticks.map((tick) => (
             <g key={tick}>
-              <line className={tick === 0 ? "usage-bar-baseline" : "usage-bar-grid"} x1={PLOT.left} x2={BAR_WIDTH - PLOT.right} y1={y(tick)} y2={y(tick)} />
-              <text className="usage-bar-axis" x={PLOT.left - 6} y={y(tick)} dy="0.32em" textAnchor="end">{tickFormat.format(tick)}</text>
+              <line className={tick === 0 ? "usage-bar-baseline" : "usage-line-grid"} x1={LINE_PLOT.left} x2={LINE_WIDTH - LINE_PLOT.right} y1={y(tick)} y2={y(tick)} />
+              <text className="usage-line-axis" x={LINE_PLOT.left - 8} y={y(tick)} dy="0.32em" textAnchor="end">{tickFormat.format(tick)}</text>
             </g>
           ))}
-          {active?.statements ? <line className="usage-line-crosshair" x1={x(activeIndex)} x2={x(activeIndex)} y1={PLOT.top} y2={PLOT.top + plotHeight} /> : null}
+          {active?.statements ? <line className="usage-line-crosshair" x1={x(activeIndex)} x2={x(activeIndex)} y1={LINE_PLOT.top} y2={LINE_PLOT.top + plotHeight} /> : null}
           <g clipPath={`url(#${clipId})`}>
-            <path className="usage-line-path" d={path} stroke={BAR_COLOR} />
+            {areaPath ? <path d={areaPath} fill={`url(#${fillId})`} /> : null}
+            <path className="usage-line-path" d={linePath} stroke={BAR_COLOR} />
             {months.map((month, index) => month.statements ? (
               <circle
                 key={month.key}
                 className="usage-line-marker"
                 cx={x(index)} cy={y(month.usage)}
-                r={hovered === month.key ? 5 : 3.5}
+                r={hovered === month.key ? 5 : month.key === latest.key ? 4 : 3}
                 fill={BAR_COLOR}
               />
             ) : null)}
@@ -293,19 +323,17 @@ export function InvoiceCostLineChart({ points, title = "Total Invoice Cost by Mo
           {months.map((month, index) => (
             <g key={month.key}>
               <rect
-                x={PLOT.left + index * band} y={PLOT.top} width={band} height={plotHeight} fill="transparent"
+                x={LINE_PLOT.left + index * band} y={LINE_PLOT.top} width={band} height={plotHeight} fill="transparent"
                 onMouseMove={(event) => {
                   const box = wrapRef.current?.getBoundingClientRect();
                   if (box) setTooltip({ x: event.clientX - box.left, y: event.clientY - box.top });
                   setHovered(month.key);
                 }}
               />
-              {index % labelEvery === 0 || index === months.length - 1 ? (
-                <text className="usage-bar-axis" x={x(index)} y={BAR_HEIGHT - PLOT.bottom + 14} textAnchor="middle">
-                  {MONTH_NAMES[month.month]}
-                  {month.month === 0 || index === 0 ? <tspan x={x(index)} dy="1.2em">{month.year}</tspan> : null}
-                </text>
-              ) : null}
+              <text className={`usage-line-axis${hovered === month.key ? " active" : ""}`} x={x(index)} y={LINE_HEIGHT - LINE_PLOT.bottom + 14} textAnchor="middle">
+                {MONTH_NAMES[month.month]}
+                {month.month === 0 || index === 0 ? <tspan x={x(index)} dy="1.15em" className="usage-line-year">{month.year}</tspan> : null}
+              </text>
             </g>
           ))}
         </svg>
