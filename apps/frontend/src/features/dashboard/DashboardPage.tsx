@@ -504,6 +504,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
     enabled: Boolean(viewedMeter),
     retry: false
   });
+  // The API returns newest first; the grid lists only the latest MAX_METER_INVOICE_ROWS.
+  const viewedMeterInvoiceRows = useMemo(() => (viewedMeterInvoices.data?.data ?? []).slice(0, MAX_METER_INVOICE_ROWS), [viewedMeterInvoices.data]);
   const meterInvoiceColumns = useMemo<GridColumn<MeterInvoiceRow>[]>(() => {
     const rows = viewedMeterInvoices.data?.data ?? [];
     if (!rows.length) return [];
@@ -3737,29 +3739,30 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </section>
                 </div>
                 <div className="company-account-main">
-                  <dl className="contract-view-summary">
-                    <div><dt>Utility</dt><dd>{viewedMeter.utility ?? "-"}</dd></div>
-                    <div><dt>Product</dt><dd>{viewedMeter.product ?? "-"}</dd></div>
-                    <div><dt>Annual Usage</dt><dd>{viewedMeter.annualUsage ?? "-"}</dd></div>
-                    <div><dt>Related Contracts</dt><dd>{viewedMeterContracts.isLoading ? "…" : viewedMeterContracts.isError ? "-" : viewedMeterContracts.data?.total ?? 0}</dd></div>
-                    <div><dt>Invoices</dt><dd>{viewedMeterInvoices.isLoading ? "…" : viewedMeterInvoices.isError ? "-" : viewedMeterInvoices.data?.total ?? 0}</dd></div>
-                  </dl>
+                  <div className="meter-overview">
+                    <dl className="contract-view-summary meter-overview-summary">
+                      <div><dt>Utility</dt><dd>{viewedMeter.utility ?? "-"}</dd></div>
+                      <div><dt>Product</dt><dd>{viewedMeter.product ?? "-"}</dd></div>
+                      <div><dt>Annual Usage</dt><dd>{viewedMeter.annualUsage ?? "-"}</dd></div>
+                      <div><dt>Related Contracts</dt><dd>{viewedMeterContracts.isLoading ? "…" : viewedMeterContracts.isError ? "-" : viewedMeterContracts.data?.total ?? 0}</dd></div>
+                      <div><dt>Invoices</dt><dd>{viewedMeterInvoices.isLoading ? "…" : viewedMeterInvoices.isError ? "-" : viewedMeterInvoices.data?.total ?? 0}</dd></div>
+                    </dl>
+                    {meterCostPoints.length ? (
+                      <div className="meter-overview-chart">
+                        <InvoiceCostLineChart key={`cost-line-${viewedMeter.id}`} points={meterCostPoints} />
+                      </div>
+                    ) : null}
+                  </div>
                   <section className="account-data-panel">
                     <div className="account-data-title"><h2>Related Invoice List</h2></div>
                     <p className="contract-view-caption">
                       {meterInvoiceTableLabel ? `${meterInvoiceTableLabel} utility invoices for meter ${viewedMeter.meter ?? ""}` : "Utility invoices for this meter"}
+                      {(viewedMeterInvoices.data?.data.length ?? 0) > MAX_METER_INVOICE_ROWS ? ` · showing latest ${MAX_METER_INVOICE_ROWS} of ${viewedMeterInvoices.data?.data.length}` : ""}
                     </p>
                     {viewedMeterInvoices.isLoading ? <p className="contract-view-message muted" role="status">Loading related invoices...</p> : viewedMeterInvoices.isError ? (
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterInvoices.refetch()}>Retry</Button>}>Unable to load related invoices.</Alert>
                     ) : viewedMeterInvoices.data?.data.length ? (
-                      <>
-                      {meterCostPoints.length ? (
-                        <div className="usage-charts">
-                          <InvoiceCostLineChart key={`cost-line-${viewedMeter.id}`} points={meterCostPoints} />
-                        </div>
-                      ) : null}
-                      <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} onRowClick={setViewedInvoice} /></div>
-                      </>
+                      <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoiceRows} onRowClick={setViewedInvoice} /></div>
                     ) : (
                       <div className="contract-view-empty">
                         <FileText size={28} aria-hidden="true" />
@@ -5018,6 +5021,8 @@ const HIDDEN_METER_INVOICE_COLUMNS = new Set([
   "city", "state", "zip", "rate", "utility", "product",
   "invoiceid", "extractionstatus", "extractionconfidence", "createdon", "aiprocessedon", "documenttitle"
 ]);
+
+const MAX_METER_INVOICE_ROWS = 50;
 
 /** PDF document icon: a page with a folded corner and a red "PDF" label. */
 function PdfIcon({ size = 22 }: { size?: number }) {

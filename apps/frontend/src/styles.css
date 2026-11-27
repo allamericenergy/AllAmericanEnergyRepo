@@ -4449,3 +4449,41 @@ nav a:hover {
 
 .invoice-compare-matrix td small.up { color: #b45309; }
 .invoice-compare-matrix td small.down { color: #047857; }
+
+/* Meter view: summary boxes stacked in a column, invoice cost chart beside them. */
+.meter-overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.meter-overview-summary {
+  flex: 0 0 220px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.meter-overview-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.6rem 0.9rem;
+}
+
+.meter-overview-summary dd {
+  margin: 0;
+  text-align: right;
+}
+
+.meter-overview-chart {
+  display: flex;
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.meter-overview-chart .usage-line-card {
+  flex: 1 1 auto;
+  max-width: 640px;
+}
