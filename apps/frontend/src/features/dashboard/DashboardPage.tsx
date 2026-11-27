@@ -6,7 +6,7 @@ import { contractMeterLabel } from "../../lib/contractMeterLabel";
 import { Alert, Autocomplete, Badge, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, InputAdornment, MenuItem, TextField, Tooltip } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Activity, Building2, Columns3, Droplet, Eye, FileText, Flame, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload, Waves, Zap } from "lucide-react";
+import { Activity, ArrowLeftRight, Building2, Columns3, Droplet, Eye, FileText, Flame, Folder, FolderOpen, GitBranch, PanelLeftClose, Pencil, Plus, Power, Trash2, Upload, Waves, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -16,6 +16,7 @@ import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn, type GridSortModel } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
 import { InvoiceCostLineChart, type UsagePoint } from "./UsagePieChart";
+import { billCheck, formatInvoiceValue, INVOICE_SECTIONS, invoiceChangeFormat, invoiceNumber, invoiceOptionLabel, invoicePercentFormat, invoiceStatementKey, invoiceTypeForProduct, normalizeInvoiceKey, openInvoiceCompare, type MeterInvoiceRow } from "../invoices/invoiceFields";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
 
@@ -883,7 +884,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
     {
       field: "id",
       headerName: "Actions",
-      width: 150,
+      width: 180,
       pinned: "right",
       excludeFromExport: true,
       renderCell: ({ row }) => (
@@ -891,6 +892,14 @@ export function DashboardPage({ view }: DashboardPageProps) {
           <Tooltip title="View meter">
             <IconButton size="small" aria-label="View meter" onClick={(event) => { event.stopPropagation(); viewMeter(row); }}>
               <Eye size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Compare invoices">
+            <IconButton size="small" aria-label="Compare invoices" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => {
+              event.stopPropagation();
+              openInvoiceCompare({ type: invoiceTypeForProduct(row.product), accountNumber: row.accountNumber, companyId: row.companyId });
+            }}>
+              <ArrowLeftRight size={16} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Edit meter">
@@ -2946,6 +2955,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </p>
                 </div>
                 <div className="company-account-actions">
+                  <Button variant="outlined" startIcon={<ArrowLeftRight size={16} />} onClick={() => openInvoiceCompare({ companyId: viewedCompany.id, companyName: viewedCompany.companyName })}>
+                    Compare Invoices
+                  </Button>
                   {canManageCompanies ? (
                     <>
                       <Button startIcon={<GitBranch size={17} />} onClick={() => { const parent = viewedCompany; setViewedCompany(null); openCreateSubcompany(parent); }}>
@@ -3668,6 +3680,9 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   </p>
                 </div>
                 <div className="company-account-actions">
+                  <Button variant="outlined" startIcon={<ArrowLeftRight size={16} />} onClick={() => openInvoiceCompare({
+                    type: invoiceTypeForProduct(viewedMeter.product), accountNumber: viewedMeter.accountNumber, companyId: viewedMeter.companyId, companyName: viewedMeterCompanyLabel
+                  })}>Compare Invoices</Button>
                   <Button variant="outlined" startIcon={<Pencil size={16} />} onClick={() => { const meter = viewedMeter; setViewedMeter(null); editMeter(meter); }}>Edit Meter</Button>
                   <Button onClick={() => setViewedMeter(null)}>Close</Button>
                 </div>
@@ -3776,6 +3791,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
       {viewedInvoice && viewedMeter ? (
         <InvoiceViewDialog
           invoice={viewedInvoice}
+          invoices={viewedMeterInvoices.data?.data ?? []}
           meterLabel={viewedMeter.meter || viewedMeter.accountNumber || String(viewedMeter.id)}
           tableLabel={meterInvoiceTableLabel}
           companyId={viewedMeter.companyId}
@@ -5015,46 +5031,10 @@ function PdfIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-/** Amount in whole cents, or null when the value is blank or not a number. */
-function amountCents(value: unknown): number | null {
-  if (value === null || value === undefined || value === false || String(value).trim() === "") return null;
-  const number = Number(String(value).replace(/[$,\s]/g, ""));
-  return Number.isFinite(number) ? Math.round(number * 100) : null;
-}
-
-/** Bill check: Total New Charges + Balance Forward, compared with Total Invoice Cost to the cent. */
-function billCheck(newCharges: unknown, balanceForward: unknown, invoiceCost: unknown) {
-  const charges = amountCents(newCharges);
-  const balance = amountCents(balanceForward);
-  const invoice = amountCents(invoiceCost);
-  if (charges === null || balance === null || invoice === null) return null;
-  const sum = charges + balance;
-  const format = (cents: number) => (cents / 100).toFixed(2);
-  return { text: format(sum), invoiceText: format(invoice), matches: sum === invoice };
-}
-
-const normalizeInvoiceKey = (key: string) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
-
-const INVOICE_SECTIONS: Array<{ title: string; match: (key: string, value: unknown) => boolean }> = [
-  { title: "Invoice", match: (key, value) => /^(invoiceid|documenttitle|statementdate|invoicedate|invoicenumber|billcheck)$/.test(key) || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value) && !/^(createdon|aiprocessedon)$/.test(key)) },
-  { title: "Charges", match: (key) => /charge|cost|amount|balance|tax|fee|payment|credit|price|due|adjust|surcharge/.test(key) },
-  { title: "Usage & Reads", match: (key) => /usage|kwh|kw|therm|ccf|mcf|gallon|demand|read|days|multiplier|loadfactor|temperature|consumption/.test(key) },
-  { title: "Account & Meter", match: (key) => /vendor|utility|account|serviceref|pod|namekey|meter|address|city|state|zip|rate|product|customer|tariff/.test(key) },
-  { title: "Processing", match: (key) => /extraction|createdon|aiprocessed|status|confidence|source|upload/.test(key) },
-  { title: "Other", match: () => true }
-];
-
-function formatInvoiceValue(value: unknown) {
-  if (value === null || value === undefined || String(value).trim() === "") return "-";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value)) return formatDate(value);
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
-/** Meter view → Related Invoice List row click: every column of the selected invoice. */
-function InvoiceViewDialog({ invoice, meterLabel, tableLabel, companyId, productFolder, onClose }: {
+/** Meter view → Related Invoice List row click: every column of the selected invoice, with an optional side-by-side compare. */
+function InvoiceViewDialog({ invoice, invoices, meterLabel, tableLabel, companyId, productFolder, onClose }: {
   invoice: MeterInvoiceRow;
+  invoices: MeterInvoiceRow[];
   meterLabel: string;
   tableLabel: string;
   companyId: string | number | null | undefined;
@@ -5077,6 +5057,31 @@ function InvoiceViewDialog({ invoice, meterLabel, tableLabel, companyId, product
   }
   const statementDate = find("statementdate");
   const totalCost = find("totalinvoicecost");
+
+  // Compare: other invoices of this meter, newest first. Defaults to the previous statement.
+  const others = useMemo(() => invoices.filter((row) => row.id !== invoice.id)
+    .sort((a, b) => invoiceStatementKey(b).localeCompare(invoiceStatementKey(a))), [invoices, invoice.id]);
+  const currentDate = invoiceStatementKey(invoice);
+  const previousInvoice = others.find((row) => invoiceStatementKey(row) < currentDate) ?? null;
+  const lastYearInvoice = (() => {
+    const match = /^(\d{4})-(\d{2})/.exec(currentDate);
+    if (!match) return null;
+    const target = `${Number(match[1]) - 1}-${match[2]}`;
+    return others.find((row) => invoiceStatementKey(row).startsWith(target)) ?? null;
+  })();
+  const [compareId, setCompareId] = useState<string | null>(null);
+  const [differencesOnly, setDifferencesOnly] = useState(false);
+  useEffect(() => { setCompareId(null); }, [invoice.id]);
+  const compared = compareId ? others.find((row) => row.id === compareId) ?? null : null;
+  const startCompare = () => setCompareId((previousInvoice ?? others[0])?.id ?? null);
+  const comparedCheck = compared ? billCheck(
+    Object.entries(compared).find(([key]) => normalizeInvoiceKey(key) === "totalnewcharges")?.[1],
+    Object.entries(compared).find(([key]) => normalizeInvoiceKey(key) === "balanceforward")?.[1],
+    Object.entries(compared).find(([key]) => normalizeInvoiceKey(key) === "totalinvoicecost")?.[1]
+  ) : null;
+  const displayValue = (key: string, value: unknown, rowCheck: ReturnType<typeof billCheck>) =>
+    normalizeInvoiceKey(key) === "billcheck" && rowCheck ? rowCheck.text : formatInvoiceValue(value);
+
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="lg" aria-labelledby="invoice-view-title" slotProps={{ paper: { className: "company-account-dialog" } }}>
       <DialogContent className="company-account-view">
@@ -5089,15 +5094,91 @@ function InvoiceViewDialog({ invoice, meterLabel, tableLabel, companyId, product
             {documentHref ? (
               <Button variant="outlined" startIcon={<PdfIcon size={18} />} href={documentHref} target="_blank" rel="noreferrer">Open PDF</Button>
             ) : null}
+            <Tooltip title={others.length ? "" : "No other invoices for this meter"}>
+              <span>
+                <Button
+                  variant={compared ? "contained" : "outlined"}
+                  startIcon={<ArrowLeftRight size={16} />}
+                  disabled={!others.length}
+                  aria-pressed={Boolean(compared)}
+                  onClick={() => (compared ? setCompareId(null) : startCompare())}
+                >
+                  {compared ? "Exit Compare" : "Compare"}
+                </Button>
+              </span>
+            </Tooltip>
             <Button onClick={onClose}>Close</Button>
           </div>
         </div>
+        {compared ? (
+          <div className="invoice-compare-bar">
+            <TextField
+              select size="small" label="Compare with" value={compared.id}
+              onChange={(event) => setCompareId(event.target.value)}
+              sx={{ minWidth: 320 }}
+            >
+              {others.map((row) => <MenuItem key={row.id} value={row.id}>{invoiceOptionLabel(row)}</MenuItem>)}
+            </TextField>
+            <Button size="small" disabled={!previousInvoice || previousInvoice.id === compared.id} onClick={() => previousInvoice && setCompareId(previousInvoice.id)}>Previous statement</Button>
+            <Button size="small" disabled={!lastYearInvoice || lastYearInvoice.id === compared.id} onClick={() => lastYearInvoice && setCompareId(lastYearInvoice.id)}>Same month last year</Button>
+            <FormControlLabel
+              className="invoice-compare-toggle"
+              control={<Checkbox size="small" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />}
+              label="Differences only"
+            />
+          </div>
+        ) : null}
         <dl className="contract-view-summary">
           <div><dt>Statement Date</dt><dd>{formatInvoiceValue(statementDate)}</dd></div>
           <div><dt>Total Invoice Cost</dt><dd>{formatInvoiceValue(totalCost)}</dd></div>
           <div><dt>New Charges + Balance Fwd</dt><dd>{check ? <span className={`bill-check-cell invoice-view-check ${check.matches ? "bill-check-match" : "bill-check-mismatch"}`}>{check.text}</span> : "-"}</dd></div>
           <div><dt>Bill Check</dt><dd>{check ? (check.matches ? "Matches" : "Mismatch") : "-"}</dd></div>
         </dl>
+        {compared ? (
+          <div className="invoice-compare-sections">
+            {sections.map((section) => {
+              const rows = section.fields.map(([key, value]) => {
+                const other = compared[key];
+                const left = displayValue(key, value, check);
+                const right = displayValue(key, other, comparedCheck);
+                const a = invoiceNumber(normalizeInvoiceKey(key), value);
+                const b = invoiceNumber(normalizeInvoiceKey(key), other);
+                const delta = a !== null && b !== null ? a - b : null;
+                return { key, left, right, delta, percent: delta !== null && b ? delta / Math.abs(b) : null, same: left === right };
+              }).filter((row) => !differencesOnly || !row.same);
+              if (!rows.length) return null;
+              return (
+                <section key={section.title} className="account-card">
+                  <h2>{section.title}</h2>
+                  <table className="invoice-compare-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Field</th>
+                        <th scope="col">This invoice<small>{formatInvoiceValue(statementDate)}</small></th>
+                        <th scope="col">Compared<small>{formatInvoiceValue(compared[Object.keys(compared).find((name) => normalizeInvoiceKey(name) === "statementdate") ?? ""])}</small></th>
+                        <th scope="col">Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.key} className={row.same ? "same" : "changed"}>
+                          <th scope="row">{row.key.replace(/_/g, " ")}</th>
+                          <td>{row.left}</td>
+                          <td>{row.right}</td>
+                          <td className={row.delta ? (row.delta > 0 ? "up" : "down") : undefined}>
+                            {row.delta !== null
+                              ? row.delta === 0 ? "No change" : <>{invoiceChangeFormat.format(row.delta)}{row.percent !== null ? <small> ({invoicePercentFormat.format(row.percent)})</small> : null}</>
+                              : row.same ? "—" : "Changed"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
         <div className="invoice-view-sections">
           {sections.filter((section) => section.fields.length).map((section) => (
             <section key={section.title} className="account-card">
@@ -5113,15 +5194,12 @@ function InvoiceViewDialog({ invoice, meterLabel, tableLabel, companyId, product
             </section>
           ))}
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-interface MeterInvoiceRow {
-  id: string;
-  [column: string]: unknown;
-}
 
 interface MeterInvoicesResponse {
   table: string | null;

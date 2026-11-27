@@ -12,6 +12,7 @@ import { MembersPage } from "../features/members/MembersPage";
 import { CompanyActivityPage, MyActivityPage } from "../features/activity/TeamActivityPages";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { AccountPage } from "../features/account/AccountPage";
+import { InvoiceComparePage } from "../features/invoices/InvoiceComparePage";
 
 export function App() {
   return (
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/companies/:companyId/activities" element={<CompanyActivityPage />} />
         <Route path="/contracts" element={<DashboardPage view="contracts" />} />
         <Route path="/meters" element={<DashboardPage view="meters" />} />
+        <Route path="/invoices/compare" element={<InvoiceComparePage />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/activity" element={<MyActivityPage />} />
         <Route path="/account" element={<AccountPage />} />
