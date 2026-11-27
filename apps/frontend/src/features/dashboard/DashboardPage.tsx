@@ -15,7 +15,7 @@ import { api } from "../../lib/api";
 import { hasMeterInputData } from "../../lib/spreadsheetRows";
 import { IntiliGrid, type GridColumn, type GridSortModel } from "@intiligrid";
 import { useAuthStore } from "../auth/authStore";
-import { InvoiceCostLineChart, UsageBarChart, UsagePieChart, type UsagePoint } from "./UsagePieChart";
+import { InvoiceCostLineChart, type UsagePoint } from "./UsagePieChart";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
 
@@ -128,6 +128,8 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
   const [meterFormMode, setMeterFormMode] = useState<"create" | "edit">("create");
   const [viewedMeter, setViewedMeter] = useState<MeterRow | null>(null);
+  const [viewedInvoice, setViewedInvoice] = useState<MeterInvoiceRow | null>(null);
+  useEffect(() => setViewedInvoice(null), [viewedMeter?.id]);
   const [meterTray, setMeterTray] = useState(false);
   const [editingMeterId, setEditingMeterId] = useState<MeterRow["id"] | null>(null);
   const [savingMeter, setSavingMeter] = useState(false);
@@ -456,8 +458,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
   ), [companies.data?.data, viewedCompany?.id, viewedCompanyIds]);
   const viewedCompanyMeters = useMemo(() => (meters.data?.data ?? [])
     .filter((meter) => viewedCompanyIds.includes(String(meter.companyId)))
-    .map((meter) => ({ ...meter, companyName: companyLabels[String(meter.companyId)] ?? meter.companyName ?? viewedCompany?.companyName ?? "" })),
-  [meters.data?.data, viewedCompanyIds, companyLabels, viewedCompany?.companyName]);
+    .map((meter) => {
+      const name = meter.companyName ?? (companies.data?.data ?? []).find((item) => String(item.id) === String(meter.companyId))?.companyName ?? viewedCompany?.companyName ?? "";
+      const marker = String(meter.companyId) === String(viewedCompany?.id) ? "▾" : "↳";
+      return { ...meter, companyName: `${marker} ${name}` };
+    }),
+  [meters.data?.data, viewedCompanyIds, companies.data?.data, viewedCompany?.id, viewedCompany?.companyName]);
   const viewedContractMeters = useQuery({
     queryKey: ["viewed-contract-meters", viewedContract?.id, user?.id],
     queryFn: ({ signal }) => loadAllMeters<MeterRow>({ contractId: viewedContract!.id }, signal),
@@ -569,10 +575,10 @@ export function DashboardPage({ view }: DashboardPageProps) {
       } as GridColumn<MeterInvoiceRow>;
     })];
   }, [viewedMeterInvoices.data, viewedMeter?.companyId, viewedMeter?.product]);
-  // Statement date + one numeric column per invoice, for the meter view charts.
-  const { meterUsagePoints, meterCostPoints } = useMemo(() => {
+  // Statement date + total invoice cost per invoice, for the meter view chart.
+  const meterCostPoints = useMemo(() => {
     const rows = viewedMeterInvoices.data?.data ?? [];
-    if (!rows.length) return { meterUsagePoints: [] as UsagePoint[], meterCostPoints: [] as UsagePoint[] };
+    if (!rows.length) return [] as UsagePoint[];
     const columnKey = (name: string) => Object.keys(rows[0]).find((key) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === name);
     const dateKey = columnKey("statementdate");
     const pointsFor = (valueKey: string | undefined, positiveOnly: boolean): UsagePoint[] => {
@@ -585,16 +591,21 @@ export function DashboardPage({ view }: DashboardPageProps) {
         return date && Number.isFinite(value) && (!positiveOnly || value > 0) ? [{ date, usage: value }] : [];
       });
     };
-    return {
-      meterUsagePoints: pointsFor(columnKey("totalusage"), true),
-      meterCostPoints: pointsFor(columnKey("totalinvoicecost"), false)
-    };
+    return pointsFor(columnKey("totalinvoicecost"), false);
   }, [viewedMeterInvoices.data]);
+  // "Parent.Company" for a subcompany's meter, else just the company name (no list markers).
+  const viewedMeterCompanyLabel = useMemo(() => {
+    if (!viewedMeter) return "";
+    const company = (companies.data?.data ?? []).find((item) => String(item.id) === String(viewedMeter.companyId));
+    const name = company?.companyName ?? viewedMeter.companyName?.replace(/^(?:[▾↳]\s*)?(?:(?:Parent|Child)\s*·\s*)?/, "") ?? "";
+    return company?.parentCompanyName ? `${company.parentCompanyName}.${name}` : name;
+  }, [companies.data?.data, viewedMeter]);
   const meterInvoiceTableLabel =viewedMeterInvoices.data?.table?.replace(/^tbl_|_UtilityInvoices$/g, "") ?? "";
   function viewMeter(meter: MeterRow) {
     window.focus();
     setViewedContract(null);
     setMeterTray(false);
+    setViewedInvoice(null);
     setViewedMeter(meter);
   }
   useEffect(() => {
@@ -3650,7 +3661,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       setViewedMeter(null);
                       navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
                     }} disabled={viewedMeter.companyId == null}>
-                      {viewedMeter.companyName ?? viewedCompany?.companyName ?? "Company"}
+                      {viewedMeterCompanyLabel || viewedCompany?.companyName || "Company"}
                     </button>
                     <span> &gt; Meter</span>
                     <span className={`status-badge company-header-status ${viewedMeter.isActive ? "active" : "inactive"}`}>{viewedMeter.isActive ? "Active" : "Inactive"}</span>
@@ -3681,7 +3692,7 @@ export function DashboardPage({ view }: DashboardPageProps) {
                           setViewedMeter(null);
                           navigate(`/companies?companyId=${encodeURIComponent(String(viewedMeter.companyId))}`);
                         }} disabled={viewedMeter.companyId == null}>
-                          {viewedMeter.companyName ?? viewedCompany?.companyName ?? "-"}
+                          {viewedMeterCompanyLabel || viewedCompany?.companyName || "-"}
                         </button>
                       </dd>
                       <dt>Account Name</dt><dd>{viewedMeter.utilityAccountName || "-"}</dd>
@@ -3727,14 +3738,12 @@ export function DashboardPage({ view }: DashboardPageProps) {
                       <Alert severity="error" className="contract-view-message" action={<Button color="inherit" size="small" onClick={() => void viewedMeterInvoices.refetch()}>Retry</Button>}>Unable to load related invoices.</Alert>
                     ) : viewedMeterInvoices.data?.data.length ? (
                       <>
-                      {meterUsagePoints.length || meterCostPoints.length ? (
+                      {meterCostPoints.length ? (
                         <div className="usage-charts">
-                          {meterUsagePoints.length ? <UsagePieChart key={`usage-pie-${viewedMeter.id}`} points={meterUsagePoints} /> : null}
-                          {meterUsagePoints.length ? <UsageBarChart key={`usage-bar-${viewedMeter.id}`} points={meterUsagePoints} /> : null}
-                          {meterCostPoints.length ? <InvoiceCostLineChart key={`cost-line-${viewedMeter.id}`} points={meterCostPoints} /> : null}
+                          <InvoiceCostLineChart key={`cost-line-${viewedMeter.id}`} points={meterCostPoints} />
                         </div>
                       ) : null}
-                      <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} /></div>
+                      <div className="contract-grid-wrap"><IntiliGrid key={`invoices-${viewedMeter.id}`} exportFileName="meter-invoices" columns={meterInvoiceColumns} rows={viewedMeterInvoices.data.data} onRowClick={setViewedInvoice} /></div>
                       </>
                     ) : (
                       <div className="contract-view-empty">
@@ -3763,6 +3772,17 @@ export function DashboardPage({ view }: DashboardPageProps) {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {viewedInvoice && viewedMeter ? (
+        <InvoiceViewDialog
+          invoice={viewedInvoice}
+          meterLabel={viewedMeter.meter || viewedMeter.accountNumber || String(viewedMeter.id)}
+          tableLabel={meterInvoiceTableLabel}
+          companyId={viewedMeter.companyId}
+          productFolder={utilityBillsFolderForProduct(viewedMeterInvoices.data?.product ?? viewedMeter.product)}
+          onClose={() => setViewedInvoice(null)}
+        />
+      ) : null}
 
       {isDashboardView && user?.role !== "member" ? (
       <div className="content-grid">
@@ -5011,6 +5031,91 @@ function billCheck(newCharges: unknown, balanceForward: unknown, invoiceCost: un
   const sum = charges + balance;
   const format = (cents: number) => (cents / 100).toFixed(2);
   return { text: format(sum), invoiceText: format(invoice), matches: sum === invoice };
+}
+
+const normalizeInvoiceKey = (key: string) => key.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+
+const INVOICE_SECTIONS: Array<{ title: string; match: (key: string, value: unknown) => boolean }> = [
+  { title: "Invoice", match: (key, value) => /^(invoiceid|documenttitle|statementdate|invoicedate|invoicenumber|billcheck)$/.test(key) || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value) && !/^(createdon|aiprocessedon)$/.test(key)) },
+  { title: "Charges", match: (key) => /charge|cost|amount|balance|tax|fee|payment|credit|price|due|adjust|surcharge/.test(key) },
+  { title: "Usage & Reads", match: (key) => /usage|kwh|kw|therm|ccf|mcf|gallon|demand|read|days|multiplier|loadfactor|temperature|consumption/.test(key) },
+  { title: "Account & Meter", match: (key) => /vendor|utility|account|serviceref|pod|namekey|meter|address|city|state|zip|rate|product|customer|tariff/.test(key) },
+  { title: "Processing", match: (key) => /extraction|createdon|aiprocessed|status|confidence|source|upload/.test(key) },
+  { title: "Other", match: () => true }
+];
+
+function formatInvoiceValue(value: unknown) {
+  if (value === null || value === undefined || String(value).trim() === "") return "-";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value)) return formatDate(value);
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/** Meter view → Related Invoice List row click: every column of the selected invoice. */
+function InvoiceViewDialog({ invoice, meterLabel, tableLabel, companyId, productFolder, onClose }: {
+  invoice: MeterInvoiceRow;
+  meterLabel: string;
+  tableLabel: string;
+  companyId: string | number | null | undefined;
+  productFolder: string | null | undefined;
+  onClose: () => void;
+}) {
+  const entries = Object.entries(invoice).filter(([key]) => key !== "id");
+  const find = (name: string) => entries.find(([key]) => normalizeInvoiceKey(key) === name)?.[1];
+  const check = billCheck(find("totalnewcharges"), find("balanceforward"), find("totalinvoicecost"));
+  const documentTitle = String(find("documenttitle") ?? "").trim();
+  const documentHref = documentTitle && companyId != null ? (() => {
+    const params = new URLSearchParams({ fileName: documentTitle });
+    if (productFolder) params.set("folder", `UtilityBills/${productFolder}`);
+    return `/companies/${encodeURIComponent(String(companyId))}/documents?${params.toString()}`;
+  })() : null;
+  const sections = INVOICE_SECTIONS.map((section) => ({ title: section.title, fields: [] as Array<[string, unknown]> }));
+  for (const [key, value] of entries) {
+    const index = INVOICE_SECTIONS.findIndex((section) => section.match(normalizeInvoiceKey(key), value));
+    sections[index].fields.push([key, value]);
+  }
+  const statementDate = find("statementdate");
+  const totalCost = find("totalinvoicecost");
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="lg" aria-labelledby="invoice-view-title" slotProps={{ paper: { className: "company-account-dialog" } }}>
+      <DialogContent className="company-account-view">
+        <div className="company-account-header">
+          <div>
+            <h1 id="invoice-view-title"><FileText size={34} />Invoice {String(find("invoiceid") ?? invoice.id)}</h1>
+            <p><span>{tableLabel ? `${tableLabel} invoice` : "Utility invoice"} &gt; Meter {meterLabel}</span></p>
+          </div>
+          <div className="company-account-actions">
+            {documentHref ? (
+              <Button variant="outlined" startIcon={<PdfIcon size={18} />} href={documentHref} target="_blank" rel="noreferrer">Open PDF</Button>
+            ) : null}
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+        <dl className="contract-view-summary">
+          <div><dt>Statement Date</dt><dd>{formatInvoiceValue(statementDate)}</dd></div>
+          <div><dt>Total Invoice Cost</dt><dd>{formatInvoiceValue(totalCost)}</dd></div>
+          <div><dt>New Charges + Balance Fwd</dt><dd>{check ? <span className={`bill-check-cell invoice-view-check ${check.matches ? "bill-check-match" : "bill-check-mismatch"}`}>{check.text}</span> : "-"}</dd></div>
+          <div><dt>Bill Check</dt><dd>{check ? (check.matches ? "Matches" : "Mismatch") : "-"}</dd></div>
+        </dl>
+        <div className="invoice-view-sections">
+          {sections.filter((section) => section.fields.length).map((section) => (
+            <section key={section.title} className="account-card">
+              <h2>{section.title}</h2>
+              <dl className="account-info-list invoice-view-list">
+                {section.fields.map(([key, value]) => (
+                  <div key={key} className="invoice-view-field">
+                    <dt>{key.replace(/_/g, " ")}</dt>
+                    <dd>{normalizeInvoiceKey(key) === "billcheck" && check ? check.text : formatInvoiceValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 interface MeterInvoiceRow {
