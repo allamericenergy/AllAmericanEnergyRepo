@@ -19,6 +19,7 @@ import { InvoiceCostLineChart, type UsagePoint } from "./UsagePieChart";
 import { billCheck, formatInvoiceValue, INVOICE_SECTIONS, invoiceChangeFormat, invoiceNumber, invoiceOptionLabel, invoicePercentFormat, invoiceStatementKey, invoiceTypeForProduct, normalizeInvoiceKey, openInvoiceCompare, type MeterInvoiceRow } from "../invoices/invoiceFields";
 import { MembersPanel } from "../members/MembersPage";
 import type { ExtractPdfReturnState } from "../organizations/ExtractPdfDialog";
+import { isPdfFile, MeterInvoiceUploadDialog } from "./MeterInvoiceUploadDialog";
 
 interface DashboardPageProps {
   view?: "reports" | "companies" | "contracts" | "meters";
@@ -131,6 +132,11 @@ export function DashboardPage({ view }: DashboardPageProps) {
   const [viewedMeter, setViewedMeter] = useState<MeterRow | null>(null);
   const [viewedInvoice, setViewedInvoice] = useState<MeterInvoiceRow | null>(null);
   useEffect(() => setViewedInvoice(null), [viewedMeter?.id]);
+  // Upload Invoices (meter view): PDFs picked for ExtractPDF + account number check.
+  const meterInvoiceInput = useRef<HTMLInputElement | null>(null);
+  const [meterInvoiceFiles, setMeterInvoiceFiles] = useState<File[] | null>(null);
+  const [meterInvoiceUploadError, setMeterInvoiceUploadError] = useState("");
+  useEffect(() => { setMeterInvoiceUploadError(""); setMeterInvoiceFiles(null); }, [viewedMeter?.id]);
   const [meterTray, setMeterTray] = useState(false);
   const [editingMeterId, setEditingMeterId] = useState<MeterRow["id"] | null>(null);
   const [savingMeter, setSavingMeter] = useState(false);
@@ -3685,10 +3691,23 @@ export function DashboardPage({ view }: DashboardPageProps) {
                   <Button variant="outlined" startIcon={<ArrowLeftRight size={16} />} onClick={() => openInvoiceCompare({
                     type: invoiceTypeForProduct(viewedMeter.product), accountNumber: viewedMeter.accountNumber, companyId: viewedMeter.companyId, companyName: viewedMeterCompanyLabel
                   })}>Compare Invoices</Button>
+                  <Button variant="outlined" startIcon={<Upload size={16} />} onClick={() => meterInvoiceInput.current?.click()}>Upload Invoices</Button>
+                  <input ref={meterInvoiceInput} hidden multiple type="file" accept=".pdf,application/pdf" onChange={(event) => {
+                    const selected = Array.from(event.target.files ?? []);
+                    event.target.value = "";
+                    if (!selected.length) return;
+                    const rejected = selected.filter((file) => !isPdfFile(file));
+                    setMeterInvoiceUploadError(rejected.length ? `Only PDF files can be uploaded. Not uploaded: ${rejected.map((file) => file.name).join(", ")}` : "");
+                    const pdfs = selected.filter(isPdfFile);
+                    if (pdfs.length) setMeterInvoiceFiles(pdfs);
+                  }} />
                   <Button variant="outlined" startIcon={<Pencil size={16} />} onClick={() => { const meter = viewedMeter; setViewedMeter(null); editMeter(meter); }}>Edit Meter</Button>
                   <Button onClick={() => setViewedMeter(null)}>Close</Button>
                 </div>
               </div>
+              {meterInvoiceUploadError ? <Alert severity="error" onClose={() => setMeterInvoiceUploadError("")} sx={{ mb: 2 }}>{meterInvoiceUploadError}</Alert> : null}
+              {meterInvoiceFiles ? <MeterInvoiceUploadDialog files={meterInvoiceFiles} meterAccountNumber={viewedMeter.accountNumber}
+                onClose={() => setMeterInvoiceFiles(null)} onSaved={() => void viewedMeterInvoices.refetch()} /> : null}
               <div className={`company-account-layout contract-account-layout${meterTray ? "" : " company-account-layout-collapsed"}`}>
                 <div className="company-account-side">
                   <div className="company-account-tray" role="group" aria-label="Meter details">
